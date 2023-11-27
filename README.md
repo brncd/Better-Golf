@@ -1,4 +1,5 @@
 # Better Golf
+![](https://i.imgur.com/2PF0vDE.png)
 
 Welcome to the Better Golf application, a comprehensive system designed to streamline the management of golf tournaments, including player registration, tournament creation, category management, course setup, scorecard tracking, and result analysis.
 
