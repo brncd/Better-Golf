@@ -54,14 +54,6 @@ The Better Golf aplication streamlines the entire tournament management process.
 
 4. **Result Analysis**: The application calculates and displays tournament results, identifying winners in various categories.
 
-## Flowchart
-
-The flowchart provided above illustrates the core processes and interactions within the application.
-
-![Golf Tournament Management Flowchart](flowchart.png)
-
-This visual representation helps to understand the flow of data and actions, from player registration to result analysis.
-
 ## Getting Started
 
 To get started with the Better Golf aplication, follow the instructions provided in the README files for both the API and Client components.
