@@ -1,0 +1,44 @@
+version: "3"
+
+services:
+
+  api:
+    container_name: api-dev
+    build:
+      context: ./Api
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    depends_on:
+      - database
+    networks:
+      - better-golf-network
+    volumes:
+      - ./Api:/app
+
+  database:
+    image: postgres:16.0
+    container_name: database-dev
+    environment:
+      POSTGRES_PASSWORD: 2002
+      POSTGRES_DB: Better-Golf
+    ports:
+      - "5432:5432"
+    networks:
+      - better-golf-network
+
+  client: 
+    container_name: client-dev
+    build:
+      context: ./Client
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    networks:
+      - better-golf-network
+    volumes:
+      - ./Client/src:/app/src
+
+networks:
+  better-golf-network:
+    driver: bridge

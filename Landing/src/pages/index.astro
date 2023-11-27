@@ -1,0 +1,16 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Hero from '../components/Hero.jsx';
+import FeatureGrid from '../components/FeatureGrid.jsx';
+import Team from '../components/Team.jsx';
+import CTA from '../components/CTA.jsx';
+import Footer from '../components/Footer.jsx';
+---
+
+<Layout title="Better Golf">
+		<Hero client:load/>
+		<FeatureGrid />
+		<Team />
+		<CTA />
+		<Footer />
+</Layout>
