@@ -1,7 +1,7 @@
 const navigation = [
   {
     name: 'GitHub',
-    href: 'https://github.com/joy-amorin/BetterGolf-MVP',
+    href: 'https://github.com/brncd/Better-Golf',
     icon: (props) => (
       <svg fill="currentColor" viewBox="0 0 24 24" {...props}>
         <path
