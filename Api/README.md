@@ -1,59 +1,53 @@
 # Better Golf API
 
-This is a part of a web application built with .NET Core. This API is designed to manage golf tournaments, including players, tournaments, categories, courses, holes, scorecards, and results. Below is a brief overview of the API and how to use it.
+This is a part of a web application built with .NET. This API is designed to manage golf tournaments, including players, tournaments, categories, courses, holes, scorecards, and results.
 
 ## Table of Contents
 
-- [Prerequisites](#prerequisites)
-- [Database Configuration](#database-configuration)
-- [Getting Started](#getting-started)
-- [Docker Configuration](#docker-configuration)
+- [Local Development Setup](#local-development-setup)
+  - [Prerequisites](#prerequisites)
+  - [Getting Started](#getting-started)
+- [Docker Configuration (Alternative)](#docker-configuration-alternative)
 - [API Endpoints](#api-endpoints)
 - [Swagger Documentation](#swagger-documentation)
 - [CORS Configuration](#cors-configuration)
 
-## Prerequisites
+## Local Development Setup
 
-Before you start using this API, make sure you have the following prerequisites installed. If you use Docker, you don't need to install anything else.
+This is the recommended setup for running the API on your local machine for development.
 
-- [.NET 7](https://dotnet.microsoft.com/download/dotnet)
-- [Entity Framework Core](https://docs.microsoft.com/en-us/ef/core/)
-- [PostgreSQL](https://www.postgresql.org/download/)
-- [Docker](https://www.docker.com/get-started) (optional)
+### Prerequisites
 
-## Database Configuration
+- **.NET 9 SDK** (or the version specified in `Api.csproj`)
+- **Visual Studio 2022** (which includes SQL Server Express LocalDB) or the standalone .NET SDK and LocalDB.
 
-The API uses PostgreSQL as the database. You can configure the database connection in the `appsettings.json` and `appsettings.Development.json` files. Update the `ConnectionStrings` section with your PostgreSQL connection details.
+### Getting Started
 
-## Getting Started
+1.  **Clone the repository** to your local machine.
+2.  **Open a terminal** and navigate to the `Api` project directory.
+3.  **Build the project** to restore dependencies:
+    ```shell
+    dotnet build
+    ```
+4.  **Create and migrate the local database**:
+    This command will create a `BetterGolf.Dev` database on your LocalDB instance and create all the necessary tables.
+    ```shell
+    dotnet ef database update
+    ```
+5.  **Run the API**:
+    ```shell
+    dotnet run
+    ```
+    The API will be running on the port specified in `launchSettings.json` or `Program.cs`.
 
-1. Clone the repository to your local machine.
+## Docker Configuration (Alternative)
 
-2. Open the terminal and navigate to the API project directory.
+For a production-like environment or if you prefer using Docker, you can use the provided `Dockerfile`. The original setup used Docker with a PostgreSQL database. While local development has been simplified to use SQL Server LocalDB, the Docker setup can still be adapted. Note that the database provider in the code is now SQL Server.
 
-3. Run the following command to apply database migrations:
-   ```shell
-   dotnet ef database update
-   ```
-   In Docker you can run the following command to create the database and apply migrations:
-   ```shell
-   docker exec $CONTAINER_NAME dotnet ef database update
-   ```
-   This command will create the database and apply the necessary migrations.
-
-## Docker Configuration
-
-To run the API using Docker, you can use the provided Dockerfile and Docker Compose file.
-
-- **Dockerfile** (from `development` stage)
-  - The API Dockerfile is configured to expose port 5000, which is where the API will be running.
-  - It uses the .NET SDK 7.0 as the base image and sets the working directory to `/app`.
-
-- **Docker Compose**
-  - The provided `docker-compose.yml` file defines three services: `api`, `database`, and `client`.
-  - The `api` service is the .NET application using the Dockerfile from the API project and exposes port 5000.
-  - The `database` service is a PostgreSQL container exposing port 5432.
-  - The `client` service, view the [client README](../Client/README.md) for more information.
+- **Dockerfile**
+  - The API Dockerfile is configured to expose a port where the API will be running.
+- **Original Docker Compose**
+  - The original setup likely included a `docker-compose.yml` file to orchestrate the API and a PostgreSQL database container. This file would need to be modified to use a SQL Server for Linux container to work with the current code.
 
 ## API Endpoints
 
@@ -104,19 +98,17 @@ The API provides the following endpoints to manage golf tournaments:
   - GET `/api/Courses/{id}/Holes`: Get holes for a golf course.
 
 - **ScorecardResult**
-  - GET `/api/ScorecardResults/{id}`: Get a scorecard result.
-  - PUT `/api/ScorecardResults/{id}`: Update a scorecard result.
-  - DELETE `/api/ScorecardResults/{id}`: Delete a scorecard result.
+  - GET `/api/ScorecardResults/{scorecardId}/{holeId}`: Get a scorecard result.
+  - PUT `/api/ScorecardResults/{scorecardId}/{holeId}`: Update a scorecard result.
 
-- **Holes** (Note: Some endpoints are unfinished and commented out in the code)
+- **Holes**
   - PUT `/api/Holes/{id}`: Update a hole.
 
-- **Scorecard** (Note: Some endpoints are unfinished and commented out in the code)
+- **Scorecard**
   - DELETE `/api/Scorecards/{id}`: Delete a scorecard.
 
-- **Results** (Note: Some endpoints are unfinished and commented out in the code)
-
-- **RoundsInfo** (Note: Some endpoints are unfinished and commented out in the code)
+- **Results**
+  - GET `/api/TournamentRankings/{tournamentId}`: Get the ranking for a tournament.
 
 ## Swagger Documentation
 
@@ -125,5 +117,3 @@ The API provides Swagger documentation to help you understand the available endp
 ## CORS Configuration
 
 CORS (Cross-Origin Resource Sharing) is configured to allow requests from any origin. You can further customize CORS settings in the code if needed.
-
-Please note that this README provides an overview of the API and its endpoints. Detailed documentation for each endpoint's request and response format should be available in the code or Swagger documentation.
