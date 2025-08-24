@@ -65,7 +65,7 @@ internal class Program
             options.AddPolicy(name: "TodoPasa",
               builder =>
               {
-                  builder.WithOrigins("http://localhost:5001") // Changed from "*"
+                  builder.WithOrigins("http://localhost:3000") // Changed from "http://localhost:5001"
                   .AllowAnyMethod()
                   .AllowAnyHeader();
               });
@@ -174,6 +174,11 @@ internal class Program
 
         app.MapGet("/api/Tournaments/Active", async (TournamentService service) => Results.Ok(await service.GetActiveTournamentsAsync()));
         app.MapGet("/api/Tournaments/Completed", async (TournamentService service) => Results.Ok(await service.GetCompletedTournamentsAsync()));
+
+        app.MapPost("/api/Tournaments/{id}/CalculateResults", [Authorize] async (TournamentService service, int id) => {
+            var rankings = await service.CalculateTournamentResultsAsync(id);
+            return Results.Ok(rankings);
+        });
 
         // Seccion Categories
         app.MapGet("/api/Categories", async (CategoryService service) => Results.Ok(await service.GetAllCategoriesAsync()));
