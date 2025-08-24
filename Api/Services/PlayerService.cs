@@ -71,5 +71,18 @@ namespace Api.Services
             await _db.SaveChangesAsync();
             return true;
         }
+
+        public async Task<List<TournamentListGetDTO>> GetPlayerTournamentsAsync(int playerId)
+        {
+            var player = await _db.Players.Include(p => p.Tournaments).FirstOrDefaultAsync(item => item.Id == playerId);
+            if (player == null) return new List<TournamentListGetDTO>();
+
+            var dtosList = new List<TournamentListGetDTO>();
+            foreach (var tournament in player.Tournaments)
+            {
+                dtosList.Add(new TournamentListGetDTO(tournament));
+            }
+            return dtosList;
+        }
     }
 }

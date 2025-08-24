@@ -70,14 +70,9 @@ public class RoundInfo
         return Results.NoContent();
     }
 
-    public static async Task<IResult> DeleteRoundInfo(int id, BgContext db)
+    public override string ToString()
     {
-        var roundifo = await db.RoundInfos.FindAsync(id);
-        if (roundifo == null) { return Results.NotFound(); }
-
-        db.RoundInfos.Remove(roundifo);
-        await db.SaveChangesAsync();
-        return Results.NoContent();
+        return $"Id: {Id}, Interval: {Interval}, First Round Time {FirstRoundTime}";
     }
 }
 

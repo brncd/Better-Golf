@@ -79,17 +79,8 @@ public class ScorecardResult
         await db.SaveChangesAsync();
         return Results.NoContent();
     }
-    public static async Task<IResult> DeleteScorecardResult(
-        int id, BgContext db)
+    public override string ToString()
     {
-        var scorecardresult = await db.ScorecardResults.FindAsync(id);
-        if (scorecardresult == null)
-        {
-            return Results.NotFound();
-        }
-
-        db.ScorecardResults.Remove(scorecardresult);
-        await db.SaveChangesAsync();
-        return Results.NoContent();
+        return $"Id: {Id}, Strokes: {Strokes}, Round Number: {RoundNumber}";
     }
 }

@@ -210,5 +210,59 @@ namespace Api.Services
             
             tournament.Scorecards.Add(playerScorecard);
         }
+
+        public async Task<(SingleCategoryDTO?, string?)> AddCategoryToTournamentAsync(int tournamentId, int categoryId)
+        {
+            var tournament = await _db.Tournaments.Include(x => x.Categories).FirstOrDefaultAsync(x => x.Id == tournamentId);
+            if (tournament == null) return (null, "Tournament not found.");
+
+            var category = await _db.Categories.FindAsync(categoryId);
+            if (category == null) return (null, "Category not found.");
+
+            if (!tournament.Categories.Any(c => c.Id == categoryId))
+            {
+                tournament.Categories.Add(category);
+                await _db.SaveChangesAsync();
+                return (new SingleCategoryDTO(category), null);
+            }
+            return (null, "Category already added to tournament.");
+        }
+
+        public async Task<bool> RemoveCategoryFromTournamentAsync(int tournamentId, int categoryId)
+        {
+            var tournament = await _db.Tournaments.Include(x => x.Categories).FirstOrDefaultAsync(x => x.Id == tournamentId);
+            if (tournament == null) return false;
+
+            var categoryOfTournament = tournament.Categories.FirstOrDefault(c => c.Id == categoryId);
+            if (categoryOfTournament != null)
+            {
+                tournament.Categories.Remove(categoryOfTournament);
+                await _db.SaveChangesAsync();
+                return true;
+            }
+            return false;
+        }
+
+        public async Task<List<ScorecardListGetDTO>> GetTournamentScorecardsAsync(int tournamentId)
+        {
+            var tournament = await _db.Tournaments.Include(x => x.Scorecards).FirstOrDefaultAsync(x => x.Id == tournamentId);
+            if (tournament == null) return new List<ScorecardListGetDTO>();
+
+            var scorecardDtos = tournament.Scorecards.Select(sc => new ScorecardListGetDTO(sc)).ToList();
+
+            return scorecardDtos;
+        }
+
+        public async Task<List<TournamentListGetDTO>> GetActiveTournamentsAsync()
+        {
+            var tournaments = await _db.Tournaments.Where(x => x.StartDate < DateOnly.FromDateTime(DateTime.Now) && x.EndDate > DateOnly.FromDateTime(DateTime.Now)).ToListAsync();
+            return tournaments.Select(t => new TournamentListGetDTO(t)).ToList();
+        }
+
+        public async Task<List<TournamentListGetDTO>> GetCompletedTournamentsAsync()
+        {
+            var tournaments = await _db.Tournaments.Where(x => x.EndDate < DateOnly.FromDateTime(DateTime.Now)).ToListAsync();
+            return tournaments.Select(t => new TournamentListGetDTO(t)).ToList();
+        }
     }
 }
