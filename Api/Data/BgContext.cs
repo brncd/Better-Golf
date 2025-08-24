@@ -1,9 +1,11 @@
 ﻿using Api.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore; // Added
+using Microsoft.AspNetCore.Identity; // Added
 
 namespace Api.Data
 {
-    public class BgContext : DbContext
+    public class BgContext : IdentityDbContext<IdentityUser> // Changed base class
     {
         public DbSet<Player> Players { get; set; }
         public DbSet<Tournament> Tournaments { get; set; }
