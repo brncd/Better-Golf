@@ -1,0 +1,214 @@
+using Api.Data;
+using Api.Models;
+using Api.Models.DTOs.CategoryDTOs;
+using Api.Models.DTOs.PlayerDTOs;
+using Api.Models.DTOs.TournamentDTOs;
+using Api.Models.Engine;
+using Microsoft.EntityFrameworkCore;
+
+namespace Api.Services
+{
+    public class TournamentService
+    {
+        private readonly BgContext _db;
+        private readonly CourseService _courseService;
+
+        public TournamentService(BgContext db, CourseService courseService)
+        {
+            _db = db;
+            _courseService = courseService;
+        }
+
+        public async Task<List<TournamentListGetDTO>> GetAllTournamentsAsync()
+        {
+            return await _db.Tournaments.Select(t => new TournamentListGetDTO(t)).ToListAsync();
+        }
+
+        public async Task<SingleTournamentDTO?> GetTournamentByIdAsync(int id)
+        {
+            var tournament = await _db.Tournaments
+                .Include(t => t.RoundInfo)
+                .FirstOrDefaultAsync(t => t.Id == id);
+            
+            return tournament == null ? null : new SingleTournamentDTO(tournament);
+        }
+
+        public async Task<SingleTournamentDTO> CreateTournamentAsync(TournamentPostDTO tournamentDto)
+        {
+            var tournament = new Tournament(tournamentDto);
+            
+            // Logic from Category.GetDefaultCategory moved here
+            var defaultCourse = _courseService.GetDefaultCourse();
+            var defaultCategory = new Category
+            {
+                Name = "Mixed General Category Hcap cutoff @56",
+                Sex = "mixed",
+                OpenCourse = defaultCourse,
+                LadiesCourse = null,
+                Tournament = tournament,
+                MinAge = 0,
+                MaxAge = 130,
+                MinHcap = -15,
+                MaxHcap = 56,
+            };
+
+            tournament.Categories.Add(defaultCategory);
+            
+            _db.Tournaments.Add(tournament);
+            await _db.SaveChangesAsync();
+            
+            return new SingleTournamentDTO(tournament);
+        }
+
+        public async Task<bool> UpdateTournamentAsync(int id, TournamentPostDTO tournamentDto)
+        {
+            var tournament = await _db.Tournaments.FindAsync(id);
+            if (tournament == null) return false;
+
+            tournament.Name = tournamentDto.Name;
+            tournament.Description = tournamentDto.Description;
+            tournament.TournamentType = tournamentDto.TournamentType;
+            tournament.StartDate = tournamentDto.StartDate;
+            tournament.EndDate = tournamentDto.EndDate;
+            tournament.RoundInfo = tournamentDto.RoundInfo;
+
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> DeleteTournamentAsync(int id)
+        {
+            var tournament = await _db.Tournaments.FindAsync(id);
+            if (tournament == null) return false;
+
+            _db.Tournaments.Remove(tournament);
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<List<PlayerListGetDTO>> GetTournamentPlayersAsync(int tournamentId)
+        {
+            var tournament = await _db.Tournaments
+                .Include(t => t.Players)
+                .FirstOrDefaultAsync(t => t.Id == tournamentId);
+
+            if (tournament == null) return new List<PlayerListGetDTO>();
+
+            return tournament.Players.Select(p => new PlayerListGetDTO(p)).ToList();
+        }
+
+        public async Task<List<CategoryListGetDTO>> GetTournamentCategoriesAsync(int tournamentId)
+        {
+            var tournament = await _db.Tournaments
+                .Include(t => t.Categories)
+                .FirstOrDefaultAsync(t => t.Id == tournamentId);
+
+            if (tournament == null) return new List<CategoryListGetDTO>();
+
+            return tournament.Categories.Select(c => new CategoryListGetDTO(c)).ToList();
+        }
+
+        public async Task<(SinglePLayerDTO?, string?)> AddPlayerToTournamentAsync(int tournamentId, int playerId)
+        {
+            var tournament = await _db.Tournaments
+                .Include(t => t.Players)
+                .Include(t => t.Categories)
+                .ThenInclude(c => c.Players)
+                .Include(t => t.Scorecards)
+                .FirstOrDefaultAsync(t => t.Id == tournamentId);
+
+            if (tournament == null) return (null, "Tournament not found.");
+
+            var player = await _db.Players.FindAsync(playerId);
+            if (player == null) return (null, "Player not found.");
+
+            if (tournament.Players.Any(p => p.Id == playerId))
+            {
+                return (null, "Player is already in the tournament.");
+            }
+
+            // --- Start of Transactional Logic ---
+            tournament.Players.Add(player);
+            tournament.Count = tournament.Players.Count;
+
+            // Assign Category
+            AssignPlayerToCategories(player, tournament);
+            
+            // Assign Scorecard for each category the player was assigned to
+            var defaultCourse = _courseService.GetDefaultCourse();
+            foreach (var category in tournament.Categories.Where(c => c.Players.Any(p => p.Id == player.Id)))
+            {
+                AssignScorecardToPlayer(player, category, defaultCourse, tournament);
+            }
+
+            await _db.SaveChangesAsync();
+            // --- End of Transactional Logic ---
+
+            return (new SinglePLayerDTO(player), null);
+        }
+        
+        public async Task<bool> RemovePlayerFromTournamentAsync(int tournamentId, int playerId)
+        {
+            var tournament = await _db.Tournaments.Include(t => t.Players).FirstOrDefaultAsync(t => t.Id == tournamentId);
+            if (tournament == null) return false;
+
+            var player = tournament.Players.FirstOrDefault(p => p.Id == playerId);
+            if (player == null) return false;
+
+            tournament.Players.Remove(player);
+            tournament.Count = tournament.Players.Count;
+            // Note: This doesn't automatically remove them from categories or delete scorecards, which might be desired.
+            // This logic should be expanded based on business rules.
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
+        // Private helper methods to encapsulate logic
+        private void AssignPlayerToCategories(Player player, Tournament tournament)
+        {
+            string preferredSex = player.IsPreferredCategoryLadies ? "ladies" : "open";
+            int age = player.CalculateAge();
+
+            foreach (var category in tournament.Categories)
+            {
+                bool sexMatch = category.Sex == "mixed" || category.Sex == preferredSex;
+                bool ageMatch = category.MinAge <= age && category.MaxAge >= age;
+                bool hcapMatch = category.MinHcap <= player.HandicapIndex && category.MaxHcap >= player.HandicapIndex;
+
+                if (sexMatch && ageMatch && hcapMatch)
+                {
+                    category.Players ??= new List<Player>();
+                    if (!category.Players.Any(p => p.Id == player.Id))
+                    {
+                        category.Players.Add(player);
+                        category.Count = category.Players.Count;
+                    }
+                }
+            }
+        }
+
+        private void AssignScorecardToPlayer(Player player, Category category, Course defaultCourse, Tournament tournament)
+        {
+            Course selectedCourse = player.IsPreferredCategoryLadies
+                ? category.LadiesCourse ?? category.OpenCourse ?? defaultCourse
+                : category.OpenCourse ?? category.LadiesCourse ?? defaultCourse;
+
+            if (selectedCourse == null) throw new InvalidOperationException("Cannot assign scorecard without a defined course.");
+
+            var playerScorecard = new Scorecard
+            {
+                PlayingHandicap = GolfMath.CalculateCourseHandicap(player, selectedCourse),
+                PlayerId = player.Id,
+                TournamentId = tournament.Id,
+                ScorecardResults = new List<ScorecardResult>()
+            };
+
+            foreach (var hole in selectedCourse.Holes)
+            {
+                playerScorecard.ScorecardResults.Add(new ScorecardResult { Hole = hole });
+            }
+            
+            tournament.Scorecards.Add(playerScorecard);
+        }
+    }
+}
