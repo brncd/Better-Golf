@@ -44,7 +44,7 @@ namespace Api.Services
             var tournament = new Tournament(tournamentDto);
             
             // Logic from Category.GetDefaultCategory moved here
-            var defaultCourse = _courseService.GetDefaultCourse();
+            var defaultCourse = await _courseService.GetDefaultCourse();
             var defaultCategory = new Category
             {
                 Name = "Mixed General Category Hcap cutoff @56",
@@ -92,26 +92,26 @@ namespace Api.Services
             return Result<bool>.Success(true);
         }
 
-        public async Task<List<PlayerListGetDTO>> GetTournamentPlayersAsync(int tournamentId)
+        public async Task<Result<List<PlayerListGetDTO>>> GetTournamentPlayersAsync(int tournamentId)
         {
             var tournament = await _db.Tournaments
                 .Include(t => t.Players)
                 .FirstOrDefaultAsync(t => t.Id == tournamentId);
 
-            if (tournament == null) return new List<PlayerListGetDTO>();
+            if (tournament == null) return Result<List<PlayerListGetDTO>>.Failure(new Error("TournamentNotFound", "Tournament not found."));
 
-            return tournament.Players.Select(p => new PlayerListGetDTO(p)).ToList();
+            return Result<List<PlayerListGetDTO>>.Success(tournament.Players.Select(p => new PlayerListGetDTO(p)).ToList());
         }
 
-        public async Task<List<CategoryListGetDTO>> GetTournamentCategoriesAsync(int tournamentId)
+        public async Task<Result<List<CategoryListGetDTO>>> GetTournamentCategoriesAsync(int tournamentId)
         {
             var tournament = await _db.Tournaments
                 .Include(t => t.Categories)
                 .FirstOrDefaultAsync(t => t.Id == tournamentId);
 
-            if (tournament == null) return new List<CategoryListGetDTO>();
+            if (tournament == null) return Result<List<CategoryListGetDTO>>.Failure(new Error("TournamentNotFound", "Tournament not found."));
 
-            return tournament.Categories.Select(c => new CategoryListGetDTO(c)).ToList();
+            return Result<List<CategoryListGetDTO>>.Success(tournament.Categories.Select(c => new CategoryListGetDTO(c)).ToList());
         }
 
         public async Task<Result<SinglePLayerDTO>> AddPlayerToTournamentAsync(int tournamentId, int playerId)
@@ -143,10 +143,15 @@ namespace Api.Services
                 AssignPlayerToCategories(player, tournament);
 
                 // Assign Scorecard for each category the player was assigned to
-                var defaultCourse = _courseService.GetDefaultCourse();
+                var defaultCourse = await _courseService.GetDefaultCourse();
                 foreach (var category in tournament.Categories.Where(c => c.Players.Any(p => p.Id == player.Id)))
                 {
-                    AssignScorecardToPlayer(player, category, defaultCourse, tournament);
+                    var assignResult = AssignScorecardToPlayer(player, category, defaultCourse, tournament);
+                    if (!assignResult.IsSuccess)
+                    {
+                        await transaction.RollbackAsync();
+                        return Result<SinglePLayerDTO>.Failure(assignResult.Error);
+                    }
                 }
 
                 await _db.SaveChangesAsync();
@@ -201,13 +206,13 @@ namespace Api.Services
             }
         }
 
-        private void AssignScorecardToPlayer(Player player, Category category, Course defaultCourse, Tournament tournament)
+        private Result<bool> AssignScorecardToPlayer(Player player, Category category, Course defaultCourse, Tournament tournament)
         {
             Course selectedCourse = player.IsPreferredCategoryLadies
                 ? category.LadiesCourse ?? category.OpenCourse ?? defaultCourse
                 : category.OpenCourse ?? category.LadiesCourse ?? defaultCourse;
 
-            if (selectedCourse == null) throw new InvalidOperationException("Cannot assign scorecard without a defined course.");
+            if (selectedCourse == null) return Result<bool>.Failure(new Error("CourseNotAssigned", "Cannot assign scorecard without a defined course."));
 
             var playerScorecard = new Scorecard
             {
@@ -223,6 +228,7 @@ namespace Api.Services
             }
             
             tournament.Scorecards.Add(playerScorecard);
+            return Result<bool>.Success(true);
         }
 
         public async Task<Result<SingleCategoryDTO>> AddCategoryToTournamentAsync(int tournamentId, int categoryId)

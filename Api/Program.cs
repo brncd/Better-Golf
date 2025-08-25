@@ -195,7 +195,18 @@ internal class Program
             return Results.NoContent();
         });
 
-        app.MapGet("/api/Tournaments/{id}/Players", async ([FromServices] TournamentService service, int id) => Results.Ok(await service.GetTournamentPlayersAsync(id)));
+        app.MapGet("/api/Tournaments/{id}/Players", async ([FromServices] TournamentService service, int id) => {
+            var result = await service.GetTournamentPlayersAsync(id);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok(result.Value);
+        });
 
         app.MapPost("/api/Tournaments/{tournamentId}/Players/{playerId}", [Authorize] async ([FromServices] TournamentService service, int tournamentId, int playerId) => {
             var result = await service.AddPlayerToTournamentAsync(tournamentId, playerId);
@@ -226,7 +237,18 @@ internal class Program
             return Results.NoContent();
         });
 
-        app.MapGet("/api/Tournaments/{id}/Categories", async ([FromServices] TournamentService service, int id) => Results.Ok(await service.GetTournamentCategoriesAsync(id)));
+        app.MapGet("/api/Tournaments/{id}/Categories", async ([FromServices] TournamentService service, int id) => {
+            var result = await service.GetTournamentCategoriesAsync(id);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok(result.Value);
+        });
         
         app.MapPost("/api/Tournaments/{tournamentId}/Categories/{categoryId}", [Authorize] async ([FromServices] TournamentService service, int tournamentId, int categoryId) => {
             var result = await service.AddCategoryToTournamentAsync(tournamentId, categoryId);

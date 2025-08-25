@@ -89,9 +89,9 @@ namespace Api.Services
             return Result<bool>.Success(true);
         }
 
-        public Course GetDefaultCourse()
+        public async Task<Course> GetDefaultCourse()
         {
-            var existingCourse = _db.Courses.Include(c => c.Holes).FirstOrDefault(c => c.Name == "Default Course");
+            var existingCourse = await _db.Courses.Include(c => c.Holes).FirstOrDefaultAsync(c => c.Name == "Default Course");
             if (existingCourse != null)
             {
                 return existingCourse;
@@ -107,7 +107,7 @@ namespace Api.Services
             };
 
             _db.Courses.Add(defaultCourse);
-            _db.SaveChanges();
+            await _db.SaveChangesAsync();
 
             return defaultCourse;
         }
