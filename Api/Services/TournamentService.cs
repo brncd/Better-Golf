@@ -131,24 +131,32 @@ namespace Api.Services
                 return (null, "Player is already in the tournament.");
             }
 
-            // --- Start of Transactional Logic ---
-            tournament.Players.Add(player);
-            tournament.Count = tournament.Players.Count;
-
-            // Assign Category
-            AssignPlayerToCategories(player, tournament);
-            
-            // Assign Scorecard for each category the player was assigned to
-            var defaultCourse = _courseService.GetDefaultCourse();
-            foreach (var category in tournament.Categories.Where(c => c.Players.Any(p => p.Id == player.Id)))
+            using var transaction = await _db.Database.BeginTransactionAsync();
+            try
             {
-                AssignScorecardToPlayer(player, category, defaultCourse, tournament);
+                tournament.Players.Add(player);
+                tournament.Count = tournament.Players.Count;
+
+                // Assign Category
+                AssignPlayerToCategories(player, tournament);
+
+                // Assign Scorecard for each category the player was assigned to
+                var defaultCourse = _courseService.GetDefaultCourse();
+                foreach (var category in tournament.Categories.Where(c => c.Players.Any(p => p.Id == player.Id)))
+                {
+                    AssignScorecardToPlayer(player, category, defaultCourse, tournament);
+                }
+
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+                
+                return (new SinglePLayerDTO(player), null);
             }
-
-            await _db.SaveChangesAsync();
-            // --- End of Transactional Logic ---
-
-            return (new SinglePLayerDTO(player), null);
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                return (null, "An error occurred while adding the player to the tournament.");
+            }
         }
         
         public async Task<bool> RemovePlayerFromTournamentAsync(int tournamentId, int playerId)
