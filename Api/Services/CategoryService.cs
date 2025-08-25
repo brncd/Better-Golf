@@ -4,6 +4,7 @@ using Api.Models.DTOs.CategoryDTOs;
 using Api.Models.DTOs.PlayerDTOs;
 using Microsoft.EntityFrameworkCore;
 using Api.Models.Results;
+using Api.Models.Common;
 
 namespace Api.Services
 {
@@ -16,9 +17,15 @@ namespace Api.Services
             _db = db;
         }
 
-        public async Task<List<CategoryListGetDTO>> GetAllCategoriesAsync()
+        public async Task<PaginationResponse<CategoryListGetDTO>> GetAllCategoriesAsync(PaginationRequest pagination)
         {
-            return await _db.Categories.Select(c => new CategoryListGetDTO(c)).ToListAsync();
+            var query = _db.Categories.AsQueryable();
+            var totalCount = await query.CountAsync();
+            var items = await query.Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                                   .Take(pagination.PageSize)
+                                   .Select(c => new CategoryListGetDTO(c))
+                                   .ToListAsync();
+            return new PaginationResponse<CategoryListGetDTO>(pagination.PageNumber, pagination.PageSize, totalCount, items);
         }
 
         public async Task<SingleCategoryDTO?> GetCategoryByIdAsync(int id)
@@ -61,18 +68,22 @@ namespace Api.Services
             return Result<bool>.Success(true);
         }
 
-        public async Task<List<PlayerListGetDTO>> GetCategoryPlayersAsync(int categoryId)
+        public async Task<Result<PaginationResponse<PlayerListGetDTO>>> GetCategoryPlayersAsync(int categoryId, PaginationRequest pagination)
         {
             var category = await _db.Categories
                 .Include(c => c.Players)
                 .FirstOrDefaultAsync(c => c.Id == categoryId);
 
-            if (category == null || category.Players == null)
-            {
-                return new List<PlayerListGetDTO>();
-            }
+            if (category == null) return Result<PaginationResponse<PlayerListGetDTO>>.Failure(new Error("CategoryNotFound", "Category not found."));
+            if (category.Players == null) return Result<PaginationResponse<PlayerListGetDTO>>.Success(new PaginationResponse<PlayerListGetDTO>(pagination.PageNumber, pagination.PageSize, 0, new List<PlayerListGetDTO>()));
 
-            return category.Players.Select(p => new PlayerListGetDTO(p)).ToList();
+            var query = category.Players.AsQueryable();
+            var totalCount = await query.CountAsync();
+            var items = await query.Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                                   .Take(pagination.PageSize)
+                                   .Select(p => new PlayerListGetDTO(p))
+                                   .ToListAsync();
+            return Result<PaginationResponse<PlayerListGetDTO>>.Success(new PaginationResponse<PlayerListGetDTO>(pagination.PageNumber, pagination.PageSize, totalCount, items));
         }
 
         public async Task<Result<SinglePLayerDTO>> AddPlayerToCategoryAsync(int categoryId, int playerId)

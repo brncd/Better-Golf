@@ -4,6 +4,7 @@ using Api.Models.DTOs.PlayerDTOs;
 using Api.Models.DTOs.TournamentDTOs; // Added
 using Microsoft.EntityFrameworkCore;
 using Api.Models.Results;
+using Api.Models.Common;
 
 namespace Api.Services
 {
@@ -16,9 +17,15 @@ namespace Api.Services
             _db = db;
         }
 
-        public async Task<List<PlayerListGetDTO>> GetAllPlayersAsync()
+        public async Task<PaginationResponse<PlayerListGetDTO>> GetAllPlayersAsync(PaginationRequest pagination)
         {
-            return await _db.Players.Select(p => new PlayerListGetDTO(p)).ToListAsync();
+            var query = _db.Players.AsQueryable();
+            var totalCount = await query.CountAsync();
+            var items = await query.Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                                   .Take(pagination.PageSize)
+                                   .Select(p => new PlayerListGetDTO(p))
+                                   .ToListAsync();
+            return new PaginationResponse<PlayerListGetDTO>(pagination.PageNumber, pagination.PageSize, totalCount, items);
         }
 
         public async Task<SinglePLayerDTO?> GetPlayerByIdAsync(int id)
@@ -74,17 +81,18 @@ namespace Api.Services
             return Result<bool>.Success(true);
         }
 
-        public async Task<List<TournamentListGetDTO>> GetPlayerTournamentsAsync(int playerId)
+        public async Task<Result<PaginationResponse<TournamentListGetDTO>>> GetPlayerTournamentsAsync(int playerId, PaginationRequest pagination)
         {
             var player = await _db.Players.Include(p => p.Tournaments).FirstOrDefaultAsync(item => item.Id == playerId);
-            if (player == null) return new List<TournamentListGetDTO>();
+            if (player == null) return Result<PaginationResponse<TournamentListGetDTO>>.Failure(new Error("PlayerNotFound", "Player not found."));
 
-            var dtosList = new List<TournamentListGetDTO>();
-            foreach (var tournament in player.Tournaments)
-            {
-                dtosList.Add(new TournamentListGetDTO(tournament));
-            }
-            return dtosList;
+            var query = player.Tournaments.AsQueryable();
+            var totalCount = await query.CountAsync();
+            var items = await query.Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                                   .Take(pagination.PageSize)
+                                   .Select(t => new TournamentListGetDTO(t))
+                                   .ToListAsync();
+            return Result<PaginationResponse<TournamentListGetDTO>>.Success(new PaginationResponse<TournamentListGetDTO>(pagination.PageNumber, pagination.PageSize, totalCount, items));
         }
     }
 }

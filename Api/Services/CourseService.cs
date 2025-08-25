@@ -4,6 +4,7 @@ using Api.Models.DTOs.CourseDTOs;
 using Api.Models.DTOs.HoleDTOs;
 using Microsoft.EntityFrameworkCore;
 using Api.Models.Results;
+using Api.Models.Common;
 
 namespace Api.Services
 {
@@ -16,9 +17,15 @@ namespace Api.Services
             _db = db;
         }
 
-        public async Task<List<CoursesListGetDTO>> GetAllCoursesAsync()
+        public async Task<PaginationResponse<CoursesListGetDTO>> GetAllCoursesAsync(PaginationRequest pagination)
         {
-            return await _db.Courses.Select(c => new CoursesListGetDTO(c)).ToListAsync();
+            var query = _db.Courses.AsQueryable();
+            var totalCount = await query.CountAsync();
+            var items = await query.Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                                   .Take(pagination.PageSize)
+                                   .Select(c => new CoursesListGetDTO(c))
+                                   .ToListAsync();
+            return new PaginationResponse<CoursesListGetDTO>(pagination.PageNumber, pagination.PageSize, totalCount, items);
         }
 
         public async Task<SingleCourseDTO?> GetCourseByIdAsync(int id)
@@ -59,11 +66,19 @@ namespace Api.Services
             return Result<bool>.Success(true);
         }
 
-        public async Task<List<HoleListGetDTO>> GetCourseHolesAsync(int courseId)
+        public async Task<Result<PaginationResponse<HoleListGetDTO>>> GetCourseHolesAsync(int courseId, PaginationRequest pagination)
         {
             var course = await _db.Courses.Include(c => c.Holes).FirstOrDefaultAsync(c => c.Id == courseId);
-            if (course == null || course.Holes == null) return new List<HoleListGetDTO>();
-            return course.Holes.Select(h => new HoleListGetDTO(h)).ToList();
+            if (course == null) return Result<PaginationResponse<HoleListGetDTO>>.Failure(new Error("CourseNotFound", "Course not found."));
+            if (course.Holes == null) return Result<PaginationResponse<HoleListGetDTO>>.Success(new PaginationResponse<HoleListGetDTO>(pagination.PageNumber, pagination.PageSize, 0, new List<HoleListGetDTO>()));
+
+            var query = course.Holes.AsQueryable();
+            var totalCount = await query.CountAsync();
+            var items = await query.Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                                   .Take(pagination.PageSize)
+                                   .Select(h => new HoleListGetDTO(h))
+                                   .ToListAsync();
+            return Result<PaginationResponse<HoleListGetDTO>>.Success(new PaginationResponse<HoleListGetDTO>(pagination.PageNumber, pagination.PageSize, totalCount, items));
         }
 
         public async Task<Result<bool>> AddHoleToCourseAsync(int courseId, HolePostDTO holeDto)

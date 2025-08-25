@@ -2,6 +2,7 @@ using Api.Data;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Api.Models.Results;
+using Api.Models.Common;
 
 namespace Api.Services
 {
@@ -14,9 +15,14 @@ namespace Api.Services
             _db = db;
         }
 
-        public async Task<List<RoundInfo>> GetAllRoundInfoAsync()
+        public async Task<PaginationResponse<RoundInfo>> GetAllRoundInfoAsync(PaginationRequest pagination)
         {
-            return await _db.RoundInfos.ToListAsync();
+            var query = _db.RoundInfos.AsQueryable();
+            var totalCount = await query.CountAsync();
+            var items = await query.Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                                   .Take(pagination.PageSize)
+                                   .ToListAsync();
+            return new PaginationResponse<RoundInfo>(pagination.PageNumber, pagination.PageSize, totalCount, items);
         }
 
         public async Task<RoundInfo?> GetRoundInfoAsync(int id)

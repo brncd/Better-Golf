@@ -4,6 +4,7 @@ using Api.Models.DTOs.ScorecardDTOs;
 using Api.Services; // Added
 using Microsoft.EntityFrameworkCore;
 using Api.Models.Results;
+using Api.Models.Common;
 
 namespace Api.Services
 {
@@ -18,48 +19,86 @@ namespace Api.Services
             _resultService = resultService; // Added
         }
 
-        public async Task<List<ScorecardListGetDTO>> GetAllScorecardsAsync(int tournamentId)
+        public async Task<Result<PaginationResponse<ScorecardListGetDTO>>> GetAllScorecardsAsync(int tournamentId, PaginationRequest pagination)
         {
-            // Original logic called Result.GenerateTournamentRanking here.
-            // This should probably be a separate process or triggered by score updates.
-            // For now, I'll just get the scorecards.
-             // Changed
+            var tournament = await _db.Tournaments.Include(t => t.Scorecards).FirstOrDefaultAsync(t => t.Id == tournamentId);
+            if (tournament == null) return Result<PaginationResponse<ScorecardListGetDTO>>.Failure(new Error("TournamentNotFound", "Tournament not found."));
 
-            var scorecards = await _db.Scorecards.Where(x => x.TournamentId == tournamentId)
-                .Select(x => new ScorecardListGetDTO(x)).ToListAsync();
-
-            return scorecards;
+            var query = tournament.Scorecards.AsQueryable();
+            var totalCount = await query.CountAsync();
+            var items = await query.Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                                   .Take(pagination.PageSize)
+                                   .Select(sc => new ScorecardListGetDTO(sc))
+                                   .ToListAsync();
+            return Result<PaginationResponse<ScorecardListGetDTO>>.Success(new PaginationResponse<ScorecardListGetDTO>(pagination.PageNumber, pagination.PageSize, totalCount, items));
         }
 
-        public async Task<Scorecard?> GetScorecardByIdAsync(int id)
+        public async Task<SingleScorecardDTO?> GetScorecardByIdAsync(int id)
         {
-            return await _db.Scorecards.FindAsync(id);
+            var scorecard = await _db.Scorecards.Include(s => s.ScorecardResults).FirstOrDefaultAsync(s => s.Id == id);
+            return scorecard == null ? null : new SingleScorecardDTO(scorecard);
         }
 
-        public async Task<Scorecard> CreateScorecardAsync(Scorecard scorecard)
+        public async Task<SingleScorecardDTO> CreateScorecardAsync(ScorecardPostDTO scorecardDto)
         {
+            var scorecard = new Scorecard
+            {
+                PlayingHandicap = scorecardDto.PlayingHandicap,
+                PlayerId = scorecardDto.PlayerId,
+                TournamentId = scorecardDto.TournamentId,
+                ScorecardResults = new List<ScorecardResult>()
+            };
+
+            foreach (var holeResultDto in scorecardDto.ScorecardResults)
+            {
+                scorecard.ScorecardResults.Add(new ScorecardResult
+                {
+                    Strokes = holeResultDto.Strokes,
+                    HoleId = holeResultDto.HoleId,
+                    RoundNumber = holeResultDto.RoundNumber
+                });
+            }
+
             _db.Scorecards.Add(scorecard);
             await _db.SaveChangesAsync();
-            return scorecard;
+            return new SingleScorecardDTO(scorecard);
         }
 
-        public async Task<Result<bool>> UpdateScorecardAsync(int id, Scorecard InputScorecard)
+        public async Task<Result<bool>> UpdateScorecardAsync(int id, ScorecardPostDTO inputScorecardDto)
         {
-            var scorecard = await _db.Scorecards.FindAsync(id);
+            var scorecard = await _db.Scorecards.Include(s => s.ScorecardResults).FirstOrDefaultAsync(s => s.Id == id);
             if (scorecard == null) return Result<bool>.Failure(new Error("ScorecardNotFound", "Scorecard not found."));
 
-            scorecard.PlayingHandicap = InputScorecard.PlayingHandicap;
+            scorecard.PlayingHandicap = inputScorecardDto.PlayingHandicap;
 
             // Update existing ScorecardResults
-            foreach (var inputResult in InputScorecard.ScorecardResults)
+            foreach (var inputResult in inputScorecardDto.ScorecardResults)
             {
                 var existingResult = scorecard.ScorecardResults.FirstOrDefault(sr => sr.HoleId == inputResult.HoleId);
                 if (existingResult != null)
                 {
                     existingResult.Strokes = inputResult.Strokes;
+                    existingResult.RoundNumber = inputResult.RoundNumber;
                 }
-                // If a ScorecardResult is in InputScorecard.ScorecardResults but not in existing, it's not handled here.
-                // This assumes ScorecardResults are pre-generated and only strokes are updated.
+                else
+                {
+                    // Add new scorecard results if they don't exist
+                    scorecard.ScorecardResults.Add(new ScorecardResult
+                    {
+                        Strokes = inputResult.Strokes,
+                        HoleId = inputResult.HoleId,
+                        RoundNumber = inputResult.RoundNumber
+                    });
+                }
+            }
+
+            // Remove scorecard results that are no longer present in the input
+            var resultsToRemove = scorecard.ScorecardResults
+                .Where(sr => !inputScorecardDto.ScorecardResults.Any(ir => ir.HoleId == sr.HoleId))
+                .ToList();
+            foreach (var result in resultsToRemove)
+            {
+                _db.ScorecardResults.Remove(result);
             }
 
             // Recalculate TotalStrokes

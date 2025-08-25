@@ -19,6 +19,8 @@ using FluentValidation.AspNetCore;
 using FluentValidation;
 using Api.Validation;
 using Api.Models.Results;
+using Api.Models.DTOs.ScorecardDTOs;
+using Api.Models.Common;
 
 internal class Program
 {
@@ -109,7 +111,7 @@ internal class Program
         });
 
         // Seccion Players
-        app.MapGet("/api/Players", async ([FromServices] PlayerService service) => Results.Ok(await service.GetAllPlayersAsync()));
+        app.MapGet("/api/Players", async ([FromServices] PlayerService service, [AsParameters] PaginationRequest pagination) => Results.Ok(await service.GetAllPlayersAsync(pagination)));
         
         app.MapGet("/api/Players/{id}", async ([FromServices] PlayerService service, int id) => {
             var player = await service.GetPlayerByIdAsync(id);
@@ -154,10 +156,21 @@ internal class Program
             }
             return Results.NoContent();
         });
-        app.MapGet("/api/Players/{id}/Tournaments", async ([FromServices] PlayerService service, int id) => Results.Ok(await service.GetPlayerTournamentsAsync(id)));
+        app.MapGet("/api/Players/{id}/Tournaments", async ([FromServices] PlayerService service, int id, [AsParameters] PaginationRequest pagination) => {
+            var result = await service.GetPlayerTournamentsAsync(id, pagination);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "PlayerNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok(result.Value);
+        });
 
         // Seccion Tournaments
-        app.MapGet("/api/Tournaments", async ([FromServices] TournamentService service) => Results.Ok(await service.GetAllTournamentsAsync()));
+        app.MapGet("/api/Tournaments", async ([FromServices] TournamentService service, [AsParameters] PaginationRequest pagination) => Results.Ok(await service.GetAllTournamentsAsync(pagination)));
         
         app.MapGet("/api/Tournaments/{id}", async ([FromServices] TournamentService service, int id) => {
             var tournament = await service.GetTournamentByIdAsync(id);
@@ -195,8 +208,8 @@ internal class Program
             return Results.NoContent();
         });
 
-        app.MapGet("/api/Tournaments/{id}/Players", async ([FromServices] TournamentService service, int id) => {
-            var result = await service.GetTournamentPlayersAsync(id);
+        app.MapGet("/api/Tournaments/{id}/Players", async ([FromServices] TournamentService service, int id, [AsParameters] PaginationRequest pagination) => {
+            var result = await service.GetTournamentPlayersAsync(id, pagination);
             if (!result.IsSuccess)
             {
                 return result.Error.Code switch
@@ -237,8 +250,8 @@ internal class Program
             return Results.NoContent();
         });
 
-        app.MapGet("/api/Tournaments/{id}/Categories", async ([FromServices] TournamentService service, int id) => {
-            var result = await service.GetTournamentCategoriesAsync(id);
+        app.MapGet("/api/Tournaments/{id}/Categories", async ([FromServices] TournamentService service, int id, [AsParameters] PaginationRequest pagination) => {
+            var result = await service.GetTournamentCategoriesAsync(id, pagination);
             if (!result.IsSuccess)
             {
                 return result.Error.Code switch
@@ -288,7 +301,7 @@ internal class Program
         });
 
         // Seccion Categories
-        app.MapGet("/api/Categories", async ([FromServices] CategoryService service) => Results.Ok(await service.GetAllCategoriesAsync()));
+        app.MapGet("/api/Categories", async ([FromServices] CategoryService service, [AsParameters] PaginationRequest pagination) => Results.Ok(await service.GetAllCategoriesAsync(pagination)));
         
         app.MapGet("/api/Categories/{id}", async ([FromServices] CategoryService service, int id) => {
             var category = await service.GetCategoryByIdAsync(id);
@@ -326,7 +339,18 @@ internal class Program
             return Results.NoContent();
         });
 
-        app.MapGet("/api/Categories/{id}/Players", async ([FromServices] CategoryService service, int id) => Results.Ok(await service.GetCategoryPlayersAsync(id)));
+        app.MapGet("/api/Categories/{id}/Players", async ([FromServices] CategoryService service, int id, [AsParameters] PaginationRequest pagination) => {
+            var result = await service.GetCategoryPlayersAsync(id, pagination);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok(result.Value);
+        });
 
         app.MapPost("/api/Categories/{id}/Players/{playerId}", [Authorize] async ([FromServices] CategoryService service, int id, int playerId) => {
             var result = await service.AddPlayerToCategoryAsync(id, playerId);
@@ -386,7 +410,7 @@ internal class Program
         });
 
         // Seccion Courses
-        app.MapGet("/api/Courses", async ([FromServices] CourseService service) => Results.Ok(await service.GetAllCoursesAsync()));
+        app.MapGet("/api/Courses", async ([FromServices] CourseService service, [AsParameters] PaginationRequest pagination) => Results.Ok(await service.GetAllCoursesAsync(pagination)));
         
         app.MapGet("/api/Courses/{id}", async ([FromServices] CourseService service, int id) => {
             var course = await service.GetCourseByIdAsync(id);
@@ -424,7 +448,18 @@ internal class Program
             return Results.NoContent();
         });
 
-        app.MapGet("/api/Courses/{id}/Holes", async ([FromServices] CourseService service, int id) => Results.Ok(await service.GetCourseHolesAsync(id)));
+        app.MapGet("/api/Courses/{id}/Holes", async ([FromServices] CourseService service, int id, [AsParameters] PaginationRequest pagination) => {
+            var result = await service.GetCourseHolesAsync(id, pagination);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "CourseNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok(result.Value);
+        });
 
         app.MapPost("/api/Courses/{id}/Holes", [Authorize] async ([FromServices] CourseService service, int id, HolePostDTO holeDto) => {
             var result = await service.AddHoleToCourseAsync(id, holeDto);
@@ -456,7 +491,7 @@ internal class Program
         
 
         // Seccion Holes
-        app.MapGet("/api/Holes", async ([FromServices] HoleService service) => Results.Ok(await service.GetAllHolesAsync()));
+        app.MapGet("/api/Holes", async ([FromServices] HoleService service, [AsParameters] PaginationRequest pagination) => Results.Ok(await service.GetAllHolesAsync(pagination)));
         
         app.MapGet("/api/Holes/{id}", async ([FromServices] HoleService service, int id) => {
             var hole = await service.GetHoleByIdAsync(id);
@@ -495,20 +530,31 @@ internal class Program
         });
 
         // Seccion Scorecard
-        app.MapGet("/api/Scorecards/Tournament/{tournamentId}", async ([FromServices] ScorecardService service, int tournamentId) => Results.Ok(await service.GetAllScorecardsAsync(tournamentId))); // Changed route
+        app.MapGet("/api/Scorecards/Tournament/{tournamentId}", async ([FromServices] ScorecardService service, int tournamentId, [AsParameters] PaginationRequest pagination) => {
+            var result = await service.GetAllScorecardsAsync(tournamentId, pagination);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok(result.Value);
+        });
         
         app.MapGet("/api/Scorecards/{id}", async ([FromServices] ScorecardService service, int id) => {
             var scorecard = await service.GetScorecardByIdAsync(id);
             return scorecard == null ? Results.NotFound() : Results.Ok(scorecard);
         });
 
-        app.MapPost("/api/Scorecards", [Authorize] async ([FromServices] ScorecardService service, Scorecard scorecard) => {
-            var createdScorecard = await service.CreateScorecardAsync(scorecard);
+        app.MapPost("/api/Scorecards", [Authorize] async ([FromServices] ScorecardService service, ScorecardPostDTO scorecardDto) => {
+            var createdScorecard = await service.CreateScorecardAsync(scorecardDto);
             return Results.Created($"/Scorecards/{createdScorecard.Id}", createdScorecard);
         });
 
-        app.MapPut("/api/Scorecards/{id}", [Authorize] async ([FromServices] ScorecardService service, int id, Scorecard scorecard) => {
-            var result = await service.UpdateScorecardAsync(id, scorecard);
+        app.MapPut("/api/Scorecards/{id}", [Authorize] async ([FromServices] ScorecardService service, int id, ScorecardPostDTO scorecardDto) => {
+            var result = await service.UpdateScorecardAsync(id, scorecardDto);
             if (!result.IsSuccess)
             {
                 return result.Error.Code switch
@@ -568,7 +614,7 @@ internal class Program
 
 
         // Seccion RoundsInfo
-        app.MapGet("/api/RoundsInfo", async ([FromServices] RoundInfoService service) => Results.Ok(await service.GetAllRoundInfoAsync()));
+        app.MapGet("/api/RoundsInfo", async ([FromServices] RoundInfoService service, [AsParameters] PaginationRequest pagination) => Results.Ok(await service.GetAllRoundInfoAsync(pagination)));
         app.MapGet("/api/RoundsInfo/{id}", async ([FromServices] RoundInfoService service, int id) => {
             var roundInfo = await service.GetRoundInfoAsync(id);
             return roundInfo == null ? Results.NotFound() : Results.Ok(roundInfo);

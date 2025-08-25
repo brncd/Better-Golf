@@ -9,6 +9,7 @@ using Api.Models.Engine;
 using Microsoft.EntityFrameworkCore;
 using Api.Models.Enums;
 using Api.Models.Results;
+using Api.Models.Common;
 
 namespace Api.Services
 {
@@ -25,9 +26,15 @@ namespace Api.Services
             _resultService = resultService; // Added
         }
 
-        public async Task<List<TournamentListGetDTO>> GetAllTournamentsAsync()
+        public async Task<PaginationResponse<TournamentListGetDTO>> GetAllTournamentsAsync(PaginationRequest pagination)
         {
-            return await _db.Tournaments.Select(t => new TournamentListGetDTO(t)).ToListAsync();
+            var query = _db.Tournaments.AsQueryable();
+            var totalCount = await query.CountAsync();
+            var items = await query.Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                                   .Take(pagination.PageSize)
+                                   .Select(t => new TournamentListGetDTO(t))
+                                   .ToListAsync();
+            return new PaginationResponse<TournamentListGetDTO>(pagination.PageNumber, pagination.PageSize, totalCount, items);
         }
 
         public async Task<SingleTournamentDTO?> GetTournamentByIdAsync(int id)
@@ -42,23 +49,6 @@ namespace Api.Services
         public async Task<SingleTournamentDTO> CreateTournamentAsync(TournamentPostDTO tournamentDto)
         {
             var tournament = new Tournament(tournamentDto);
-            
-            // Logic from Category.GetDefaultCategory moved here
-            var defaultCourse = await _courseService.GetDefaultCourse();
-            var defaultCategory = new Category
-            {
-                Name = "Mixed General Category Hcap cutoff @56",
-                Sex = Gender.Mixed,
-                OpenCourse = defaultCourse,
-                LadiesCourse = null,
-                Tournament = tournament,
-                MinAge = 0,
-                MaxAge = 130,
-                MinHcap = -15,
-                MaxHcap = 56,
-            };
-
-            tournament.Categories.Add(defaultCategory);
             
             _db.Tournaments.Add(tournament);
             await _db.SaveChangesAsync();
@@ -92,26 +82,38 @@ namespace Api.Services
             return Result<bool>.Success(true);
         }
 
-        public async Task<Result<List<PlayerListGetDTO>>> GetTournamentPlayersAsync(int tournamentId)
+        public async Task<Result<PaginationResponse<PlayerListGetDTO>>> GetTournamentPlayersAsync(int tournamentId, PaginationRequest pagination)
         {
             var tournament = await _db.Tournaments
                 .Include(t => t.Players)
                 .FirstOrDefaultAsync(t => t.Id == tournamentId);
 
-            if (tournament == null) return Result<List<PlayerListGetDTO>>.Failure(new Error("TournamentNotFound", "Tournament not found."));
+            if (tournament == null) return Result<PaginationResponse<PlayerListGetDTO>>.Failure(new Error("TournamentNotFound", "Tournament not found."));
 
-            return Result<List<PlayerListGetDTO>>.Success(tournament.Players.Select(p => new PlayerListGetDTO(p)).ToList());
+            var query = tournament.Players.AsQueryable();
+            var totalCount = await query.CountAsync();
+            var items = await query.Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                                   .Take(pagination.PageSize)
+                                   .Select(p => new PlayerListGetDTO(p))
+                                   .ToListAsync();
+            return Result<PaginationResponse<PlayerListGetDTO>>.Success(new PaginationResponse<PlayerListGetDTO>(pagination.PageNumber, pagination.PageSize, totalCount, items));
         }
 
-        public async Task<Result<List<CategoryListGetDTO>>> GetTournamentCategoriesAsync(int tournamentId)
+        public async Task<Result<PaginationResponse<CategoryListGetDTO>>> GetTournamentCategoriesAsync(int tournamentId, PaginationRequest pagination)
         {
             var tournament = await _db.Tournaments
                 .Include(t => t.Categories)
                 .FirstOrDefaultAsync(t => t.Id == tournamentId);
 
-            if (tournament == null) return Result<List<CategoryListGetDTO>>.Failure(new Error("TournamentNotFound", "Tournament not found."));
+            if (tournament == null) return Result<PaginationResponse<CategoryListGetDTO>>.Failure(new Error("TournamentNotFound", "Tournament not found."));
 
-            return Result<List<CategoryListGetDTO>>.Success(tournament.Categories.Select(c => new CategoryListGetDTO(c)).ToList());
+            var query = tournament.Categories.AsQueryable();
+            var totalCount = await query.CountAsync();
+            var items = await query.Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                                   .Take(pagination.PageSize)
+                                   .Select(c => new CategoryListGetDTO(c))
+                                   .ToListAsync();
+            return Result<PaginationResponse<CategoryListGetDTO>>.Success(new PaginationResponse<CategoryListGetDTO>(pagination.PageNumber, pagination.PageSize, totalCount, items));
         }
 
         public async Task<Result<SinglePLayerDTO>> AddPlayerToTournamentAsync(int tournamentId, int playerId)

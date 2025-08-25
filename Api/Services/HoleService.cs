@@ -3,6 +3,7 @@ using Api.Models;
 using Api.Models.DTOs.HoleDTOs;
 using Microsoft.EntityFrameworkCore;
 using Api.Models.Results;
+using Api.Models.Common;
 
 namespace Api.Services
 {
@@ -15,9 +16,15 @@ namespace Api.Services
             _db = db;
         }
 
-        public async Task<List<HoleListGetDTO>> GetAllHolesAsync()
+        public async Task<PaginationResponse<HoleListGetDTO>> GetAllHolesAsync(PaginationRequest pagination)
         {
-            return await _db.Holes.Select(h => new HoleListGetDTO(h)).ToListAsync();
+            var query = _db.Holes.AsQueryable();
+            var totalCount = await query.CountAsync();
+            var items = await query.Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                                   .Take(pagination.PageSize)
+                                   .Select(h => new HoleListGetDTO(h))
+                                   .ToListAsync();
+            return new PaginationResponse<HoleListGetDTO>(pagination.PageNumber, pagination.PageSize, totalCount, items);
         }
 
         public async Task<SingleHoleDTO?> GetHoleByIdAsync(int id)
