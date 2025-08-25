@@ -279,55 +279,7 @@ namespace Api.Services
 
         public async Task<List<TournamentRankingDTO>> CalculateTournamentResultsAsync(int tournamentId)
         {
-            var tournament = await _db.Tournaments
-                .Include(t => t.Scorecards)
-                    .ThenInclude(sc => sc.Player)
-                .Include(t => t.Scorecards)
-                    .ThenInclude(sc => sc.ScorecardResults)
-                        .ThenInclude(sr => sr.Hole)
-                .FirstOrDefaultAsync(t => t.Id == tournamentId);
-
-            if (tournament == null) return new List<TournamentRankingDTO>();
-
-            var playerScores = new Dictionary<int, double>();
-
-            foreach (var scorecard in tournament.Scorecards)
-            {
-                double score = 0;
-                if (tournament.TournamentType == "MedalPlay") // Assuming "MedalPlay" for MedalScratchScore
-                {
-                    score = ResultsEngine.MedalScratchScore(scorecard.PlayingHandicap, scorecard.ScorecardResults); // Corrected
-                }
-                else if (tournament.TournamentType == "Stableford") // Assuming "Stableford" for StablefordScore
-                {
-                    score = ResultsEngine.StablefordScore(scorecard.ScorecardResults); // Corrected
-                }
-                // Add other tournament types as needed
-
-                if (playerScores.ContainsKey(scorecard.PlayerId))
-                {
-                    playerScores[scorecard.PlayerId] += score;
-                }
-                else
-                {
-                    playerScores.Add(scorecard.PlayerId, score);
-                }
-            }
-
-            // Convert to TournamentRankingDTOs and sort
-            var rankings = playerScores.Select(ps => new TournamentRankingDTO
-            {
-                TournamentId = tournamentId,
-                PlayerId = ps.Key,
-                TotalStrokes = (int)ps.Value // Assuming TotalStrokes can be a double or needs rounding
-            })
-            .OrderBy(r => r.TotalStrokes) // Order by score for MedalPlay, Stableford might be descending
-            .ToList();
-
-            // Update TournamentRankings table via ResultService
-            await _resultService.GenerateTournamentRankingAsync(tournamentId);
-
-            return rankings;
+            return await _resultService.GenerateTournamentRankingAsync(tournamentId);
         }
     }
 }
