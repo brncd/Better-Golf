@@ -21,6 +21,8 @@ using Api.Validation;
 using Api.Models.Results;
 using Api.Models.DTOs.ScorecardDTOs;
 using Api.Models.Common;
+using Api.Models.Authorization;
+using Microsoft.Extensions.DependencyInjection;
 
 internal class Program
 {
@@ -66,6 +68,18 @@ internal class Program
         builder.Services.AddScoped<ScorecardResultService>();
         builder.Services.AddScoped<ResultService>();
         builder.Services.AddScoped<RoundInfoService>();
+        builder.Services.AddScoped<RoleService>(); // Add RoleService
+
+        builder.Services.AddSingleton<IAuthorizationHandler, ScorecardOwnerAuthorizationHandler>(); // Register the custom authorization handler
+
+        builder.Services.AddAuthorization(options =>
+        {
+            options.AddPolicy("AdminPolicy", policy => policy.RequireRole("Admin"));
+            options.AddPolicy("TournamentOrganizerPolicy", policy => policy.RequireRole("Admin", "TournamentOrganizer"));
+            options.AddPolicy("PlayerPolicy", policy => policy.RequireRole("Admin", "TournamentOrganizer", "Player"));
+            options.AddPolicy("ManageOwnScorecard", policy => policy.Requirements.Add(new IsOwnerRequirement()));
+            // More granular policies for resource-based authorization will be added later
+        });
 
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(c =>
@@ -118,7 +132,7 @@ internal class Program
             return player == null ? Results.NotFound() : Results.Ok(player);
         });
 
-        app.MapPost("/api/Players", [Authorize] async ([FromServices] PlayerService service, PLayerPostDTO playerDto) => {
+        app.MapPost("/api/Players", [Authorize(Policy = "AdminPolicy")] async ([FromServices] PlayerService service, PLayerPostDTO playerDto) => {
             var result = await service.CreatePlayerAsync(playerDto);
             if (!result.IsSuccess)
             {
@@ -131,7 +145,7 @@ internal class Program
             return Results.Created($"/Players/{result.Value.Id}", result.Value);
         });
 
-        app.MapPut("/api/Players/{id}", [Authorize] async ([FromServices] PlayerService service, int id, PLayerPostDTO playerDto) => {
+        app.MapPut("/api/Players/{id}", [Authorize(Policy = "PlayerPolicy")] async ([FromServices] PlayerService service, int id, PLayerPostDTO playerDto) => {
             var result = await service.UpdatePlayerAsync(id, playerDto);
             if (!result.IsSuccess)
             {
@@ -144,7 +158,7 @@ internal class Program
             return Results.NoContent();
         });
 
-        app.MapDelete("/api/Players/{id}", [Authorize] async ([FromServices] PlayerService service, int id) => {
+        app.MapDelete("/api/Players/{id}", [Authorize(Policy = "AdminPolicy")] async ([FromServices] PlayerService service, int id) => {
             var result = await service.DeletePlayerAsync(id);
             if (!result.IsSuccess)
             {
@@ -177,12 +191,12 @@ internal class Program
             return tournament == null ? Results.NotFound() : Results.Ok(tournament);
         });
 
-        app.MapPost("/api/Tournaments", [Authorize] async ([FromServices] TournamentService service, TournamentPostDTO tournamentDto) => {
+        app.MapPost("/api/Tournaments", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] TournamentService service, TournamentPostDTO tournamentDto) => {
             var tournament = await service.CreateTournamentAsync(tournamentDto);
             return Results.Created($"/Tournaments/{tournament.Id}", tournament);
         });
 
-        app.MapPut("/api/Tournaments/{id}", [Authorize] async ([FromServices] TournamentService service, int id, TournamentPostDTO tournamentDto) => {
+        app.MapPut("/api/Tournaments/{id}", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] TournamentService service, int id, TournamentPostDTO tournamentDto) => {
             var result = await service.UpdateTournamentAsync(id, tournamentDto);
             if (!result.IsSuccess)
             {
@@ -195,7 +209,7 @@ internal class Program
             return Results.NoContent();
         });
 
-        app.MapDelete("/api/Tournaments/{id}", [Authorize] async ([FromServices] TournamentService service, int id) => {
+        app.MapDelete("/api/Tournaments/{id}", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] TournamentService service, int id) => {
             var result = await service.DeleteTournamentAsync(id);
             if (!result.IsSuccess)
             {
@@ -221,7 +235,7 @@ internal class Program
             return Results.Ok(result.Value);
         });
 
-        app.MapPost("/api/Tournaments/{tournamentId}/Players/{playerId}", [Authorize] async ([FromServices] TournamentService service, int tournamentId, int playerId) => {
+        app.MapPost("/api/Tournaments/{tournamentId}/Players/{playerId}", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] TournamentService service, int tournamentId, int playerId) => {
             var result = await service.AddPlayerToTournamentAsync(tournamentId, playerId);
             if (!result.IsSuccess)
             {
@@ -236,7 +250,7 @@ internal class Program
             return Results.Ok(result.Value);
         });
 
-        app.MapDelete("/api/Tournaments/{tournamentId}/Players/{playerId}", [Authorize] async ([FromServices] TournamentService service, int tournamentId, int playerId) => {
+        app.MapDelete("/api/Tournaments/{tournamentId}/Players/{playerId}", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] TournamentService service, int tournamentId, int playerId) => {
             var result = await service.RemovePlayerFromTournamentAsync(tournamentId, playerId);
             if (!result.IsSuccess)
             {
@@ -263,7 +277,7 @@ internal class Program
             return Results.Ok(result.Value);
         });
         
-        app.MapPost("/api/Tournaments/{tournamentId}/Categories/{categoryId}", [Authorize] async ([FromServices] TournamentService service, int tournamentId, int categoryId) => {
+        app.MapPost("/api/Tournaments/{tournamentId}/Categories/{categoryId}", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] TournamentService service, int tournamentId, int categoryId) => {
             var result = await service.AddCategoryToTournamentAsync(tournamentId, categoryId);
             if (!result.IsSuccess)
             {
@@ -277,7 +291,7 @@ internal class Program
             }
             return Results.Ok(result.Value);
         });
-        app.MapDelete("/api/Tournaments/{tournamentId}/Categories/{categoryId}", [Authorize] async ([FromServices] TournamentService service, int tournamentId, int categoryId) => {
+        app.MapDelete("/api/Tournaments/{tournamentId}/Categories/{categoryId}", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] TournamentService service, int tournamentId, int categoryId) => {
             var result = await service.RemoveCategoryFromTournamentAsync(tournamentId, categoryId);
             if (!result.IsSuccess)
             {
@@ -295,7 +309,7 @@ internal class Program
         app.MapGet("/api/Tournaments/Active", async ([FromServices] TournamentService service) => Results.Ok(await service.GetActiveTournamentsAsync()));
         app.MapGet("/api/Tournaments/Completed", async ([FromServices] TournamentService service) => Results.Ok(await service.GetCompletedTournamentsAsync()));
 
-        app.MapPost("/api/Tournaments/{id}/CalculateResults", [Authorize] async ([FromServices] TournamentService service, int id) => {
+        app.MapPost("/api/Tournaments/{id}/CalculateResults", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] TournamentService service, int id) => {
             var rankings = await service.CalculateTournamentResultsAsync(id);
             return Results.Ok(rankings);
         });
@@ -308,12 +322,12 @@ internal class Program
             return category == null ? Results.NotFound() : Results.Ok(category);
         });
 
-        app.MapPost("/api/Categories", [Authorize] async ([FromServices] CategoryService service, CategoryPostDTO categoryDto) => {
+        app.MapPost("/api/Categories", [Authorize(Policy = "AdminPolicy")] async ([FromServices] CategoryService service, CategoryPostDTO categoryDto) => {
             var category = await service.CreateCategoryAsync(categoryDto);
             return Results.Created($"/Categories/{category.Id}", category);
         });
 
-        app.MapPut("/api/Categories/{id}", [Authorize] async ([FromServices] CategoryService service, int id, CategoryPostDTO categoryDto) => {
+        app.MapPut("/api/Categories/{id}", [Authorize(Policy = "AdminPolicy")] async ([FromServices] CategoryService service, int id, CategoryPostDTO categoryDto) => {
             var result = await service.UpdateCategoryAsync(id, categoryDto);
             if (!result.IsSuccess)
             {
@@ -326,7 +340,7 @@ internal class Program
             return Results.NoContent();
         });
 
-        app.MapDelete("/api/Categories/{id}", [Authorize] async ([FromServices] CategoryService service, int id) => {
+        app.MapDelete("/api/Categories/{id}", [Authorize(Policy = "AdminPolicy")] async ([FromServices] CategoryService service, int id) => {
             var result = await service.DeleteCategoryAsync(id);
             if (!result.IsSuccess)
             {
@@ -352,7 +366,7 @@ internal class Program
             return Results.Ok(result.Value);
         });
 
-        app.MapPost("/api/Categories/{id}/Players/{playerId}", [Authorize] async ([FromServices] CategoryService service, int id, int playerId) => {
+        app.MapPost("/api/Categories/{id}/Players/{playerId}", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] CategoryService service, int id, int playerId) => {
             var result = await service.AddPlayerToCategoryAsync(id, playerId);
             if (!result.IsSuccess)
             {
@@ -367,7 +381,7 @@ internal class Program
             return Results.Ok(result.Value);
         });
 
-        app.MapDelete("/api/Categories/{id}/Players/{playerId}", [Authorize] async ([FromServices] CategoryService service, int id, int playerId) => {
+        app.MapDelete("/api/Categories/{id}/Players/{playerId}", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] CategoryService service, int id, int playerId) => {
             var result = await service.RemovePlayerFromCategoryAsync(id, playerId);
             if (!result.IsSuccess)
             {
@@ -381,7 +395,7 @@ internal class Program
             return Results.NoContent();
         });
 
-        app.MapPost("/api/Categories/{id}/SetOpenCourse/{courseId}", [Authorize] async ([FromServices] CategoryService service, int id, int courseId) => {
+        app.MapPost("/api/Categories/{id}/SetOpenCourse/{courseId}", [Authorize(Policy = "AdminPolicy")] async ([FromServices] CategoryService service, int id, int courseId) => {
             var result = await service.SetOpenCourseAsync(id, courseId);
             if (!result.IsSuccess)
             {
@@ -395,7 +409,7 @@ internal class Program
             return Results.NoContent();
         });
 
-        app.MapPost("/api/Categories/{id}/SetLadiesCourse/{courseId}", [Authorize] async ([FromServices] CategoryService service, int id, int courseId) => {
+        app.MapPost("/api/Categories/{id}/SetLadiesCourse/{courseId}", [Authorize(Policy = "AdminPolicy")] async ([FromServices] CategoryService service, int id, int courseId) => {
             var result = await service.SetLadiesCourseAsync(id, courseId);
             if (!result.IsSuccess)
             {
@@ -417,12 +431,12 @@ internal class Program
             return course == null ? Results.NotFound() : Results.Ok(course);
         });
 
-        app.MapPost("/api/Courses", [Authorize] async ([FromServices] CourseService service, CoursePostDTO courseDto) => {
+        app.MapPost("/api/Courses", [Authorize(Policy = "AdminPolicy")] async ([FromServices] CourseService service, CoursePostDTO courseDto) => {
             var course = await service.CreateCourseAsync(courseDto);
             return Results.Created($"/Courses/{course.Id}", course);
         });
 
-        app.MapPut("/api/Courses/{id}", [Authorize] async ([FromServices] CourseService service, int id, CoursePostDTO courseDto) => {
+        app.MapPut("/api/Courses/{id}", [Authorize(Policy = "AdminPolicy")] async ([FromServices] CourseService service, int id, CoursePostDTO courseDto) => {
             var result = await service.UpdateCourseAsync(id, courseDto);
             if (!result.IsSuccess)
             {
@@ -435,7 +449,7 @@ internal class Program
             return Results.NoContent();
         });
 
-        app.MapDelete("/api/Courses/{id}", [Authorize] async ([FromServices] CourseService service, int id) => {
+        app.MapDelete("/api/Courses/{id}", [Authorize(Policy = "AdminPolicy")] async ([FromServices] CourseService service, int id) => {
             var result = await service.DeleteCourseAsync(id);
             if (!result.IsSuccess)
             {
@@ -461,7 +475,7 @@ internal class Program
             return Results.Ok(result.Value);
         });
 
-        app.MapPost("/api/Courses/{id}/Holes", [Authorize] async ([FromServices] CourseService service, int id, HolePostDTO holeDto) => {
+        app.MapPost("/api/Courses/{id}/Holes", [Authorize(Policy = "AdminPolicy")] async ([FromServices] CourseService service, int id, HolePostDTO holeDto) => {
             var result = await service.AddHoleToCourseAsync(id, holeDto);
             if (!result.IsSuccess)
             {
@@ -474,7 +488,7 @@ internal class Program
             return Results.NoContent();
         });
 
-        app.MapDelete("/api/Courses/{id}/Holes/{holeId}", [Authorize] async ([FromServices] CourseService service, int id, int holeId) => {
+        app.MapDelete("/api/Courses/{id}/Holes/{holeId}", [Authorize(Policy = "AdminPolicy")] async ([FromServices] CourseService service, int id, int holeId) => {
             var result = await service.RemoveHoleFromCourseAsync(id, holeId);
             if (!result.IsSuccess)
             {
@@ -498,12 +512,12 @@ internal class Program
             return hole == null ? Results.NotFound() : Results.Ok(hole);
         });
 
-        app.MapPost("/api/Holes", [Authorize] async ([FromServices] HoleService service, HolePostDTO holeDto) => {
+        app.MapPost("/api/Holes", [Authorize(Policy = "AdminPolicy")] async ([FromServices] HoleService service, HolePostDTO holeDto) => {
             var hole = await service.CreateHoleAsync(holeDto);
             return Results.Created($"/Holes/{hole.Id}", hole);
         });
 
-        app.MapPut("/api/Holes/{id}", [Authorize] async ([FromServices] HoleService service, int id, HolePostDTO holeDto) => {
+        app.MapPut("/api/Holes/{id}", [Authorize(Policy = "AdminPolicy")] async ([FromServices] HoleService service, int id, HolePostDTO holeDto) => {
             var result = await service.UpdateHoleAsync(id, holeDto);
             if (!result.IsSuccess)
             {
@@ -516,7 +530,7 @@ internal class Program
             return Results.NoContent();
         });
 
-        app.MapDelete("/api/Holes/{id}", [Authorize] async ([FromServices] HoleService service, int id) => {
+        app.MapDelete("/api/Holes/{id}", [Authorize(Policy = "AdminPolicy")] async ([FromServices] HoleService service, int id) => {
             var result = await service.DeleteHoleAsync(id);
             if (!result.IsSuccess)
             {
@@ -548,12 +562,19 @@ internal class Program
             return scorecard == null ? Results.NotFound() : Results.Ok(scorecard);
         });
 
-        app.MapPost("/api/Scorecards", [Authorize] async ([FromServices] ScorecardService service, ScorecardPostDTO scorecardDto) => {
+        app.MapPost("/api/Scorecards", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] ScorecardService service, ScorecardPostDTO scorecardDto) => {
             var createdScorecard = await service.CreateScorecardAsync(scorecardDto);
             return Results.Created($"/Scorecards/{createdScorecard.Id}", createdScorecard);
         });
 
-        app.MapPut("/api/Scorecards/{id}", [Authorize] async ([FromServices] ScorecardService service, int id, ScorecardPostDTO scorecardDto) => {
+        app.MapPut("/api/Scorecards/{id}", [Authorize(Policy = "ManageOwnScorecard")] async ([FromServices] ScorecardService service, int id, ScorecardPostDTO scorecardDto, HttpContext httpContext) => {
+            var authorizationService = httpContext.RequestServices.GetRequiredService<IAuthorizationService>();
+            var authorized = await authorizationService.AuthorizeAsync(httpContext.User, id, new IsOwnerRequirement());
+            if (!authorized.Succeeded)
+            {
+                return Results.Forbid();
+            }
+
             var result = await service.UpdateScorecardAsync(id, scorecardDto);
             if (!result.IsSuccess)
             {
@@ -566,7 +587,7 @@ internal class Program
             return Results.NoContent();
         });
 
-        app.MapDelete("/api/Scorecards/{id}", [Authorize] async ([FromServices] ScorecardService service, int id) => {
+        app.MapDelete("/api/Scorecards/{id}", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] ScorecardService service, int id) => {
             var result = await service.DeleteScorecardAsync(id);
             if (!result.IsSuccess)
             {
@@ -584,7 +605,7 @@ internal class Program
             var scorecardResult = await service.GetScorecardResultAsync(scorecardId, holeId);
             return scorecardResult == null ? Results.NotFound() : Results.Ok(scorecardResult);
         });
-        app.MapPut("/api/ScorecardResults/{scorecardId}/{holeId}", [Authorize] async ([FromServices] ScorecardResultService service, int scorecardId, int holeId, ScorecardResultPostDTO scorecardResultDto) => {
+        app.MapPut("/api/ScorecardResults/{scorecardId}/{holeId}", [Authorize(Policy = "PlayerPolicy")] async ([FromServices] ScorecardResultService service, int scorecardId, int holeId, ScorecardResultPostDTO scorecardResultDto) => {
             var result = await service.UpdateScorecardResultAsync(scorecardId, holeId, scorecardResultDto);
             if (!result.IsSuccess)
             {
@@ -596,7 +617,7 @@ internal class Program
             }
             return Results.NoContent();
         });
-        app.MapDelete("/api/ScorecardResults/{id}", [Authorize] async ([FromServices] ScorecardResultService service, int id) => {
+        app.MapDelete("/api/ScorecardResults/{id}", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] ScorecardResultService service, int id) => {
             var result = await service.DeleteScorecardResultAsync(id);
             if (!result.IsSuccess)
             {
@@ -619,11 +640,11 @@ internal class Program
             var roundInfo = await service.GetRoundInfoAsync(id);
             return roundInfo == null ? Results.NotFound() : Results.Ok(roundInfo);
         });
-        app.MapPost("/api/RoundsInfo", [Authorize] async ([FromServices] RoundInfoService service, RoundInfo roundInfo) => {
+        app.MapPost("/api/RoundsInfo", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] RoundInfoService service, RoundInfo roundInfo) => {
             var createdRoundInfo = await service.CreateRoundInfoAsync(roundInfo);
             return Results.Created($"/RoundsInfo/{createdRoundInfo.Id}", createdRoundInfo);
         });
-        app.MapPut("/api/RoundsInfo/{id}", [Authorize] async ([FromServices] RoundInfoService service, int id, RoundInfo roundInfo) => {
+        app.MapPut("/api/RoundsInfo/{id}", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] RoundInfoService service, int id, RoundInfo roundInfo) => {
             var result = await service.UpdateRoundInfoAsync(id, roundInfo);
             if (!result.IsSuccess)
             {
@@ -635,7 +656,7 @@ internal class Program
             }
             return Results.NoContent();
         });
-        app.MapDelete("/api/RoundsInfo/{id}", [Authorize] async ([FromServices] RoundInfoService service, int id) => {
+        app.MapDelete("/api/RoundsInfo/{id}", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] RoundInfoService service, int id) => {
             var result = await service.DeleteRoundInfoAsync(id);
             if (!result.IsSuccess)
             {
