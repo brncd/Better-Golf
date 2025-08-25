@@ -79,8 +79,4 @@ public class ScorecardResult
         await db.SaveChangesAsync();
         return Results.NoContent();
     }
-    public override string ToString()
-    {
-        return $"Id: {Id}, Strokes: {Strokes}, Round Number: {RoundNumber}";
-    }
 }

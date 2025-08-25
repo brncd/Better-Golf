@@ -69,10 +69,4 @@ public class RoundInfo
         await db.SaveChangesAsync();
         return Results.NoContent();
     }
-
-    public override string ToString()
-    {
-        return $"Id: {Id}, Interval: {Interval}, First Round Time {FirstRoundTime}";
-    }
 }
-

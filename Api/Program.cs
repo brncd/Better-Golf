@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer; // Added
 using Microsoft.IdentityModel.Tokens; // Added
 using System.Text; // Added
 using Microsoft.AspNetCore.Authorization; // Added
+using Microsoft.AspNetCore.Identity; // Added
+using Api.Models.DTOs.ScorecardResultDTOs; // Added
 
 
 internal class Program
@@ -287,7 +289,7 @@ internal class Program
         });
 
         // Seccion Scorecard
-        app.MapGet("/api/Scorecards/{tournamentId}", async (ScorecardService service, int tournamentId) => Results.Ok(await service.GetAllScorecardsAsync(tournamentId)));
+        app.MapGet("/api/Scorecards/Tournament/{tournamentId}", async (ScorecardService service, int tournamentId) => Results.Ok(await service.GetAllScorecardsAsync(tournamentId))); // Changed route
         
         app.MapGet("/api/Scorecards/{id}", async (ScorecardService service, int id) => {
             var scorecard = await service.GetScorecardByIdAsync(id);

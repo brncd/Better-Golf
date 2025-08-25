@@ -1,6 +1,7 @@
 using Api.Data;
 using Api.Models;
 using Api.Models.DTOs.PlayerDTOs;
+using Api.Models.DTOs.TournamentDTOs; // Added
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Services
