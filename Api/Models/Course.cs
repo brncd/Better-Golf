@@ -46,8 +46,6 @@ public class Course
     
     internal int CalculatePar()
     {
-        if (Holes == null)
-     	    return 0;
         int totalPar = 0;
         foreach (Hole hole in Holes)
         {

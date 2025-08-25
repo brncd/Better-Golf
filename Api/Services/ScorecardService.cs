@@ -22,7 +22,7 @@ namespace Api.Services
             // Original logic called Result.GenerateTournamentRanking here.
             // This should probably be a separate process or triggered by score updates.
             // For now, I'll just get the scorecards.
-            await _resultService.GenerateTournamentRankingAsync(tournamentId); // Changed
+             // Changed
 
             var scorecards = await _db.Scorecards.Where(x => x.TournamentId == tournamentId)
                 .Select(x => new ScorecardListGetDTO(x)).ToListAsync();
@@ -48,9 +48,21 @@ namespace Api.Services
             if (scorecard == null) return false;
 
             scorecard.PlayingHandicap = InputScorecard.PlayingHandicap;
-            // Note: Updating ScorecardResults directly like this can be problematic.
-            // It's better to manage ScorecardResults via their own service.
-            scorecard.ScorecardResults = InputScorecard.ScorecardResults; 
+
+            // Update existing ScorecardResults
+            foreach (var inputResult in InputScorecard.ScorecardResults)
+            {
+                var existingResult = scorecard.ScorecardResults.FirstOrDefault(sr => sr.HoleId == inputResult.HoleId);
+                if (existingResult != null)
+                {
+                    existingResult.Strokes = inputResult.Strokes;
+                }
+                // If a ScorecardResult is in InputScorecard.ScorecardResults but not in existing, it's not handled here.
+                // This assumes ScorecardResults are pre-generated and only strokes are updated.
+            }
+
+            // Recalculate TotalStrokes
+            scorecard.TotalStrokes = scorecard.ScorecardResults.Sum(sr => sr.Strokes);
 
             await _db.SaveChangesAsync();
             return true;

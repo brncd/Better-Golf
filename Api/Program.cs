@@ -14,7 +14,7 @@ using System.Text; // Added
 using Microsoft.AspNetCore.Authorization; // Added
 using Microsoft.AspNetCore.Identity; // Added
 using Api.Models.DTOs.ScorecardResultDTOs; // Added
-
+using Microsoft.AspNetCore.Mvc; // Added for [FromServices]
 
 internal class Program
 {
@@ -101,164 +101,164 @@ internal class Program
         });
 
         // Seccion Players
-        app.MapGet("/api/Players", async (PlayerService service) => Results.Ok(await service.GetAllPlayersAsync()));
+        app.MapGet("/api/Players", async ([FromServices] PlayerService service) => Results.Ok(await service.GetAllPlayersAsync()));
         
-        app.MapGet("/api/Players/{id}", async (PlayerService service, int id) => {
+        app.MapGet("/api/Players/{id}", async ([FromServices] PlayerService service, int id) => {
             var player = await service.GetPlayerByIdAsync(id);
             return player == null ? Results.NotFound() : Results.Ok(player);
         });
 
-        app.MapPost("/api/Players", [Authorize] async (PlayerService service, PLayerPostDTO playerDto) => {
+        app.MapPost("/api/Players", [Authorize] async ([FromServices] PlayerService service, PLayerPostDTO playerDto) => {
             var (player, error) = await service.CreatePlayerAsync(playerDto);
             if (error != null) return Results.BadRequest(error);
             return Results.Created($"/Players/{player.Id}", player);
         });
 
-        app.MapPut("/api/Players/{id}", [Authorize] async (PlayerService service, int id, PLayerPostDTO playerDto) => {
+        app.MapPut("/api/Players/{id}", [Authorize] async ([FromServices] PlayerService service, int id, PLayerPostDTO playerDto) => {
             var success = await service.UpdatePlayerAsync(id, playerDto);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
-        app.MapDelete("/api/Players/{id}", [Authorize] async (PlayerService service, int id) => {
+        app.MapDelete("/api/Players/{id}", [Authorize] async ([FromServices] PlayerService service, int id) => {
             var success = await service.DeletePlayerAsync(id);
             return success ? Results.NoContent() : Results.NotFound();
         });
-        app.MapGet("/api/Players/{id}/Tournaments", async (PlayerService service, int id) => Results.Ok(await service.GetPlayerTournamentsAsync(id)));
+        app.MapGet("/api/Players/{id}/Tournaments", async ([FromServices] PlayerService service, int id) => Results.Ok(await service.GetPlayerTournamentsAsync(id)));
 
         // Seccion Tournaments
-        app.MapGet("/api/Tournaments", async (TournamentService service) => Results.Ok(await service.GetAllTournamentsAsync()));
+        app.MapGet("/api/Tournaments", async ([FromServices] TournamentService service) => Results.Ok(await service.GetAllTournamentsAsync()));
         
-        app.MapGet("/api/Tournaments/{id}", async (TournamentService service, int id) => {
+        app.MapGet("/api/Tournaments/{id}", async ([FromServices] TournamentService service, int id) => {
             var tournament = await service.GetTournamentByIdAsync(id);
             return tournament == null ? Results.NotFound() : Results.Ok(tournament);
         });
 
-        app.MapPost("/api/Tournaments", [Authorize] async (TournamentService service, TournamentPostDTO tournamentDto) => {
+        app.MapPost("/api/Tournaments", [Authorize] async ([FromServices] TournamentService service, TournamentPostDTO tournamentDto) => {
             var tournament = await service.CreateTournamentAsync(tournamentDto);
             return Results.Created($"/Tournaments/{tournament.Id}", tournament);
         });
 
-        app.MapPut("/api/Tournaments/{id}", [Authorize] async (TournamentService service, int id, TournamentPostDTO tournamentDto) => {
+        app.MapPut("/api/Tournaments/{id}", [Authorize] async ([FromServices] TournamentService service, int id, TournamentPostDTO tournamentDto) => {
             var success = await service.UpdateTournamentAsync(id, tournamentDto);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
-        app.MapDelete("/api/Tournaments/{id}", [Authorize] async (TournamentService service, int id) => {
+        app.MapDelete("/api/Tournaments/{id}", [Authorize] async ([FromServices] TournamentService service, int id) => {
             var success = await service.DeleteTournamentAsync(id);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
-        app.MapGet("/api/Tournaments/{id}/Players", async (TournamentService service, int id) => Results.Ok(await service.GetTournamentPlayersAsync(id)));
+        app.MapGet("/api/Tournaments/{id}/Players", async ([FromServices] TournamentService service, int id) => Results.Ok(await service.GetTournamentPlayersAsync(id)));
 
-        app.MapPost("/api/Tournaments/{tournamentId}/Players/{playerId}", [Authorize] async (TournamentService service, int tournamentId, int playerId) => {
+        app.MapPost("/api/Tournaments/{tournamentId}/Players/{playerId}", [Authorize] async ([FromServices] TournamentService service, int tournamentId, int playerId) => {
             var (player, error) = await service.AddPlayerToTournamentAsync(tournamentId, playerId);
             if (error != null) return Results.BadRequest(error);
             return Results.Ok(player);
         });
 
-        app.MapDelete("/api/Tournaments/{tournamentId}/Players/{playerId}", [Authorize] async (TournamentService service, int tournamentId, int playerId) => {
+        app.MapDelete("/api/Tournaments/{tournamentId}/Players/{playerId}", [Authorize] async ([FromServices] TournamentService service, int tournamentId, int playerId) => {
             var success = await service.RemovePlayerFromTournamentAsync(tournamentId, playerId);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
-        app.MapGet("/api/Tournaments/{id}/Categories", async (TournamentService service, int id) => Results.Ok(await service.GetTournamentCategoriesAsync(id)));
+        app.MapGet("/api/Tournaments/{id}/Categories", async ([FromServices] TournamentService service, int id) => Results.Ok(await service.GetTournamentCategoriesAsync(id)));
         
-        app.MapPost("/api/Tournaments/{tournamentId}/Categories/{categoryId}", [Authorize] async (TournamentService service, int tournamentId, int categoryId) => {
+        app.MapPost("/api/Tournaments/{tournamentId}/Categories/{categoryId}", [Authorize] async ([FromServices] TournamentService service, int tournamentId, int categoryId) => {
             var (category, error) = await service.AddCategoryToTournamentAsync(tournamentId, categoryId);
             if (error != null) return Results.BadRequest(error);
             return Results.Ok(category);
         });
-        app.MapDelete("/api/Tournaments/{tournamentId}/Categories/{categoryId}", [Authorize] async (TournamentService service, int tournamentId, int categoryId) => {
+        app.MapDelete("/api/Tournaments/{tournamentId}/Categories/{categoryId}", [Authorize] async ([FromServices] TournamentService service, int tournamentId, int categoryId) => {
             var success = await service.RemoveCategoryFromTournamentAsync(tournamentId, categoryId);
             return success ? Results.NoContent() : Results.NotFound();
         });
-        app.MapGet("/api/Tournaments/{id}/Scorecards", async (TournamentService service, int id) => Results.Ok(await service.GetTournamentScorecardsAsync(id)));
+        app.MapGet("/api/Tournaments/{id}/Scorecards", async ([FromServices] TournamentService service, int id) => Results.Ok(await service.GetTournamentScorecardsAsync(id)));
 
-        app.MapGet("/api/Tournaments/Active", async (TournamentService service) => Results.Ok(await service.GetActiveTournamentsAsync()));
-        app.MapGet("/api/Tournaments/Completed", async (TournamentService service) => Results.Ok(await service.GetCompletedTournamentsAsync()));
+        app.MapGet("/api/Tournaments/Active", async ([FromServices] TournamentService service) => Results.Ok(await service.GetActiveTournamentsAsync()));
+        app.MapGet("/api/Tournaments/Completed", async ([FromServices] TournamentService service) => Results.Ok(await service.GetCompletedTournamentsAsync()));
 
-        app.MapPost("/api/Tournaments/{id}/CalculateResults", [Authorize] async (TournamentService service, int id) => {
+        app.MapPost("/api/Tournaments/{id}/CalculateResults", [Authorize] async ([FromServices] TournamentService service, int id) => {
             var rankings = await service.CalculateTournamentResultsAsync(id);
             return Results.Ok(rankings);
         });
 
         // Seccion Categories
-        app.MapGet("/api/Categories", async (CategoryService service) => Results.Ok(await service.GetAllCategoriesAsync()));
+        app.MapGet("/api/Categories", async ([FromServices] CategoryService service) => Results.Ok(await service.GetAllCategoriesAsync()));
         
-        app.MapGet("/api/Categories/{id}", async (CategoryService service, int id) => {
+        app.MapGet("/api/Categories/{id}", async ([FromServices] CategoryService service, int id) => {
             var category = await service.GetCategoryByIdAsync(id);
             return category == null ? Results.NotFound() : Results.Ok(category);
         });
 
-        app.MapPost("/api/Categories", [Authorize] async (CategoryService service, CategoryPostDTO categoryDto) => {
+        app.MapPost("/api/Categories", [Authorize] async ([FromServices] CategoryService service, CategoryPostDTO categoryDto) => {
             var category = await service.CreateCategoryAsync(categoryDto);
             return Results.Created($"/Categories/{category.Id}", category);
         });
 
-        app.MapPut("/api/Categories/{id}", [Authorize] async (CategoryService service, int id, CategoryPostDTO categoryDto) => {
+        app.MapPut("/api/Categories/{id}", [Authorize] async ([FromServices] CategoryService service, int id, CategoryPostDTO categoryDto) => {
             var success = await service.UpdateCategoryAsync(id, categoryDto);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
-        app.MapDelete("/api/Categories/{id}", [Authorize] async (CategoryService service, int id) => {
+        app.MapDelete("/api/Categories/{id}", [Authorize] async ([FromServices] CategoryService service, int id) => {
             var success = await service.DeleteCategoryAsync(id);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
-        app.MapGet("/api/Categories/{id}/Players", async (CategoryService service, int id) => Results.Ok(await service.GetCategoryPlayersAsync(id)));
+        app.MapGet("/api/Categories/{id}/Players", async ([FromServices] CategoryService service, int id) => Results.Ok(await service.GetCategoryPlayersAsync(id)));
 
-        app.MapPost("/api/Categories/{id}/Players/{playerId}", [Authorize] async (CategoryService service, int id, int playerId) => {
+        app.MapPost("/api/Categories/{id}/Players/{playerId}", [Authorize] async ([FromServices] CategoryService service, int id, int playerId) => {
             var (player, error) = await service.AddPlayerToCategoryAsync(id, playerId);
             if (error != null) return Results.BadRequest(error);
             return Results.Ok(player);
         });
 
-        app.MapDelete("/api/Categories/{id}/Players/{playerId}", [Authorize] async (CategoryService service, int id, int playerId) => {
+        app.MapDelete("/api/Categories/{id}/Players/{playerId}", [Authorize] async ([FromServices] CategoryService service, int id, int playerId) => {
             var success = await service.RemovePlayerFromCategoryAsync(id, playerId);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
-        app.MapPost("/api/Categories/{id}/SetOpenCourse/{courseId}", [Authorize] async (CategoryService service, int id, int courseId) => {
+        app.MapPost("/api/Categories/{id}/SetOpenCourse/{courseId}", [Authorize] async ([FromServices] CategoryService service, int id, int courseId) => {
             var success = await service.SetOpenCourseAsync(id, courseId);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
-        app.MapPost("/api/Categories/{id}/SetLadiesCourse/{courseId}", [Authorize] async (CategoryService service, int id, int courseId) => {
+        app.MapPost("/api/Categories/{id}/SetLadiesCourse/{courseId}", [Authorize] async ([FromServices] CategoryService service, int id, int courseId) => {
             var success = await service.SetLadiesCourseAsync(id, courseId);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
         // Seccion Courses
-        app.MapGet("/api/Courses", async (CourseService service) => Results.Ok(await service.GetAllCoursesAsync()));
+        app.MapGet("/api/Courses", async ([FromServices] CourseService service) => Results.Ok(await service.GetAllCoursesAsync()));
         
-        app.MapGet("/api/Courses/{id}", async (CourseService service, int id) => {
+        app.MapGet("/api/Courses/{id}", async ([FromServices] CourseService service, int id) => {
             var course = await service.GetCourseByIdAsync(id);
             return course == null ? Results.NotFound() : Results.Ok(course);
         });
 
-        app.MapPost("/api/Courses", [Authorize] async (CourseService service, CoursePostDTO courseDto) => {
+        app.MapPost("/api/Courses", [Authorize] async ([FromServices] CourseService service, CoursePostDTO courseDto) => {
             var course = await service.CreateCourseAsync(courseDto);
             return Results.Created($"/Courses/{course.Id}", course);
         });
 
-        app.MapPut("/api/Courses/{id}", [Authorize] async (CourseService service, int id, CoursePostDTO courseDto) => {
+        app.MapPut("/api/Courses/{id}", [Authorize] async ([FromServices] CourseService service, int id, CoursePostDTO courseDto) => {
             var success = await service.UpdateCourseAsync(id, courseDto);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
-        app.MapDelete("/api/Courses/{id}", [Authorize] async (CourseService service, int id) => {
+        app.MapDelete("/api/Courses/{id}", [Authorize] async ([FromServices] CourseService service, int id) => {
             var success = await service.DeleteCourseAsync(id);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
-        app.MapGet("/api/Courses/{id}/Holes", async (CourseService service, int id) => Results.Ok(await service.GetCourseHolesAsync(id)));
+        app.MapGet("/api/Courses/{id}/Holes", async ([FromServices] CourseService service, int id) => Results.Ok(await service.GetCourseHolesAsync(id)));
 
-        app.MapPost("/api/Courses/{id}/Holes", [Authorize] async (CourseService service, int id, HolePostDTO holeDto) => {
+        app.MapPost("/api/Courses/{id}/Holes", [Authorize] async ([FromServices] CourseService service, int id, HolePostDTO holeDto) => {
             var success = await service.AddHoleToCourseAsync(id, holeDto);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
-        app.MapDelete("/api/Courses/{id}/Holes/{holeId}", [Authorize] async (CourseService service, int id, int holeId) => {
+        app.MapDelete("/api/Courses/{id}/Holes/{holeId}", [Authorize] async ([FromServices] CourseService service, int id, int holeId) => {
             var success = await service.RemoveHoleFromCourseAsync(id, holeId);
             return success ? Results.NoContent() : Results.NotFound();
         });
@@ -266,84 +266,84 @@ internal class Program
         
 
         // Seccion Holes
-        app.MapGet("/api/Holes", async (HoleService service) => Results.Ok(await service.GetAllHolesAsync()));
+        app.MapGet("/api/Holes", async ([FromServices] HoleService service) => Results.Ok(await service.GetAllHolesAsync()));
         
-        app.MapGet("/api/Holes/{id}", async (HoleService service, int id) => {
+        app.MapGet("/api/Holes/{id}", async ([FromServices] HoleService service, int id) => {
             var hole = await service.GetHoleByIdAsync(id);
             return hole == null ? Results.NotFound() : Results.Ok(hole);
         });
 
-        app.MapPost("/api/Holes", [Authorize] async (HoleService service, HolePostDTO holeDto) => {
+        app.MapPost("/api/Holes", [Authorize] async ([FromServices] HoleService service, HolePostDTO holeDto) => {
             var hole = await service.CreateHoleAsync(holeDto);
             return Results.Created($"/Holes/{hole.Id}", hole);
         });
 
-        app.MapPut("/api/Holes/{id}", [Authorize] async (HoleService service, int id, HolePostDTO holeDto) => {
+        app.MapPut("/api/Holes/{id}", [Authorize] async ([FromServices] HoleService service, int id, HolePostDTO holeDto) => {
             var success = await service.UpdateHoleAsync(id, holeDto);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
-        app.MapDelete("/api/Holes/{id}", [Authorize] async (HoleService service, int id) => {
+        app.MapDelete("/api/Holes/{id}", [Authorize] async ([FromServices] HoleService service, int id) => {
             var success = await service.DeleteHoleAsync(id);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
         // Seccion Scorecard
-        app.MapGet("/api/Scorecards/Tournament/{tournamentId}", async (ScorecardService service, int tournamentId) => Results.Ok(await service.GetAllScorecardsAsync(tournamentId))); // Changed route
+        app.MapGet("/api/Scorecards/Tournament/{tournamentId}", async ([FromServices] ScorecardService service, int tournamentId) => Results.Ok(await service.GetAllScorecardsAsync(tournamentId))); // Changed route
         
-        app.MapGet("/api/Scorecards/{id}", async (ScorecardService service, int id) => {
+        app.MapGet("/api/Scorecards/{id}", async ([FromServices] ScorecardService service, int id) => {
             var scorecard = await service.GetScorecardByIdAsync(id);
             return scorecard == null ? Results.NotFound() : Results.Ok(scorecard);
         });
 
-        app.MapPost("/api/Scorecards", [Authorize] async (ScorecardService service, Scorecard scorecard) => {
+        app.MapPost("/api/Scorecards", [Authorize] async ([FromServices] ScorecardService service, Scorecard scorecard) => {
             var createdScorecard = await service.CreateScorecardAsync(scorecard);
             return Results.Created($"/Scorecards/{createdScorecard.Id}", createdScorecard);
         });
 
-        app.MapPut("/api/Scorecards/{id}", [Authorize] async (ScorecardService service, int id, Scorecard scorecard) => {
+        app.MapPut("/api/Scorecards/{id}", [Authorize] async ([FromServices] ScorecardService service, int id, Scorecard scorecard) => {
             var success = await service.UpdateScorecardAsync(id, scorecard);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
-        app.MapDelete("/api/Scorecards/{id}", [Authorize] async (ScorecardService service, int id) => {
+        app.MapDelete("/api/Scorecards/{id}", [Authorize] async ([FromServices] ScorecardService service, int id) => {
             var success = await service.DeleteScorecardAsync(id);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
         // Seccion ScorecardResult
-        app.MapGet("/api/ScorecardResults/{scorecardId}/{holeId}", async (ScorecardResultService service, int scorecardId, int holeId) => {
+        app.MapGet("/api/ScorecardResults/{scorecardId}/{holeId}", async ([FromServices] ScorecardResultService service, int scorecardId, int holeId) => {
             var scorecardResult = await service.GetScorecardResultAsync(scorecardId, holeId);
             return scorecardResult == null ? Results.NotFound() : Results.Ok(scorecardResult);
         });
-        app.MapPut("/api/ScorecardResults/{scorecardId}/{holeId}", [Authorize] async (ScorecardResultService service, int scorecardId, int holeId, ScorecardResultPostDTO scorecardResultDto) => {
+        app.MapPut("/api/ScorecardResults/{scorecardId}/{holeId}", [Authorize] async ([FromServices] ScorecardResultService service, int scorecardId, int holeId, ScorecardResultPostDTO scorecardResultDto) => {
             var success = await service.UpdateScorecardResultAsync(scorecardId, holeId, scorecardResultDto);
             return success ? Results.NoContent() : Results.NotFound();
         });
-        app.MapDelete("/api/ScorecardResults/{id}", [Authorize] async (ScorecardResultService service, int id) => {
+        app.MapDelete("/api/ScorecardResults/{id}", [Authorize] async ([FromServices] ScorecardResultService service, int id) => {
             var success = await service.DeleteScorecardResultAsync(id);
             return success ? Results.NoContent() : Results.NotFound();
         });
 
         // Seccion Results
-        app.MapGet("/api/TournamentRankings/{tournamentId}", async (ResultService service, int tournamentId) => Results.Ok(await service.GetTournamentRankingAsync(tournamentId)));
+        app.MapGet("/api/TournamentRankings/{tournamentId}", async ([FromServices] ResultService service, int tournamentId) => Results.Ok(await service.GetTournamentRankingAsync(tournamentId)));
 
 
         // Seccion RoundsInfo
-        app.MapGet("/api/RoundsInfo", async (RoundInfoService service) => Results.Ok(await service.GetAllRoundInfoAsync()));
-        app.MapGet("/api/RoundsInfo/{id}", async (RoundInfoService service, int id) => {
+        app.MapGet("/api/RoundsInfo", async ([FromServices] RoundInfoService service) => Results.Ok(await service.GetAllRoundInfoAsync()));
+        app.MapGet("/api/RoundsInfo/{id}", async ([FromServices] RoundInfoService service, int id) => {
             var roundInfo = await service.GetRoundInfoAsync(id);
             return roundInfo == null ? Results.NotFound() : Results.Ok(roundInfo);
         });
-        app.MapPost("/api/RoundsInfo", [Authorize] async (RoundInfoService service, RoundInfo roundInfo) => {
+        app.MapPost("/api/RoundsInfo", [Authorize] async ([FromServices] RoundInfoService service, RoundInfo roundInfo) => {
             var createdRoundInfo = await service.CreateRoundInfoAsync(roundInfo);
             return Results.Created($"/RoundsInfo/{createdRoundInfo.Id}", createdRoundInfo);
         });
-        app.MapPut("/api/RoundsInfo/{id}", [Authorize] async (RoundInfoService service, int id, RoundInfo roundInfo) => {
+        app.MapPut("/api/RoundsInfo/{id}", [Authorize] async ([FromServices] RoundInfoService service, int id, RoundInfo roundInfo) => {
             var success = await service.UpdateRoundInfoAsync(id, roundInfo);
             return success ? Results.NoContent() : Results.NotFound();
         });
-        app.MapDelete("/api/RoundsInfo/{id}", [Authorize] async (RoundInfoService service, int id) => {
+        app.MapDelete("/api/RoundsInfo/{id}", [Authorize] async ([FromServices] RoundInfoService service, int id) => {
             var success = await service.DeleteRoundInfoAsync(id);
             return success ? Results.NoContent() : Results.NotFound();
         });

@@ -20,14 +20,7 @@ public class Category
     public List<Category>? ChildrenCategories { get; set; }
     public List<Player>? Players { get; set; } = new List<Player>();
 
-    public Category(string name, Course openCourse, Course ladiesCourse, List<Player> players, int numberOfHoles)
-    {
-        Name = name;
-        OpenCourse = openCourse;
-        LadiesCourse = ladiesCourse;
-        Players = players;
-        NumberOfHoles = numberOfHoles;
-    }
+    
     public Category(CategoryPostDTO categoryPostDTO)
     {
         Name = categoryPostDTO.Name;
