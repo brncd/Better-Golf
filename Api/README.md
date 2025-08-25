@@ -117,3 +117,7 @@ The API provides Swagger documentation to help you understand the available endp
 ## CORS Configuration
 
 CORS (Cross-Origin Resource Sharing) is configured to allow requests from any origin. You can further customize CORS settings in the code if needed.
+
+## JWT Key Handling
+
+For development, the JWT key is stored in `appsettings.Development.json`. In production environments, it is highly recommended to use more secure methods for managing sensitive information, such as environment variables, Azure Key Vault, or other secrets management solutions.
