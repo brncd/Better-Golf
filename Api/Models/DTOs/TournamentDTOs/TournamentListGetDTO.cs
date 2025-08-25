@@ -13,7 +13,7 @@ public class TournamentListGetDTO
     {
         Id = tournament.Id;
         Name = tournament.Name;
-        TournamentType = tournament.TournamentType;
+        TournamentType = tournament.TournamentType.ToString();
         StartDate = tournament.StartDate;
         EndDate = tournament.EndDate;
         PlayerCount = tournament.Count;

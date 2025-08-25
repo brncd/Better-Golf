@@ -11,7 +11,7 @@ public class CategoryListGetDTO
     {
         Id = category.Id;
         Name = category.Name;
-        Sex = category.Sex;
+        Sex = category.Sex.ToString();
         Count = category.Count;
     }
 }

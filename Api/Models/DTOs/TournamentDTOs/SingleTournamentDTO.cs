@@ -18,7 +18,7 @@ public class SingleTournamentDTO
         Id = tournament.Id;
         Name = tournament.Name;
         Count = tournament.Count;
-        TournamentType = tournament.TournamentType;
+        TournamentType = tournament.TournamentType.ToString();
         StartDate = tournament.StartDate;
         EndDate = tournament.EndDate;
         Description = tournament.Description;

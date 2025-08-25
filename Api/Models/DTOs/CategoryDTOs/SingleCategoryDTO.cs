@@ -14,7 +14,7 @@ public class SingleCategoryDTO
     {
         Id = category.Id;
         Name = category.Name;
-        Sex = category.Sex;
+        Sex = category.Sex.ToString();
         MinAge = category.MinAge;
         MaxAge = category.MaxAge;
         MinHcap = category.MinHcap;
