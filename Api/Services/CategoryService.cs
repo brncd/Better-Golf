@@ -3,6 +3,7 @@ using Api.Models;
 using Api.Models.DTOs.CategoryDTOs;
 using Api.Models.DTOs.PlayerDTOs;
 using Microsoft.EntityFrameworkCore;
+using Api.Models.Results;
 
 namespace Api.Services
 {
@@ -34,10 +35,10 @@ namespace Api.Services
             return new SingleCategoryDTO(category);
         }
 
-        public async Task<bool> UpdateCategoryAsync(int id, CategoryPostDTO categoryDto)
+        public async Task<Result<bool>> UpdateCategoryAsync(int id, CategoryPostDTO categoryDto)
         {
             var category = await _db.Categories.FindAsync(id);
-            if (category == null) return false;
+            if (category == null) return Result<bool>.Failure(new Error("CategoryNotFound", "Category not found."));
 
             category.Name = categoryDto.Name;
             category.MinAge = categoryDto.MinAge;
@@ -47,17 +48,17 @@ namespace Api.Services
             category.NumberOfHoles = categoryDto.NumberOfHoles;
 
             await _db.SaveChangesAsync();
-            return true;
+            return Result<bool>.Success(true);
         }
 
-        public async Task<bool> DeleteCategoryAsync(int id)
+        public async Task<Result<bool>> DeleteCategoryAsync(int id)
         {
             var category = await _db.Categories.FindAsync(id);
-            if (category == null) return false;
+            if (category == null) return Result<bool>.Failure(new Error("CategoryNotFound", "Category not found."));
 
             _db.Categories.Remove(category);
             await _db.SaveChangesAsync();
-            return true;
+            return Result<bool>.Success(true);
         }
 
         public async Task<List<PlayerListGetDTO>> GetCategoryPlayersAsync(int categoryId)
@@ -74,63 +75,63 @@ namespace Api.Services
             return category.Players.Select(p => new PlayerListGetDTO(p)).ToList();
         }
 
-        public async Task<(PlayerListGetDTO?, string?)> AddPlayerToCategoryAsync(int categoryId, int playerId)
+        public async Task<Result<SinglePLayerDTO>> AddPlayerToCategoryAsync(int categoryId, int playerId)
         {
             var category = await _db.Categories.Include(c => c.Players).FirstOrDefaultAsync(c => c.Id == categoryId);
-            if (category == null) return (null, "Category not found.");
+            if (category == null) return Result<SinglePLayerDTO>.Failure(new Error("CategoryNotFound", "Category not found."));
 
             var player = await _db.Players.FindAsync(playerId);
-            if (player == null) return (null, "Player not found.");
+            if (player == null) return Result<SinglePLayerDTO>.Failure(new Error("PlayerNotFound", "Player not found."));
 
             if (category.Players != null && !category.Players.Any(p => p.Id == playerId))
             {
                 category.Players.Add(player);
                 category.Count = category.Players.Count;
                 await _db.SaveChangesAsync();
-                return (new PlayerListGetDTO(player), null);
+                return Result<SinglePLayerDTO>.Success(new SinglePLayerDTO(player));
             }
             
-            return (null, "Player already in category.");
+            return Result<SinglePLayerDTO>.Failure(new Error("PlayerAlreadyInCategory", "Player already in category."));
         }
 
-        public async Task<bool> RemovePlayerFromCategoryAsync(int categoryId, int playerId)
+        public async Task<Result<bool>> RemovePlayerFromCategoryAsync(int categoryId, int playerId)
         {
             var category = await _db.Categories.Include(c => c.Players).FirstOrDefaultAsync(c => c.Id == categoryId);
-            if (category?.Players == null) return false;
+            if (category == null) return Result<bool>.Failure(new Error("CategoryNotFound", "Category not found."));
 
             var player = category.Players.FirstOrDefault(p => p.Id == playerId);
-            if (player == null) return false;
+            if (player == null) return Result<bool>.Failure(new Error("PlayerNotFound", "Player not found in category."));
 
             category.Players.Remove(player);
             category.Count = category.Players.Count;
             await _db.SaveChangesAsync();
-            return true;
+            return Result<bool>.Success(true);
         }
 
-        public async Task<bool> SetOpenCourseAsync(int categoryId, int courseId)
+        public async Task<Result<bool>> SetOpenCourseAsync(int categoryId, int courseId)
         {
             var category = await _db.Categories.FindAsync(categoryId);
-            if (category == null) return false;
+            if (category == null) return Result<bool>.Failure(new Error("CategoryNotFound", "Category not found."));
 
             var course = await _db.Courses.FindAsync(courseId);
-            if (course == null) return false;
+            if (course == null) return Result<bool>.Failure(new Error("CourseNotFound", "Course not found."));
 
             category.OpenCourse = course;
             await _db.SaveChangesAsync();
-            return true;
+            return Result<bool>.Success(true);
         }
 
-        public async Task<bool> SetLadiesCourseAsync(int categoryId, int courseId)
+        public async Task<Result<bool>> SetLadiesCourseAsync(int categoryId, int courseId)
         {
             var category = await _db.Categories.FindAsync(categoryId);
-            if (category == null) return false;
+            if (category == null) return Result<bool>.Failure(new Error("CategoryNotFound", "Category not found."));
 
             var course = await _db.Courses.FindAsync(courseId);
-            if (course == null) return false;
+            if (course == null) return Result<bool>.Failure(new Error("CourseNotFound", "Course not found."));
 
             category.LadiesCourse = course;
             await _db.SaveChangesAsync();
-            return true;
+            return Result<bool>.Success(true);
         }
     }
 }

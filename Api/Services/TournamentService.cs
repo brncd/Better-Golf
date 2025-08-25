@@ -8,6 +8,7 @@ using Api.Models.DTOs.ResultDTOs; // Added
 using Api.Models.Engine;
 using Microsoft.EntityFrameworkCore;
 using Api.Models.Enums;
+using Api.Models.Results;
 
 namespace Api.Services
 {
@@ -65,10 +66,10 @@ namespace Api.Services
             return new SingleTournamentDTO(tournament);
         }
 
-        public async Task<bool> UpdateTournamentAsync(int id, TournamentPostDTO tournamentDto)
+        public async Task<Result<bool>> UpdateTournamentAsync(int id, TournamentPostDTO tournamentDto)
         {
             var tournament = await _db.Tournaments.FindAsync(id);
-            if (tournament == null) return false;
+            if (tournament == null) return Result<bool>.Failure(new Error("TournamentNotFound", "Tournament not found."));
 
             tournament.Name = tournamentDto.Name;
             tournament.Description = tournamentDto.Description;
@@ -78,17 +79,17 @@ namespace Api.Services
             tournament.RoundInfo = tournamentDto.RoundInfo;
 
             await _db.SaveChangesAsync();
-            return true;
+            return Result<bool>.Success(true);
         }
 
-        public async Task<bool> DeleteTournamentAsync(int id)
+        public async Task<Result<bool>> DeleteTournamentAsync(int id)
         {
             var tournament = await _db.Tournaments.FindAsync(id);
-            if (tournament == null) return false;
+            if (tournament == null) return Result<bool>.Failure(new Error("TournamentNotFound", "Tournament not found."));
 
             _db.Tournaments.Remove(tournament);
             await _db.SaveChangesAsync();
-            return true;
+            return Result<bool>.Success(true);
         }
 
         public async Task<List<PlayerListGetDTO>> GetTournamentPlayersAsync(int tournamentId)
@@ -113,7 +114,7 @@ namespace Api.Services
             return tournament.Categories.Select(c => new CategoryListGetDTO(c)).ToList();
         }
 
-        public async Task<(SinglePLayerDTO?, string?)> AddPlayerToTournamentAsync(int tournamentId, int playerId)
+        public async Task<Result<SinglePLayerDTO>> AddPlayerToTournamentAsync(int tournamentId, int playerId)
         {
             var tournament = await _db.Tournaments
                 .Include(t => t.Players)
@@ -122,14 +123,14 @@ namespace Api.Services
                 .Include(t => t.Scorecards)
                 .FirstOrDefaultAsync(t => t.Id == tournamentId);
 
-            if (tournament == null) return (null, "Tournament not found.");
+            if (tournament == null) return Result<SinglePLayerDTO>.Failure(new Error("TournamentNotFound", "Tournament not found."));
 
             var player = await _db.Players.FindAsync(playerId);
-            if (player == null) return (null, "Player not found.");
+            if (player == null) return Result<SinglePLayerDTO>.Failure(new Error("PlayerNotFound", "Player not found."));
 
             if (tournament.Players.Any(p => p.Id == playerId))
             {
-                return (null, "Player is already in the tournament.");
+                return Result<SinglePLayerDTO>.Failure(new Error("PlayerAlreadyInTournament", "Player is already in the tournament."));
             }
 
             using var transaction = await _db.Database.BeginTransactionAsync();
@@ -151,29 +152,29 @@ namespace Api.Services
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
                 
-                return (new SinglePLayerDTO(player), null);
+                return Result<SinglePLayerDTO>.Success(new SinglePLayerDTO(player));
             }
             catch (Exception)
             {
                 await transaction.RollbackAsync();
-                return (null, "An error occurred while adding the player to the tournament.");
+                return Result<SinglePLayerDTO>.Failure(new Error("UnknownError", "An error occurred while adding the player to the tournament."));
             }
         }
         
-        public async Task<bool> RemovePlayerFromTournamentAsync(int tournamentId, int playerId)
+        public async Task<Result<bool>> RemovePlayerFromTournamentAsync(int tournamentId, int playerId)
         {
             var tournament = await _db.Tournaments.Include(t => t.Players).FirstOrDefaultAsync(t => t.Id == tournamentId);
-            if (tournament == null) return false;
+            if (tournament == null) return Result<bool>.Failure(new Error("TournamentNotFound", "Tournament not found."));
 
             var player = tournament.Players.FirstOrDefault(p => p.Id == playerId);
-            if (player == null) return false;
+            if (player == null) return Result<bool>.Failure(new Error("PlayerNotFound", "Player not found in tournament."));
 
             tournament.Players.Remove(player);
             tournament.Count = tournament.Players.Count;
             // Note: This doesn't automatically remove them from categories or delete scorecards, which might be desired.
             // This logic should be expanded based on business rules.
             await _db.SaveChangesAsync();
-            return true;
+            return Result<bool>.Success(true);
         }
 
         // Private helper methods to encapsulate logic
@@ -224,36 +225,35 @@ namespace Api.Services
             tournament.Scorecards.Add(playerScorecard);
         }
 
-        public async Task<(SingleCategoryDTO?, string?)> AddCategoryToTournamentAsync(int tournamentId, int categoryId)
+        public async Task<Result<SingleCategoryDTO>> AddCategoryToTournamentAsync(int tournamentId, int categoryId)
         {
             var tournament = await _db.Tournaments.Include(x => x.Categories).FirstOrDefaultAsync(x => x.Id == tournamentId);
-            if (tournament == null) return (null, "Tournament not found.");
+            if (tournament == null) return Result<SingleCategoryDTO>.Failure(new Error("TournamentNotFound", "Tournament not found."));
 
             var category = await _db.Categories.FindAsync(categoryId);
-            if (category == null) return (null, "Category not found.");
+            if (category == null) return Result<SingleCategoryDTO>.Failure(new Error("CategoryNotFound", "Category not found."));
 
-            if (!tournament.Categories.Any(c => c.Id == categoryId))
+            if (tournament.Categories.Any(c => c.Id == categoryId))
             {
-                tournament.Categories.Add(category);
-                await _db.SaveChangesAsync();
-                return (new SingleCategoryDTO(category), null);
+                return Result<SingleCategoryDTO>.Failure(new Error("CategoryAlreadyInTournament", "Category already added to tournament."));
             }
-            return (null, "Category already added to tournament.");
+
+            tournament.Categories.Add(category);
+            await _db.SaveChangesAsync();
+            return Result<SingleCategoryDTO>.Success(new SingleCategoryDTO(category));
         }
 
-        public async Task<bool> RemoveCategoryFromTournamentAsync(int tournamentId, int categoryId)
+        public async Task<Result<bool>> RemoveCategoryFromTournamentAsync(int tournamentId, int categoryId)
         {
             var tournament = await _db.Tournaments.Include(x => x.Categories).FirstOrDefaultAsync(x => x.Id == tournamentId);
-            if (tournament == null) return false;
+            if (tournament == null) return Result<bool>.Failure(new Error("TournamentNotFound", "Tournament not found."));
 
             var categoryOfTournament = tournament.Categories.FirstOrDefault(c => c.Id == categoryId);
-            if (categoryOfTournament != null)
-            {
-                tournament.Categories.Remove(categoryOfTournament);
-                await _db.SaveChangesAsync();
-                return true;
-            }
-            return false;
+            if (categoryOfTournament == null) return Result<bool>.Failure(new Error("CategoryNotFound", "Category not found in tournament."));
+
+            tournament.Categories.Remove(categoryOfTournament);
+            await _db.SaveChangesAsync();
+            return Result<bool>.Success(true);
         }
 
         public async Task<List<ScorecardListGetDTO>> GetTournamentScorecardsAsync(int tournamentId)

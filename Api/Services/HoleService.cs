@@ -2,6 +2,7 @@ using Api.Data;
 using Api.Models;
 using Api.Models.DTOs.HoleDTOs;
 using Microsoft.EntityFrameworkCore;
+using Api.Models.Results;
 
 namespace Api.Services
 {
@@ -33,27 +34,27 @@ namespace Api.Services
             return new SingleHoleDTO(hole);
         }
 
-        public async Task<bool> UpdateHoleAsync(int id, HolePostDTO holeDto)
+        public async Task<Result<bool>> UpdateHoleAsync(int id, HolePostDTO holeDto)
         {
             var hole = await _db.Holes.FindAsync(id);
-            if (hole == null) return false;
+            if (hole == null) return Result<bool>.Failure(new Error("HoleNotFound", "Hole not found."));
 
             hole.Par = holeDto.Par;
             hole.Number = holeDto.Number;
             hole.StrokeIndex = holeDto.StrokeIndex;
 
             await _db.SaveChangesAsync();
-            return true;
+            return Result<bool>.Success(true);
         }
 
-        public async Task<bool> DeleteHoleAsync(int id)
+        public async Task<Result<bool>> DeleteHoleAsync(int id)
         {
             var hole = await _db.Holes.FindAsync(id);
-            if (hole == null) return false;
+            if (hole == null) return Result<bool>.Failure(new Error("HoleNotFound", "Hole not found."));
 
             _db.Holes.Remove(hole);
             await _db.SaveChangesAsync();
-            return true;
+            return Result<bool>.Success(true);
         }
     }
 }

@@ -3,6 +3,7 @@ using Api.Models;
 using Api.Models.DTOs.PlayerDTOs;
 using Api.Models.DTOs.TournamentDTOs; // Added
 using Microsoft.EntityFrameworkCore;
+using Api.Models.Results;
 
 namespace Api.Services
 {
@@ -26,27 +27,27 @@ namespace Api.Services
             return player == null ? null : new SinglePLayerDTO(player);
         }
 
-        public async Task<(SinglePLayerDTO?, string?)> CreatePlayerAsync(PLayerPostDTO playerDto)
+        public async Task<Result<SinglePLayerDTO>> CreatePlayerAsync(PLayerPostDTO playerDto)
         {
             var existingPlayer = await _db.Players.FirstOrDefaultAsync(x => x.MatriculaAUG == playerDto.MatriculaAUG);
             if (existingPlayer != null)
             {
-                return (null, "Ya existe un jugador con la misma MatriculaAUG");
+                return Result<SinglePLayerDTO>.Failure(new Error("PlayerAlreadyExists", "Ya existe un jugador con la misma MatriculaAUG"));
             }
 
             var player = new Player(playerDto);
             _db.Players.Add(player);
             await _db.SaveChangesAsync();
 
-            return (new SinglePLayerDTO(player), null);
+            return Result<SinglePLayerDTO>.Success(new SinglePLayerDTO(player));
         }
 
-        public async Task<bool> UpdatePlayerAsync(int id, PLayerPostDTO playerDto)
+        public async Task<Result<bool>> UpdatePlayerAsync(int id, PLayerPostDTO playerDto)
         {
             var player = await _db.Players.FindAsync(id);
             if (player == null)
             {
-                return false;
+                return Result<bool>.Failure(new Error("PlayerNotFound", "Player not found."));
             }
 
             player.MatriculaAUG = playerDto.MatriculaAUG;
@@ -57,20 +58,20 @@ namespace Api.Services
             player.IsPreferredCategoryLadies = playerDto.IsPreferredCategoryLadies;
 
             await _db.SaveChangesAsync();
-            return true;
+            return Result<bool>.Success(true);
         }
 
-        public async Task<bool> DeletePlayerAsync(int id)
+        public async Task<Result<bool>> DeletePlayerAsync(int id)
         {
             var player = await _db.Players.FindAsync(id);
             if (player == null)
             {
-                return false;
+                return Result<bool>.Failure(new Error("PlayerNotFound", "Player not found."));
             }
 
             _db.Players.Remove(player);
             await _db.SaveChangesAsync();
-            return true;
+            return Result<bool>.Success(true);
         }
 
         public async Task<List<TournamentListGetDTO>> GetPlayerTournamentsAsync(int playerId)

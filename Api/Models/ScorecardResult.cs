@@ -43,40 +43,7 @@ public class ScorecardResult
         return $"Id: {Id}, Strokes: {Strokes}, Round Number: {RoundNumber}";
     }
 
-    public static async Task<IResult> GetScorecardResult(int scorecardId, int holeId, BgContext db)
-    {
-        var scorecardresult = await db.ScorecardResults.Include(x => x.Scorecard)
-        .ThenInclude(x => x.ScorecardResults).Include(x => x.Hole)
-        .FirstOrDefaultAsync(x => x.ScorecardId == scorecardId && x.HoleId == holeId);
+    
 
-        if (scorecardresult == null)
-        {
-            return Results.NotFound();
-        }
-
-        return Results.Ok(new SingleScorecardResultDTO(scorecardresult));
-    }
-
-    public static async Task<IResult> UpdateScorecardResult(int scorecardId, int holeId, BgContext db, ScorecardResultPostDTO InputScorecardResult)
-    {
-        var scorecardresult = await db.ScorecardResults.Include(x => x.Scorecard)
-        .ThenInclude(x => x.ScorecardResults).Include(x => x.Hole)
-        .FirstOrDefaultAsync(x => x.ScorecardId == scorecardId && x.HoleId == holeId);
-
-        if (scorecardresult == null)
-        {
-            return Results.NotFound();
-        }
-
-        scorecardresult.Strokes = InputScorecardResult.Strokes;
-        await db.SaveChangesAsync();
-
-        if (scorecardresult.Scorecard != null && scorecardresult.Scorecard.ScorecardResults != null)
-        {
-            scorecardresult.Scorecard.TotalStrokes = scorecardresult.Scorecard.ScorecardResults.Sum(result => result.Strokes);
-        }
-
-        await db.SaveChangesAsync();
-        return Results.NoContent();
-    }
+    
 }

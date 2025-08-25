@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Mvc; // Added for [FromServices]
 using FluentValidation.AspNetCore;
 using FluentValidation;
 using Api.Validation;
+using Api.Models.Results;
 
 internal class Program
 {
@@ -116,19 +117,42 @@ internal class Program
         });
 
         app.MapPost("/api/Players", [Authorize] async ([FromServices] PlayerService service, PLayerPostDTO playerDto) => {
-            var (player, error) = await service.CreatePlayerAsync(playerDto);
-            if (error != null) return Results.BadRequest(error);
-            return Results.Created($"/Players/{player.Id}", player);
+            var result = await service.CreatePlayerAsync(playerDto);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "PlayerAlreadyExists" => Results.Conflict(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Created($"/Players/{result.Value.Id}", result.Value);
         });
 
         app.MapPut("/api/Players/{id}", [Authorize] async ([FromServices] PlayerService service, int id, PLayerPostDTO playerDto) => {
-            var success = await service.UpdatePlayerAsync(id, playerDto);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.UpdatePlayerAsync(id, playerDto);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "PlayerNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         app.MapDelete("/api/Players/{id}", [Authorize] async ([FromServices] PlayerService service, int id) => {
-            var success = await service.DeletePlayerAsync(id);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.DeletePlayerAsync(id);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "PlayerNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
         app.MapGet("/api/Players/{id}/Tournaments", async ([FromServices] PlayerService service, int id) => Results.Ok(await service.GetPlayerTournamentsAsync(id)));
 
@@ -146,38 +170,90 @@ internal class Program
         });
 
         app.MapPut("/api/Tournaments/{id}", [Authorize] async ([FromServices] TournamentService service, int id, TournamentPostDTO tournamentDto) => {
-            var success = await service.UpdateTournamentAsync(id, tournamentDto);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.UpdateTournamentAsync(id, tournamentDto);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         app.MapDelete("/api/Tournaments/{id}", [Authorize] async ([FromServices] TournamentService service, int id) => {
-            var success = await service.DeleteTournamentAsync(id);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.DeleteTournamentAsync(id);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         app.MapGet("/api/Tournaments/{id}/Players", async ([FromServices] TournamentService service, int id) => Results.Ok(await service.GetTournamentPlayersAsync(id)));
 
         app.MapPost("/api/Tournaments/{tournamentId}/Players/{playerId}", [Authorize] async ([FromServices] TournamentService service, int tournamentId, int playerId) => {
-            var (player, error) = await service.AddPlayerToTournamentAsync(tournamentId, playerId);
-            if (error != null) return Results.BadRequest(error);
-            return Results.Ok(player);
+            var result = await service.AddPlayerToTournamentAsync(tournamentId, playerId);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
+                    "PlayerNotFound" => Results.NotFound(result.Error.Description),
+                    "PlayerAlreadyInTournament" => Results.Conflict(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok(result.Value);
         });
 
         app.MapDelete("/api/Tournaments/{tournamentId}/Players/{playerId}", [Authorize] async ([FromServices] TournamentService service, int tournamentId, int playerId) => {
-            var success = await service.RemovePlayerFromTournamentAsync(tournamentId, playerId);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.RemovePlayerFromTournamentAsync(tournamentId, playerId);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
+                    "PlayerNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         app.MapGet("/api/Tournaments/{id}/Categories", async ([FromServices] TournamentService service, int id) => Results.Ok(await service.GetTournamentCategoriesAsync(id)));
         
         app.MapPost("/api/Tournaments/{tournamentId}/Categories/{categoryId}", [Authorize] async ([FromServices] TournamentService service, int tournamentId, int categoryId) => {
-            var (category, error) = await service.AddCategoryToTournamentAsync(tournamentId, categoryId);
-            if (error != null) return Results.BadRequest(error);
-            return Results.Ok(category);
+            var result = await service.AddCategoryToTournamentAsync(tournamentId, categoryId);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
+                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
+                    "CategoryAlreadyInTournament" => Results.Conflict(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok(result.Value);
         });
         app.MapDelete("/api/Tournaments/{tournamentId}/Categories/{categoryId}", [Authorize] async ([FromServices] TournamentService service, int tournamentId, int categoryId) => {
-            var success = await service.RemoveCategoryFromTournamentAsync(tournamentId, categoryId);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.RemoveCategoryFromTournamentAsync(tournamentId, categoryId);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
+                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
         app.MapGet("/api/Tournaments/{id}/Scorecards", async ([FromServices] TournamentService service, int id) => Results.Ok(await service.GetTournamentScorecardsAsync(id)));
 
@@ -203,36 +279,88 @@ internal class Program
         });
 
         app.MapPut("/api/Categories/{id}", [Authorize] async ([FromServices] CategoryService service, int id, CategoryPostDTO categoryDto) => {
-            var success = await service.UpdateCategoryAsync(id, categoryDto);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.UpdateCategoryAsync(id, categoryDto);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         app.MapDelete("/api/Categories/{id}", [Authorize] async ([FromServices] CategoryService service, int id) => {
-            var success = await service.DeleteCategoryAsync(id);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.DeleteCategoryAsync(id);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         app.MapGet("/api/Categories/{id}/Players", async ([FromServices] CategoryService service, int id) => Results.Ok(await service.GetCategoryPlayersAsync(id)));
 
         app.MapPost("/api/Categories/{id}/Players/{playerId}", [Authorize] async ([FromServices] CategoryService service, int id, int playerId) => {
-            var (player, error) = await service.AddPlayerToCategoryAsync(id, playerId);
-            if (error != null) return Results.BadRequest(error);
-            return Results.Ok(player);
+            var result = await service.AddPlayerToCategoryAsync(id, playerId);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
+                    "PlayerNotFound" => Results.NotFound(result.Error.Description),
+                    "PlayerAlreadyInCategory" => Results.Conflict(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok(result.Value);
         });
 
         app.MapDelete("/api/Categories/{id}/Players/{playerId}", [Authorize] async ([FromServices] CategoryService service, int id, int playerId) => {
-            var success = await service.RemovePlayerFromCategoryAsync(id, playerId);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.RemovePlayerFromCategoryAsync(id, playerId);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
+                    "PlayerNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         app.MapPost("/api/Categories/{id}/SetOpenCourse/{courseId}", [Authorize] async ([FromServices] CategoryService service, int id, int courseId) => {
-            var success = await service.SetOpenCourseAsync(id, courseId);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.SetOpenCourseAsync(id, courseId);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
+                    "CourseNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         app.MapPost("/api/Categories/{id}/SetLadiesCourse/{courseId}", [Authorize] async ([FromServices] CategoryService service, int id, int courseId) => {
-            var success = await service.SetLadiesCourseAsync(id, courseId);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.SetLadiesCourseAsync(id, courseId);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
+                    "CourseNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         // Seccion Courses
@@ -249,25 +377,58 @@ internal class Program
         });
 
         app.MapPut("/api/Courses/{id}", [Authorize] async ([FromServices] CourseService service, int id, CoursePostDTO courseDto) => {
-            var success = await service.UpdateCourseAsync(id, courseDto);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.UpdateCourseAsync(id, courseDto);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "CourseNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         app.MapDelete("/api/Courses/{id}", [Authorize] async ([FromServices] CourseService service, int id) => {
-            var success = await service.DeleteCourseAsync(id);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.DeleteCourseAsync(id);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "CourseNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         app.MapGet("/api/Courses/{id}/Holes", async ([FromServices] CourseService service, int id) => Results.Ok(await service.GetCourseHolesAsync(id)));
 
         app.MapPost("/api/Courses/{id}/Holes", [Authorize] async ([FromServices] CourseService service, int id, HolePostDTO holeDto) => {
-            var success = await service.AddHoleToCourseAsync(id, holeDto);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.AddHoleToCourseAsync(id, holeDto);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "CourseNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         app.MapDelete("/api/Courses/{id}/Holes/{holeId}", [Authorize] async ([FromServices] CourseService service, int id, int holeId) => {
-            var success = await service.RemoveHoleFromCourseAsync(id, holeId);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.RemoveHoleFromCourseAsync(id, holeId);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "CourseNotFound" => Results.NotFound(result.Error.Description),
+                    "HoleNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         
@@ -286,13 +447,29 @@ internal class Program
         });
 
         app.MapPut("/api/Holes/{id}", [Authorize] async ([FromServices] HoleService service, int id, HolePostDTO holeDto) => {
-            var success = await service.UpdateHoleAsync(id, holeDto);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.UpdateHoleAsync(id, holeDto);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "HoleNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         app.MapDelete("/api/Holes/{id}", [Authorize] async ([FromServices] HoleService service, int id) => {
-            var success = await service.DeleteHoleAsync(id);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.DeleteHoleAsync(id);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "HoleNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         // Seccion Scorecard
@@ -309,13 +486,29 @@ internal class Program
         });
 
         app.MapPut("/api/Scorecards/{id}", [Authorize] async ([FromServices] ScorecardService service, int id, Scorecard scorecard) => {
-            var success = await service.UpdateScorecardAsync(id, scorecard);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.UpdateScorecardAsync(id, scorecard);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "ScorecardNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         app.MapDelete("/api/Scorecards/{id}", [Authorize] async ([FromServices] ScorecardService service, int id) => {
-            var success = await service.DeleteScorecardAsync(id);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.DeleteScorecardAsync(id);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "ScorecardNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         // Seccion ScorecardResult
@@ -324,12 +517,28 @@ internal class Program
             return scorecardResult == null ? Results.NotFound() : Results.Ok(scorecardResult);
         });
         app.MapPut("/api/ScorecardResults/{scorecardId}/{holeId}", [Authorize] async ([FromServices] ScorecardResultService service, int scorecardId, int holeId, ScorecardResultPostDTO scorecardResultDto) => {
-            var success = await service.UpdateScorecardResultAsync(scorecardId, holeId, scorecardResultDto);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.UpdateScorecardResultAsync(scorecardId, holeId, scorecardResultDto);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "ScorecardResultNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
         app.MapDelete("/api/ScorecardResults/{id}", [Authorize] async ([FromServices] ScorecardResultService service, int id) => {
-            var success = await service.DeleteScorecardResultAsync(id);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.DeleteScorecardResultAsync(id);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "ScorecardResultNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
 
         // Seccion Results
@@ -347,12 +556,28 @@ internal class Program
             return Results.Created($"/RoundsInfo/{createdRoundInfo.Id}", createdRoundInfo);
         });
         app.MapPut("/api/RoundsInfo/{id}", [Authorize] async ([FromServices] RoundInfoService service, int id, RoundInfo roundInfo) => {
-            var success = await service.UpdateRoundInfoAsync(id, roundInfo);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.UpdateRoundInfoAsync(id, roundInfo);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "RoundInfoNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
         app.MapDelete("/api/RoundsInfo/{id}", [Authorize] async ([FromServices] RoundInfoService service, int id) => {
-            var success = await service.DeleteRoundInfoAsync(id);
-            return success ? Results.NoContent() : Results.NotFound();
+            var result = await service.DeleteRoundInfoAsync(id);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "RoundInfoNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
         });
         app.Run();
     }

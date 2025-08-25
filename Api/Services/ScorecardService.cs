@@ -3,6 +3,7 @@ using Api.Models;
 using Api.Models.DTOs.ScorecardDTOs;
 using Api.Services; // Added
 using Microsoft.EntityFrameworkCore;
+using Api.Models.Results;
 
 namespace Api.Services
 {
@@ -42,10 +43,10 @@ namespace Api.Services
             return scorecard;
         }
 
-        public async Task<bool> UpdateScorecardAsync(int id, Scorecard InputScorecard)
+        public async Task<Result<bool>> UpdateScorecardAsync(int id, Scorecard InputScorecard)
         {
             var scorecard = await _db.Scorecards.FindAsync(id);
-            if (scorecard == null) return false;
+            if (scorecard == null) return Result<bool>.Failure(new Error("ScorecardNotFound", "Scorecard not found."));
 
             scorecard.PlayingHandicap = InputScorecard.PlayingHandicap;
 
@@ -65,17 +66,17 @@ namespace Api.Services
             scorecard.TotalStrokes = scorecard.ScorecardResults.Sum(sr => sr.Strokes);
 
             await _db.SaveChangesAsync();
-            return true;
+            return Result<bool>.Success(true);
         }
 
-        public async Task<bool> DeleteScorecardAsync(int id)
+        public async Task<Result<bool>> DeleteScorecardAsync(int id)
         {
             var scorecard = await _db.Scorecards.FindAsync(id);
-            if (scorecard == null) return false;
+            if (scorecard == null) return Result<bool>.Failure(new Error("ScorecardNotFound", "Scorecard not found."));
 
             _db.Scorecards.Remove(scorecard);
             await _db.SaveChangesAsync();
-            return true;
+            return Result<bool>.Success(true);
         }
     }
 }

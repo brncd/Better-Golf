@@ -26,6 +26,9 @@
 
   <ItemGroup>
     <Folder Include="Migrations" />
+    <Compile Remove="Api.Tests\**" />
+    <EmbeddedResource Remove="Api.Tests\**" />
+    <None Remove="Api.Tests\**" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,7 @@
 using Api.Data;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
+using Api.Models.Results;
 
 namespace Api.Services
 {
@@ -30,28 +31,28 @@ namespace Api.Services
             return roundInfo;
         }
 
-        public async Task<bool> UpdateRoundInfoAsync(int id, RoundInfo inputRoundInfo)
+        public async Task<Result<bool>> UpdateRoundInfoAsync(int id, RoundInfo inputRoundInfo)
         {
             var roundInfo = await _db.RoundInfos.FindAsync(id);
 
-            if (roundInfo == null) return false;
+            if (roundInfo == null) return Result<bool>.Failure(new Error("RoundInfoNotFound", "Round info not found."));
 
             roundInfo.Interval = inputRoundInfo.Interval;
             roundInfo.FirstRoundTime = inputRoundInfo.FirstRoundTime;
             roundInfo.IsShotgun = inputRoundInfo.IsShotgun;
 
             await _db.SaveChangesAsync();
-            return true;
+            return Result<bool>.Success(true);
         }
 
-        public async Task<bool> DeleteRoundInfoAsync(int id)
+        public async Task<Result<bool>> DeleteRoundInfoAsync(int id)
         {
             var roundInfo = await _db.RoundInfos.FindAsync(id);
-            if (roundInfo == null) return false;
+            if (roundInfo == null) return Result<bool>.Failure(new Error("RoundInfoNotFound", "Round info not found."));
 
             _db.RoundInfos.Remove(roundInfo);
             await _db.SaveChangesAsync();
-            return true;
+            return Result<bool>.Success(true);
         }
     }
 }
