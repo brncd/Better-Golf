@@ -2,6 +2,7 @@ using Api.Data;
 using Api.Models;
 using Api.Models.DTOs.ResultDTOs;
 using Api.Models.Engine;
+using Api.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Services
@@ -35,11 +36,11 @@ namespace Api.Services
             foreach (var scorecard in tournament.Scorecards)
             {
                 double score = 0;
-                if (tournament.TournamentType == "MedalPlay")
+                if (tournament.TournamentType == TournamentType.MedalPlay)
                 {
                     score = ResultsEngine.MedalScratchScore(scorecard.PlayingHandicap, scorecard.ScorecardResults);
                 }
-                else if (tournament.TournamentType == "Stableford")
+                else if (tournament.TournamentType == TournamentType.Stableford)
                 {
                     score = ResultsEngine.StablefordScore(scorecard.ScorecardResults);
                 }
@@ -56,7 +57,7 @@ namespace Api.Services
             }
 
             // Order by score (ascending for MedalPlay, descending for Stableford)
-            var orderedPlayerScores = tournament.TournamentType == "Stableford"
+            var orderedPlayerScores = tournament.TournamentType == TournamentType.Stableford
                 ? playerScores.OrderByDescending(ps => ps.Value)
                 : playerScores.OrderBy(ps => ps.Value);
 

@@ -15,6 +15,9 @@ using Microsoft.AspNetCore.Authorization; // Added
 using Microsoft.AspNetCore.Identity; // Added
 using Api.Models.DTOs.ScorecardResultDTOs; // Added
 using Microsoft.AspNetCore.Mvc; // Added for [FromServices]
+using FluentValidation.AspNetCore;
+using FluentValidation;
+using Api.Validation;
 
 internal class Program
 {
@@ -27,6 +30,10 @@ internal class Program
         
         builder.Services.AddIdentityApiEndpoints<IdentityUser>() // Added
             .AddEntityFrameworkStores<BgContext>(); // Added
+
+        // Add FluentValidation
+        builder.Services.AddFluentValidationAutoValidation();
+        builder.Services.AddValidatorsFromAssemblyContaining<TournamentPostDTOValidator>();
 
         // Add Authentication services
         builder.Services.AddAuthentication(options =>

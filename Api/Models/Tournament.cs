@@ -1,4 +1,5 @@
-﻿using Api.Models.DTOs.TournamentDTOs;
+using Api.Models.DTOs.TournamentDTOs;
+using Api.Models.Enums;
 
 namespace Api.Models;
 
@@ -7,7 +8,7 @@ public class Tournament
     public int Id { get; set; }
     public string Name { get; set; } = null!;
     public string Description { get; set; } = null!;
-    public string TournamentType { get; set; } = null!;
+    public TournamentType TournamentType { get; set; }
     public int Count { get; set; }
     public DateOnly StartDate { get; set; }
     public DateOnly EndDate { get; set; }
@@ -46,5 +47,3 @@ public class Tournament
         return $"ID Tournament: {Id}, Name: {Name}. Type: {TournamentType}";
     }
 }
-
-  

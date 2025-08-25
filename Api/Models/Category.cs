@@ -1,4 +1,5 @@
 using Api.Models.DTOs.CategoryDTOs;
+using Api.Models.Enums;
 
 namespace Api.Models;
 
@@ -6,7 +7,7 @@ public class Category
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;
-    public string Sex { get; set; } = "mixed";
+    public Gender Sex { get; set; }
     public Course? OpenCourse { get; set; }
     public Course? LadiesCourse { get; set; }
     public int MinAge { get; set; }

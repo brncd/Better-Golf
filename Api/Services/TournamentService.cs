@@ -7,6 +7,7 @@ using Api.Models.DTOs.ScorecardDTOs; // Added
 using Api.Models.DTOs.ResultDTOs; // Added
 using Api.Models.Engine;
 using Microsoft.EntityFrameworkCore;
+using Api.Models.Enums;
 
 namespace Api.Services
 {
@@ -46,7 +47,7 @@ namespace Api.Services
             var defaultCategory = new Category
             {
                 Name = "Mixed General Category Hcap cutoff @56",
-                Sex = "mixed",
+                Sex = Gender.Mixed,
                 OpenCourse = defaultCourse,
                 LadiesCourse = null,
                 Tournament = tournament,
@@ -178,12 +179,12 @@ namespace Api.Services
         // Private helper methods to encapsulate logic
         private void AssignPlayerToCategories(Player player, Tournament tournament)
         {
-            string preferredSex = player.IsPreferredCategoryLadies ? "ladies" : "open";
+            Gender preferredSex = player.IsPreferredCategoryLadies ? Gender.Ladies : Gender.Open;
             int age = player.CalculateAge();
 
             foreach (var category in tournament.Categories)
             {
-                bool sexMatch = category.Sex == "mixed" || category.Sex == preferredSex;
+                bool sexMatch = category.Sex == Gender.Mixed || category.Sex == preferredSex;
                 bool ageMatch = category.MinAge <= age && category.MaxAge >= age;
                 bool hcapMatch = category.MinHcap <= player.HandicapIndex && category.MaxHcap >= player.HandicapIndex;
 
