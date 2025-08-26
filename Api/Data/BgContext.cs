@@ -66,6 +66,31 @@ namespace Api.Data
                 .WithMany() // No navigation property in RoundInfo for Rounds
                 .HasForeignKey(r => r.RoundInfoId)
                 .IsRequired(false); // RoundInfo is optional for a Round
+
+            // Configure cascade deletes
+            modelBuilder.Entity<Tournament>()
+                .HasMany(t => t.Scorecards)
+                .WithOne(sc => sc.Tournament)
+                .HasForeignKey(sc => sc.TournamentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Tournament>()
+                .HasMany(t => t.Categories)
+                .WithOne(c => c.Tournament)
+                .HasForeignKey(c => c.TournamentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Tournament>()
+                .HasMany(t => t.Rounds)
+                .WithOne(r => r.Tournament)
+                .HasForeignKey(r => r.TournamentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Scorecard>()
+                .HasMany(sc => sc.ScorecardResults)
+                .WithOne(sr => sr.Scorecard)
+                .HasForeignKey(sr => sr.ScorecardId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
