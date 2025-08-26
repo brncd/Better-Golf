@@ -69,6 +69,7 @@ internal class Program
         builder.Services.AddScoped<ResultService>();
         builder.Services.AddScoped<RoundInfoService>();
         builder.Services.AddScoped<RoleService>(); // Add RoleService
+        builder.Services.AddScoped<ScorecardService>(); // No change needed here, dependencies are resolved automatically
 
         builder.Services.AddSingleton<IAuthorizationHandler, ScorecardOwnerAuthorizationHandler>(); // Register the custom authorization handler
 
@@ -581,6 +582,21 @@ internal class Program
                 return result.Error.Code switch
                 {
                     "ScorecardNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
+        });
+
+        // New endpoint for locking scorecards
+        app.MapPut("/api/Scorecards/{id}/lock", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] ScorecardService service, int id) => {
+            var result = await service.LockScorecardAsync(id);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "ScorecardNotFound" => Results.NotFound(result.Error.Description),
+                    "ScorecardAlreadyLocked" => Results.Conflict(result.Error.Description),
                     _ => Results.BadRequest(result.Error.Description)
                 };
             }

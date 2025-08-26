@@ -1,4 +1,4 @@
-﻿namespace Api.Models;
+namespace Api.Models;
 
 public class Scorecard
 {
@@ -10,6 +10,7 @@ public class Scorecard
     public Tournament? Tournament { get; set; }
     public int TournamentId { get; set; }
     public int TotalStrokes { get; set; }
+    public bool IsLocked { get; set; } // Added IsLocked property
 
 
     public Scorecard()
@@ -19,7 +20,7 @@ public class Scorecard
     {
         Player = player;
     }
-    public override string ToString() 
+    public override string ToString()
     {
         return $"Id: {Id}, PlayingHandicap: {PlayingHandicap}";
     }

@@ -32,6 +32,12 @@ namespace Api.Services
 
             if (scorecardresult == null) return Result<bool>.Failure(new Error("ScorecardResultNotFound", "Scorecard result not found."));
 
+            // Check if the associated scorecard is locked
+            if (scorecardresult.Scorecard != null && scorecardresult.Scorecard.IsLocked)
+            {
+                return Result<bool>.Failure(new Error("ScorecardLocked", "Scorecard is locked and cannot be updated."));
+            }
+
             scorecardresult.Strokes = inputScorecardResult.Strokes;
             await _db.SaveChangesAsync();
 

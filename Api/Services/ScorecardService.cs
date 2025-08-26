@@ -46,7 +46,8 @@ namespace Api.Services
                 PlayingHandicap = scorecardDto.PlayingHandicap,
                 PlayerId = scorecardDto.PlayerId,
                 TournamentId = scorecardDto.TournamentId,
-                ScorecardResults = new List<ScorecardResult>()
+                ScorecardResults = new List<ScorecardResult>(),
+                IsLocked = false // Set IsLocked to false by default
             };
 
             foreach (var holeResultDto in scorecardDto.ScorecardResults)
@@ -68,6 +69,11 @@ namespace Api.Services
         {
             var scorecard = await _db.Scorecards.Include(s => s.ScorecardResults).FirstOrDefaultAsync(s => s.Id == id);
             if (scorecard == null) return Result<bool>.Failure(new Error("ScorecardNotFound", "Scorecard not found."));
+
+            if (scorecard.IsLocked)
+            {
+                return Result<bool>.Failure(new Error("ScorecardLocked", "Scorecard is locked and cannot be updated."));
+            }
 
             scorecard.PlayingHandicap = inputScorecardDto.PlayingHandicap;
 
@@ -104,6 +110,21 @@ namespace Api.Services
             // Recalculate TotalStrokes
             scorecard.TotalStrokes = scorecard.ScorecardResults.Sum(sr => sr.Strokes);
 
+            await _db.SaveChangesAsync();
+            return Result<bool>.Success(true);
+        }
+
+        public async Task<Result<bool>> LockScorecardAsync(int id)
+        {
+            var scorecard = await _db.Scorecards.FindAsync(id);
+            if (scorecard == null) return Result<bool>.Failure(new Error("ScorecardNotFound", "Scorecard not found."));
+
+            if (scorecard.IsLocked)
+            {
+                return Result<bool>.Failure(new Error("ScorecardAlreadyLocked", "Scorecard is already locked."));
+            }
+
+            scorecard.IsLocked = true;
             await _db.SaveChangesAsync();
             return Result<bool>.Success(true);
         }
