@@ -5,16 +5,19 @@ using Api.Models.DTOs.PlayerDTOs;
 using Microsoft.EntityFrameworkCore;
 using Api.Models.Results;
 using Api.Models.Common;
+using Microsoft.Extensions.Logging;
 
 namespace Api.Services
 {
     public class CategoryService
     {
         private readonly BgContext _db;
+        private readonly ILogger<CategoryService> _logger;
 
-        public CategoryService(BgContext db)
+        public CategoryService(BgContext db, ILogger<CategoryService> logger)
         {
             _db = db;
+            _logger = logger;
         }
 
         public async Task<PaginationResponse<CategoryListGetDTO>> GetAllCategoriesAsync(PaginationRequest pagination)
@@ -39,6 +42,7 @@ namespace Api.Services
             var category = new Category(categoryDto);
             _db.Categories.Add(category);
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Category {category.Id} created.");
             return new SingleCategoryDTO(category);
         }
 
@@ -55,6 +59,7 @@ namespace Api.Services
             category.NumberOfHoles = categoryDto.NumberOfHoles;
 
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Category {id} updated.");
             return Result<bool>.Success(true);
         }
 
@@ -65,6 +70,7 @@ namespace Api.Services
 
             _db.Categories.Remove(category);
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Category {id} deleted.");
             return Result<bool>.Success(true);
         }
 
@@ -99,6 +105,7 @@ namespace Api.Services
                 category.Players.Add(player);
                 category.Count = category.Players.Count;
                 await _db.SaveChangesAsync();
+                _logger.LogInformation($"Player {playerId} added to category {categoryId}.");
                 return Result<SinglePLayerDTO>.Success(new SinglePLayerDTO(player));
             }
             
@@ -116,6 +123,7 @@ namespace Api.Services
             category.Players.Remove(player);
             category.Count = category.Players.Count;
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Player {playerId} removed from category {categoryId}.");
             return Result<bool>.Success(true);
         }
 

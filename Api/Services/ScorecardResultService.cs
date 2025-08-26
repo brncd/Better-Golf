@@ -3,16 +3,19 @@ using Api.Models;
 using Api.Models.DTOs.ScorecardResultDTOs;
 using Microsoft.EntityFrameworkCore;
 using Api.Models.Results;
+using Microsoft.Extensions.Logging;
 
 namespace Api.Services
 {
     public class ScorecardResultService
     {
         private readonly BgContext _db;
+        private readonly ILogger<ScorecardResultService> _logger;
 
-        public ScorecardResultService(BgContext db)
+        public ScorecardResultService(BgContext db, ILogger<ScorecardResultService> logger)
         {
             _db = db;
+            _logger = logger;
         }
 
         public async Task<SingleScorecardResultDTO?> GetScorecardResultAsync(int scorecardId, int holeId)
@@ -47,6 +50,7 @@ namespace Api.Services
             }
 
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"ScorecardResult for scorecard {scorecardId} and hole {holeId} updated.");
             return Result<bool>.Success(true);
         }
 
@@ -57,6 +61,7 @@ namespace Api.Services
 
             _db.ScorecardResults.Remove(scorecardresult);
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"ScorecardResult {id} deleted.");
             return Result<bool>.Success(true);
         }
     }

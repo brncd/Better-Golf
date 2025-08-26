@@ -5,6 +5,7 @@ using Api.Services; // Added
 using Microsoft.EntityFrameworkCore;
 using Api.Models.Results;
 using Api.Models.Common;
+using Microsoft.Extensions.Logging;
 
 namespace Api.Services
 {
@@ -12,11 +13,13 @@ namespace Api.Services
     {
         private readonly BgContext _db;
         private readonly ResultService _resultService; // Added
+        private readonly ILogger<ScorecardService> _logger;
 
-        public ScorecardService(BgContext db, ResultService resultService) // Added resultService
+        public ScorecardService(BgContext db, ResultService resultService, ILogger<ScorecardService> logger) // Added resultService
         {
             _db = db;
             _resultService = resultService; // Added
+            _logger = logger;
         }
 
         public async Task<Result<PaginationResponse<ScorecardListGetDTO>>> GetAllScorecardsAsync(int tournamentId, PaginationRequest pagination)
@@ -62,6 +65,7 @@ namespace Api.Services
 
             _db.Scorecards.Add(scorecard);
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Scorecard {scorecard.Id} created.");
             return new SingleScorecardDTO(scorecard);
         }
 
@@ -111,6 +115,7 @@ namespace Api.Services
             scorecard.TotalStrokes = scorecard.ScorecardResults.Sum(sr => sr.Strokes);
 
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Scorecard {id} updated.");
             return Result<bool>.Success(true);
         }
 
@@ -126,6 +131,7 @@ namespace Api.Services
 
             scorecard.IsLocked = true;
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Scorecard {id} locked.");
             return Result<bool>.Success(true);
         }
 
@@ -136,6 +142,7 @@ namespace Api.Services
 
             _db.Scorecards.Remove(scorecard);
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Scorecard {id} deleted.");
             return Result<bool>.Success(true);
         }
     }

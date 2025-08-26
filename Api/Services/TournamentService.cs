@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Api.Models.Enums;
 using Api.Models.Results;
 using Api.Models.Common;
+using Microsoft.Extensions.Logging;
 
 namespace Api.Services
 {
@@ -18,12 +19,14 @@ namespace Api.Services
         private readonly BgContext _db;
         private readonly CourseService _courseService;
         private readonly ResultService _resultService; // Added
+        private readonly ILogger<TournamentService> _logger;
 
-        public TournamentService(BgContext db, CourseService courseService, ResultService resultService) // Added resultService
+        public TournamentService(BgContext db, CourseService courseService, ResultService resultService, ILogger<TournamentService> logger) // Added resultService
         {
             _db = db;
             _courseService = courseService;
             _resultService = resultService; // Added
+            _logger = logger;
         }
 
         public async Task<PaginationResponse<TournamentListGetDTO>> GetAllTournamentsAsync(PaginationRequest pagination)
@@ -55,7 +58,7 @@ namespace Api.Services
             
             _db.Tournaments.Add(tournament);
             await _db.SaveChangesAsync();
-            
+            _logger.LogInformation($"Tournament {tournament.Id} created.");
             return new SingleTournamentDTO(tournament);
         }
 
@@ -72,6 +75,7 @@ namespace Api.Services
             tournament.RoundInfo = tournamentDto.RoundInfo;
 
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Tournament {id} updated.");
             return Result<bool>.Success(true);
         }
 
@@ -89,6 +93,7 @@ namespace Api.Services
 
             tournament.Status = newStatus;
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Tournament {id} status changed to {newStatus}.");
             return Result<bool>.Success(true);
         }
 
@@ -99,6 +104,7 @@ namespace Api.Services
 
             _db.Tournaments.Remove(tournament);
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Tournament {id} deleted.");
             return Result<bool>.Success(true);
         }
 
@@ -184,12 +190,13 @@ namespace Api.Services
 
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
-                
+                _logger.LogInformation($"Player {playerId} added to tournament {tournamentId}.");
                 return Result<SinglePLayerDTO>.Success(new SinglePLayerDTO(player));
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 await transaction.RollbackAsync();
+                _logger.LogError(ex, $"Error adding player {playerId} to tournament {tournamentId}.");
                 return Result<SinglePLayerDTO>.Failure(new Error("UnknownError", "An error occurred while adding the player to the tournament."));
             }
         }
@@ -207,6 +214,7 @@ namespace Api.Services
             // Note: This doesn't automatically remove them from categories or delete scorecards, which might be desired.
             // This logic should be expanded based on business rules.
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Player {playerId} removed from tournament {tournamentId}.");
             return Result<bool>.Success(true);
         }
 

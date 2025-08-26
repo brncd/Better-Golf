@@ -4,16 +4,19 @@ using Api.Models.DTOs.HoleDTOs;
 using Microsoft.EntityFrameworkCore;
 using Api.Models.Results;
 using Api.Models.Common;
+using Microsoft.Extensions.Logging;
 
 namespace Api.Services
 {
     public class HoleService
     {
         private readonly BgContext _db;
+        private readonly ILogger<HoleService> _logger;
 
-        public HoleService(BgContext db)
+        public HoleService(BgContext db, ILogger<HoleService> logger)
         {
             _db = db;
+            _logger = logger;
         }
 
         public async Task<PaginationResponse<HoleListGetDTO>> GetAllHolesAsync(PaginationRequest pagination)
@@ -38,6 +41,7 @@ namespace Api.Services
             var hole = new Hole(holeDto);
             _db.Holes.Add(hole);
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Hole {hole.Id} created.");
             return new SingleHoleDTO(hole);
         }
 
@@ -51,6 +55,7 @@ namespace Api.Services
             hole.StrokeIndex = holeDto.StrokeIndex;
 
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Hole {id} updated.");
             return Result<bool>.Success(true);
         }
 
@@ -61,6 +66,7 @@ namespace Api.Services
 
             _db.Holes.Remove(hole);
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Hole {id} deleted.");
             return Result<bool>.Success(true);
         }
     }

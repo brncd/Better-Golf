@@ -5,16 +5,19 @@ using Api.Models.DTOs.TournamentDTOs; // Added
 using Microsoft.EntityFrameworkCore;
 using Api.Models.Results;
 using Api.Models.Common;
+using Microsoft.Extensions.Logging;
 
 namespace Api.Services
 {
     public class PlayerService
     {
         private readonly BgContext _db;
+        private readonly ILogger<PlayerService> _logger;
 
-        public PlayerService(BgContext db)
+        public PlayerService(BgContext db, ILogger<PlayerService> logger)
         {
             _db = db;
+            _logger = logger;
         }
 
         public async Task<PaginationResponse<PlayerListGetDTO>> GetAllPlayersAsync(PaginationRequest pagination)
@@ -45,6 +48,7 @@ namespace Api.Services
             var player = new Player(playerDto);
             _db.Players.Add(player);
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Player {player.Id} created.");
 
             return Result<SinglePLayerDTO>.Success(new SinglePLayerDTO(player));
         }
@@ -65,6 +69,7 @@ namespace Api.Services
             player.IsPreferredCategoryLadies = playerDto.IsPreferredCategoryLadies;
 
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Player {id} updated.");
             return Result<bool>.Success(true);
         }
 
@@ -78,6 +83,7 @@ namespace Api.Services
 
             _db.Players.Remove(player);
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Player {id} deleted.");
             return Result<bool>.Success(true);
         }
 

@@ -5,16 +5,19 @@ using Api.Models.DTOs.HoleDTOs;
 using Microsoft.EntityFrameworkCore;
 using Api.Models.Results;
 using Api.Models.Common;
+using Microsoft.Extensions.Logging;
 
 namespace Api.Services
 {
     public class CourseService
     {
         private readonly BgContext _db;
+        private readonly ILogger<CourseService> _logger;
 
-        public CourseService(BgContext db)
+        public CourseService(BgContext db, ILogger<CourseService> logger)
         {
             _db = db;
+            _logger = logger;
         }
 
         public async Task<PaginationResponse<CoursesListGetDTO>> GetAllCoursesAsync(PaginationRequest pagination)
@@ -39,6 +42,7 @@ namespace Api.Services
             var course = new Course(courseDto);
             _db.Courses.Add(course);
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Course {course.Id} created.");
             return new SingleCourseDTO(course);
         }
 
@@ -53,6 +57,7 @@ namespace Api.Services
             course.CourseSlope = courseDto.CourseSlope;
 
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Course {id} updated.");
             return Result<bool>.Success(true);
         }
 
@@ -63,6 +68,7 @@ namespace Api.Services
 
             _db.Courses.Remove(course);
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Course {id} deleted.");
             return Result<bool>.Success(true);
         }
 
@@ -86,8 +92,10 @@ namespace Api.Services
             var course = await _db.Courses.Include(c => c.Holes).FirstOrDefaultAsync(c => c.Id == courseId);
             if (course == null) return Result<bool>.Failure(new Error("CourseNotFound", "Course not found."));
 
-            course.Holes.Add(new Hole(holeDto));
+            var hole = new Hole(holeDto);
+            course.Holes.Add(hole);
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Hole {hole.Id} added to course {courseId}.");
             return Result<bool>.Success(true);
         }
 
@@ -101,6 +109,7 @@ namespace Api.Services
 
             course.Holes.Remove(hole);
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Hole {holeId} removed from course {courseId}.");
             return Result<bool>.Success(true);
         }
 
