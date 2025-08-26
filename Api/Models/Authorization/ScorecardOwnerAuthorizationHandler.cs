@@ -16,7 +16,7 @@ namespace Api.Models.Authorization
 
         protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, IsOwnerRequirement requirement, int scorecardId)
         {
-            if (context.User == null || !context.User.Identity.IsAuthenticated)
+            if (context.User == null || context.User.Identity == null || !context.User.Identity.IsAuthenticated)
             {
                 context.Fail();
                 return;

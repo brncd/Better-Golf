@@ -7,6 +7,6 @@ namespace Api.Models.DTOs.ScorecardDTOs
         public int PlayingHandicap { get; set; }
         public int PlayerId { get; set; }
         public int TournamentId { get; set; }
-        public List<ScorecardResultPostDTO> ScorecardResults { get; set; }
+        public List<ScorecardResultPostDTO> ScorecardResults { get; set; } = new();
     }
 }

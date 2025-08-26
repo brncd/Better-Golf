@@ -141,6 +141,7 @@ internal class Program
             var result = await service.CreatePlayerAsync(playerDto);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "PlayerAlreadyExists" => Results.Conflict(result.Error.Description),
@@ -154,6 +155,7 @@ internal class Program
             var result = await service.UpdatePlayerAsync(id, playerDto);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "PlayerNotFound" => Results.NotFound(result.Error.Description),
@@ -167,6 +169,7 @@ internal class Program
             var result = await service.DeletePlayerAsync(id);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "PlayerNotFound" => Results.NotFound(result.Error.Description),
@@ -179,6 +182,7 @@ internal class Program
             var result = await service.GetPlayerTournamentsAsync(id, pagination);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "PlayerNotFound" => Results.NotFound(result.Error.Description),
@@ -205,6 +209,7 @@ internal class Program
             var result = await service.UpdateTournamentAsync(id, tournamentDto);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "TournamentNotFound" => Results.NotFound(result.Error.Description),
@@ -219,6 +224,7 @@ internal class Program
             var result = await service.SetTournamentStatusAsync(id, newStatus);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "TournamentNotFound" => Results.NotFound(result.Error.Description),
@@ -233,6 +239,7 @@ internal class Program
             var result = await service.DeleteTournamentAsync(id);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "TournamentNotFound" => Results.NotFound(result.Error.Description),
@@ -246,6 +253,7 @@ internal class Program
             var result = await service.GetTournamentPlayersAsync(id, pagination);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "TournamentNotFound" => Results.NotFound(result.Error.Description),
@@ -259,6 +267,7 @@ internal class Program
             var result = await service.AddPlayerToTournamentAsync(tournamentId, playerId);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "TournamentNotFound" => Results.NotFound(result.Error.Description),
@@ -275,6 +284,7 @@ internal class Program
             var result = await service.RemovePlayerFromTournamentAsync(tournamentId, playerId);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "TournamentNotFound" => Results.NotFound(result.Error.Description),
@@ -289,6 +299,7 @@ internal class Program
             var result = await service.GetTournamentCategoriesAsync(id, pagination);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "TournamentNotFound" => Results.NotFound(result.Error.Description),
@@ -302,6 +313,7 @@ internal class Program
             var result = await service.AddCategoryToTournamentAsync(tournamentId, categoryId);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "TournamentNotFound" => Results.NotFound(result.Error.Description),
@@ -316,6 +328,7 @@ internal class Program
             var result = await service.RemoveCategoryFromTournamentAsync(tournamentId, categoryId);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "TournamentNotFound" => Results.NotFound(result.Error.Description),
@@ -352,6 +365,7 @@ internal class Program
             var result = await service.UpdateCategoryAsync(id, categoryDto);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "CategoryNotFound" => Results.NotFound(result.Error.Description),
@@ -365,6 +379,7 @@ internal class Program
             var result = await service.DeleteCategoryAsync(id);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "CategoryNotFound" => Results.NotFound(result.Error.Description),
@@ -378,6 +393,7 @@ internal class Program
             var result = await service.GetCategoryPlayersAsync(id, pagination);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "CategoryNotFound" => Results.NotFound(result.Error.Description),
@@ -569,6 +585,7 @@ internal class Program
             var result = await service.GetAllScorecardsAsync(tournamentId, pagination);
             if (!result.IsSuccess)
             {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
                 return result.Error.Code switch
                 {
                     "TournamentNotFound" => Results.NotFound(result.Error.Description),

@@ -13,7 +13,7 @@ public class ScorecardResult
     public int RoundNumber { get; set; }
     public Hole Hole { get; set; } = null!;
     public int HoleId { get; set; }
-    public Scorecard Scorecard { get; set; }
+    public Scorecard Scorecard { get; set; } = null!;
     public int ScorecardId { get; set; }
 
     public ScorecardResult(int strokes, int roundNumber, Hole hole)
