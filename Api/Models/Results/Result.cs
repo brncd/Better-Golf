@@ -22,16 +22,4 @@ namespace Api.Models.Results
         public static Result<T> Success(T value) => new(value);
         public static Result<T> Failure(Error error) => new(error);
     }
-
-    public class Error
-    {
-        public string Code { get; }
-        public string Description { get; }
-
-        public Error(string code, string description)
-        {
-            Code = code;
-            Description = description;
-        }
-    }
 }

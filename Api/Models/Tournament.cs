@@ -12,10 +12,12 @@ public class Tournament
     public int Count { get; set; }
     public DateOnly StartDate { get; set; }
     public DateOnly EndDate { get; set; }
-    public RoundInfo? RoundInfo { get; set; } = new RoundInfo();
+    public RoundInfo RoundInfo { get; set; } = null!;
     public ICollection<Player> Players { get; set; } = new List<Player>();
     public ICollection<Category> Categories { get; set; } = new List<Category>();
     public ICollection<Scorecard> Scorecards { get; set; } = new List<Scorecard>();
+    public TournamentStatus Status { get; set; } // Added TournamentStatus property
+    public ICollection<Round> Rounds { get; set; } = new List<Round>(); // Added Rounds collection
 
     public Tournament(TournamentPostDTO tournamentPostDTO)
     {
@@ -27,7 +29,7 @@ public class Tournament
         RoundInfo = tournamentPostDTO.RoundInfo;
     }
 
-    public Tournament() 
+    public Tournament()
     {
     }
     public override bool Equals(object? obj)

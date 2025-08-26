@@ -14,6 +14,7 @@ public class Player
     public List<Tournament> Tournaments { get; set; } = new List<Tournament>();
     public List<Category> Categories { get; set; } = new List<Category>();
     public List<Scorecard> Scorecards { get; set; } = new List<Scorecard>();
+    public ICollection<PlayerRound> PlayerRounds { get; set; } = new List<PlayerRound>(); // Added PlayerRounds collection
 
     public Player(int matriculaAUG, string name, string lastName, float handicapIndex, bool isWoman)
 
@@ -38,7 +39,7 @@ public class Player
         IsPreferredCategoryLadies = playerdto.IsPreferredCategoryLadies;
         Birthdate = playerdto.Birthdate;
     }
-    public Player() 
+    public Player()
     {
     }
     public override bool Equals(object? obj)
@@ -57,7 +58,7 @@ public class Player
     {
         return $"Player: {Id}, Name: {Name} {LastName}, Handicap: {HandicapIndex}";
     }
-    
+
     public int CalculateAge()
     {
         var today = DateTime.Today;

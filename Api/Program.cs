@@ -23,6 +23,8 @@ using Api.Models.DTOs.ScorecardDTOs;
 using Api.Models.Common;
 using Api.Models.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Api.Models.Enums; // Added for TournamentStatus
+using Api.Middleware;
 
 internal class Program
 {
@@ -98,6 +100,8 @@ internal class Program
               });
         });
         var app = builder.Build();
+
+        app.UseMiddleware<ExceptionMiddleware>();
 
         app.UseSwagger();
         app.UseSwaggerUI(c =>
@@ -210,6 +214,21 @@ internal class Program
             return Results.NoContent();
         });
 
+        // New endpoint for setting tournament status
+        app.MapPut("/api/Tournaments/{id}/status", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] TournamentService service, int id, [FromBody] Api.Models.Enums.TournamentStatus newStatus) => {
+            var result = await service.SetTournamentStatusAsync(id, newStatus);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
+                    "InvalidStatusTransition" => Results.BadRequest(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
+        });
+
         app.MapDelete("/api/Tournaments/{id}", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] TournamentService service, int id) => {
             var result = await service.DeleteTournamentAsync(id);
             if (!result.IsSuccess)
@@ -245,6 +264,7 @@ internal class Program
                     "TournamentNotFound" => Results.NotFound(result.Error.Description),
                     "PlayerNotFound" => Results.NotFound(result.Error.Description),
                     "PlayerAlreadyInTournament" => Results.Conflict(result.Error.Description),
+                    "TournamentNotOpenForRegistration" => Results.BadRequest(result.Error.Description), // Added new error case
                     _ => Results.BadRequest(result.Error.Description)
                 };
             }

@@ -1,4 +1,5 @@
 using Microsoft.Identity.Client;
+using Api.Models;
 
 namespace Api.Models.DTOs.TournamentDTOs;
 
@@ -22,6 +23,6 @@ public class SingleTournamentDTO
         StartDate = tournament.StartDate;
         EndDate = tournament.EndDate;
         Description = tournament.Description;
-        RoundInfo = tournament.RoundInfo ?? new RoundInfo();
+        RoundInfo = tournament.RoundInfo;
     }
 }

@@ -48,7 +48,10 @@ namespace Api.Services
 
         public async Task<SingleTournamentDTO> CreateTournamentAsync(TournamentPostDTO tournamentDto)
         {
-            var tournament = new Tournament(tournamentDto);
+            var tournament = new Tournament(tournamentDto)
+            {
+                Status = TournamentStatus.Draft // Set initial status to Draft
+            };
             
             _db.Tournaments.Add(tournament);
             await _db.SaveChangesAsync();
@@ -68,6 +71,23 @@ namespace Api.Services
             tournament.EndDate = tournamentDto.EndDate;
             tournament.RoundInfo = tournamentDto.RoundInfo;
 
+            await _db.SaveChangesAsync();
+            return Result<bool>.Success(true);
+        }
+
+        public async Task<Result<bool>> SetTournamentStatusAsync(int id, TournamentStatus newStatus)
+        {
+            var tournament = await _db.Tournaments.FindAsync(id);
+            if (tournament == null) return Result<bool>.Failure(new Error("TournamentNotFound", "Tournament not found."));
+
+            // Basic status transition validation (can be expanded)
+            // Example: Cannot set to OpenRegistration if already InProgress
+            // if (tournament.Status == TournamentStatus.InProgress && newStatus == TournamentStatus.OpenRegistration)
+            // {
+            //     return Result<bool>.Failure(new Error("InvalidStatusTransition", "Cannot transition from InProgress to OpenRegistration."));
+            // }
+
+            tournament.Status = newStatus;
             await _db.SaveChangesAsync();
             return Result<bool>.Success(true);
         }
@@ -127,6 +147,12 @@ namespace Api.Services
 
             if (tournament == null) return Result<SinglePLayerDTO>.Failure(new Error("TournamentNotFound", "Tournament not found."));
 
+            // Check if tournament is in OpenRegistration status
+            if (tournament.Status != TournamentStatus.OpenRegistration)
+            {
+                return Result<SinglePLayerDTO>.Failure(new Error("TournamentNotOpenForRegistration", "Tournament is not open for registration."));
+            }
+
             var player = await _db.Players.FindAsync(playerId);
             if (player == null) return Result<SinglePLayerDTO>.Failure(new Error("PlayerNotFound", "Player not found."));
 
@@ -167,7 +193,7 @@ namespace Api.Services
                 return Result<SinglePLayerDTO>.Failure(new Error("UnknownError", "An error occurred while adding the player to the tournament."));
             }
         }
-        
+
         public async Task<Result<bool>> RemovePlayerFromTournamentAsync(int tournamentId, int playerId)
         {
             var tournament = await _db.Tournaments.Include(t => t.Players).FirstOrDefaultAsync(t => t.Id == tournamentId);
