@@ -1,5 +1,7 @@
 using Api.Data;
 using Api.Models;
+using Api.Models.DTOs.MatchDTOs;
+using Api.Models.Engine;
 using Api.Models.Enums;
 using Api.Models.Results;
 using Microsoft.EntityFrameworkCore;
@@ -54,6 +56,47 @@ namespace Api.Services
 
             _logger.LogInformation($"{matches.Count} matches generated for tournament {tournamentId}.");
             return Result<bool>.Success(true);
+        }
+
+        public async Task<Result<MatchDTO>> RecordHoleResultAsync(int matchId, int holeId, int? winningPlayerId)
+        {
+            var match = await _db.Matches
+                .Include(m => m.HoleResults)
+                .Include(m => m.Player1)
+                .Include(m => m.Player2)
+                .Include(m => m.WinningPlayer)
+                .FirstOrDefaultAsync(m => m.Id == matchId);
+
+            if (match == null) return Result<MatchDTO>.Failure(new Error("MatchNotFound", "Match not found."));
+            if (match.Status == MatchStatus.Completed) return Result<MatchDTO>.Failure(new Error("MatchCompleted", "This match has already been completed."));
+            if (winningPlayerId.HasValue && winningPlayerId != match.Player1Id && winningPlayerId != match.Player2Id)
+            {
+                return Result<MatchDTO>.Failure(new Error("InvalidWinner", "The winning player is not part of this match."));
+            }
+
+            var holeResult = match.HoleResults.FirstOrDefault(hr => hr.HoleId == holeId);
+            if (holeResult != null)
+            {
+                // Update existing result
+                holeResult.WinningPlayerId = winningPlayerId;
+            }
+            else
+            {
+                // Add new result
+                match.HoleResults.Add(new MatchHoleResult
+                {
+                    HoleId = holeId,
+                    WinningPlayerId = winningPlayerId
+                });
+            }
+
+            // Recalculate match state
+            ResultsEngine.UpdateMatchState(match, match.HoleResults);
+
+            await _db.SaveChangesAsync();
+            _logger.LogInformation($"Result for hole {holeId} in match {matchId} recorded. New score: {match.Result}");
+
+            return Result<MatchDTO>.Success(new MatchDTO(match));
         }
     }
 }
