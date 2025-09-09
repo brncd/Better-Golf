@@ -270,6 +270,26 @@ internal class Program
             return Results.NoContent();
         });
 
+        app.MapPost("/api/tournaments/{tournamentId}/register", [Authorize(Policy = "PlayerPolicy")] async (ClaimsPrincipal user, [FromServices] TournamentService service, int tournamentId) => {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null) return Results.Unauthorized();
+
+            var result = await service.RegisterCurrentUserToTournamentAsync(tournamentId, userId);
+            if (!result.IsSuccess)
+            {
+                 return result.Error.Code switch
+                {
+                    "PlayerProfileNotFound" => Results.NotFound(result.Error.Description),
+                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
+                    "PlayerNotFound" => Results.NotFound(result.Error.Description), // Should not happen if profile is found
+                    "PlayerAlreadyInTournament" => Results.Conflict(result.Error.Description),
+                    "TournamentNotOpenForRegistration" => Results.BadRequest(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok(result.Value);
+        });
+
         app.MapGet("/api/Tournaments/{id}/Players", async ([FromServices] TournamentService service, int id, [AsParameters] PaginationRequest pagination) => {
             var result = await service.GetTournamentPlayersAsync(id, pagination);
             if (!result.IsSuccess)
