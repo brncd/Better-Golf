@@ -17,6 +17,7 @@ public class Tournament
     public ICollection<Category> Categories { get; set; } = new List<Category>();
     public ICollection<Scorecard> Scorecards { get; set; } = new List<Scorecard>();
     public TournamentStatus Status { get; set; } // Added TournamentStatus property
+    public double HandicapAllowance { get; set; } = 1.0; // Default to 100%
     public ICollection<Round> Rounds { get; set; } = new List<Round>(); // Added Rounds collection
 
     public Tournament(TournamentPostDTO tournamentPostDTO)
@@ -27,6 +28,7 @@ public class Tournament
         EndDate = tournamentPostDTO.EndDate;
         Description = tournamentPostDTO.Description;
         RoundInfo = tournamentPostDTO.RoundInfo;
+        HandicapAllowance = tournamentPostDTO.HandicapAllowance ?? 1.0;
     }
 
     public Tournament()

@@ -10,4 +10,5 @@ public class TournamentPostDTO
     public DateOnly StartDate { get; set; }
     public DateOnly EndDate { get; set; }
     public RoundInfo RoundInfo { get; set; } = null!;
+    public double? HandicapAllowance { get; set; }
 }
