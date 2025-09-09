@@ -20,6 +20,7 @@ using FluentValidation.AspNetCore;
 using FluentValidation;
 using Api.Validation;
 using Api.Models.Results;
+using Api.Models.DTOs.RoleDTOs;
 using Api.Models.DTOs.RoundDTOs;
 using Api.Models.DTOs.ScorecardDTOs;
 using Api.Models.Common;
@@ -791,6 +792,56 @@ internal class Program
             }
             return Results.NoContent();
         });
+
+        // Seccion Roles y Usuarios
+        app.MapPost("/api/roles/{roleName}", [Authorize(Policy = "AdminPolicy")] async ([FromServices] RoleService service, string roleName) => {
+            var result = await service.CreateRoleAsync(roleName);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "RoleAlreadyExists" => Results.Conflict(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok($"Role {roleName} created successfully.");
+        });
+
+        app.MapPost("/api/users/{userId}/roles", [Authorize(Policy = "AdminPolicy")] async ([FromServices] RoleService service, string userId, [FromBody] RoleAssignmentDTO roleDto) => {
+            var result = await service.AssignUserToRoleAsync(userId, roleDto.RoleName);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "UserNotFound" => Results.NotFound(result.Error.Description),
+                    "RoleNotFound" => Results.NotFound(result.Error.Description),
+                    "UserAlreadyInRole" => Results.Conflict(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok($"Role {roleDto.RoleName} assigned to user {userId}.");
+        });
+
+        app.MapGet("/api/users/{userId}/roles", [Authorize(Policy = "AdminPolicy")] async ([FromServices] RoleService service, string userId) => {
+            var roles = await service.GetUserRolesAsync(userId);
+            return Results.Ok(roles);
+        });
+
+        app.MapDelete("/api/users/{userId}/roles", [Authorize(Policy = "AdminPolicy")] async ([FromServices] RoleService service, string userId, [FromBody] RoleAssignmentDTO roleDto) => {
+            var result = await service.RemoveUserFromRoleAsync(userId, roleDto.RoleName);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "UserNotFound" => Results.NotFound(result.Error.Description),
+                    "RoleNotFound" => Results.NotFound(result.Error.Description),
+                    "UserNotInRole" => Results.BadRequest(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.NoContent();
+        });
+
         app.Run();
     }
 }
