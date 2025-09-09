@@ -1,123 +1,163 @@
 # Better Golf API
 
-This is a part of a web application built with .NET. This API is designed to manage golf tournaments, including players, tournaments, categories, courses, holes, scorecards, and results.
+## Overview
+Better Golf API is a robust and complete backend designed for managing golf tournaments. It provides a solid foundation for golf club applications, enabling the administration of players, courses, tournaments, and results. The API is built with a modern approach using .NET and ASP.NET Core Minimal APIs, offering high performance and an easy-to-maintain structure.
 
-## Table of Contents
+The API supports multiple game formats, a complete tournament lifecycle, and an authentication/role system for secure management.
 
-- [Local Development Setup](#local-development-setup)
-  - [Prerequisites](#prerequisites)
-  - [Getting Started](#getting-started)
-- [Docker Configuration (Alternative)](#docker-configuration-alternative)
-- [API Endpoints](#api-endpoints)
-- [Swagger Documentation](#swagger-documentation)
-- [CORS Configuration](#cors-configuration)
+---
 
-## Local Development Setup
+## Key Features
 
-This is the recommended setup for running the API on your local machine for development.
+- **Golf Entity Management:** Full CRUD for Courses, Holes, Categories, and Player Profiles.  
+- **Tournament Lifecycle:** Well-defined state flow (`Draft`, `OpenRegistration`, `InProgress`, `Completed`, `Archived`) with associated business logic.  
+- **Multiple Game Formats:**
+  - **Stroke Play (Medal Play):** Score calculation by strokes.  
+  - **Stableford:** Point-based scoring.  
+  - **Match Play:** Support for head-to-head matches, with match generation and hole-by-hole result tracking.  
+- **Automated Results & Rankings:**
+  - Automatic calculation of final tournament standings.  
+  - **Tiebreak Logic (Countback):** Tiebreak system using the last 9, 6, 3, and 1 holes to determine a unique winner.  
+- **Round & Tee Time Management:**
+  - Create rounds for multi-day tournaments.  
+  - Automatic tee time generation, supporting both standard and shotgun starts.  
+- **Flexible Handicap System:**
+  - Calculation of playing handicap based on a player’s handicap index and course characteristics (Slope, Rating, Par).  
+  - **Handicap Allowance:** Configure tournament-specific percentage adjustments to comply with official rules.  
+- **Authentication & Authorization:**
+  - System based on **ASP.NET Core Identity** with **JWT tokens**.  
+  - **User Roles:** Three predefined access levels (`Admin`, `TournamentOrganizer`, `Player`).  
+  - **Self-registration:** Users can sign up and create their own linked player profile.  
+  - **Tournament Registration:** Players can self-register for open tournaments.  
+- **API Documentation:** Automatic documentation generation with **Swagger / OpenAPI**.  
 
-### Prerequisites
+---
 
-- **.NET 9 SDK** (or the version specified in `Api.csproj`)
-- **Visual Studio 2022** (which includes SQL Server Express LocalDB) or the standalone .NET SDK and LocalDB.
+## Tech Stack
 
-### Getting Started
+- **Framework:** .NET 8  
+- **API:** ASP.NET Core Minimal APIs  
+- **Database:** Entity Framework Core 8 with SQL Server  
+- **Authentication:** ASP.NET Core Identity  
+- **Authorization:** JSON Web Tokens (JWT)  
+- **Validation:** FluentValidation  
 
-1.  **Clone the repository** to your local machine.
-2.  **Open a terminal** and navigate to the `Api` project directory.
-3.  **Build the project** to restore dependencies:
-    ```shell
-    dotnet build
+---
+
+## Prerequisites
+
+- .NET 8 SDK
+- SQL Server (Express, Developer, or a Docker instance are all valid options).  
+
+---
+
+## Installation & Setup
+
+1. **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd Better-Golf/Api
     ```
-4.  **Create and migrate the local database**:
-    This command will create a `BetterGolf.Dev` database on your LocalDB instance and create all the necessary tables.
-    ```shell
+
+2. **Configure Database Connection:**
+    - Open `appsettings.Development.json`.  
+    - Update the `DefaultConnection` string to point to your SQL Server instance.  
+    ```json
+    "ConnectionStrings": {
+      "DefaultConnection": "Server=YOUR_SERVER;Database=BetterGolfDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=true"
+    }
+    ```
+
+3. **Configure JWT Key:**
+    - Open `appsettings.json`.  
+    - Update `Jwt:Key` with a long, secure secret value. **Do not use the default value in production.**  
+    ```json
+    "Jwt": {
+      "Key": "YOUR_SUPER_LONG_SECURE_SECRET_KEY_HERE",
+      "Issuer": "BetterGolfApi",
+      "Audience": "BetterGolfApp"
+    }
+    ```
+
+4. **Apply Database Migrations:**
+    - Open a terminal in the `Api/` directory.  
+    - Run the following command to create the database schema from EF Core migrations:  
+    ```bash
     dotnet ef database update
     ```
-5.  **Run the API**:
-    ```shell
+
+5. **Run the API:**
+    ```bash
     dotnet run
     ```
-    The API will be running on the port specified in `launchSettings.json` or `Program.cs`.
+    The API will be available at `localhost:5001`.
 
-## Docker Configuration (Alternative)
+---
 
-For a production-like environment or if you prefer using Docker, you can use the provided `Dockerfile`. The original setup used Docker with a PostgreSQL database. While local development has been simplified to use SQL Server LocalDB, the Docker setup can still be adapted. Note that the database provider in the code is now SQL Server.
+## API Usage
 
-- **Dockerfile**
-  - The API Dockerfile is configured to expose a port where the API will be running.
-- **Original Docker Compose**
-  - The original setup likely included a `docker-compose.yml` file to orchestrate the API and a PostgreSQL database container. This file would need to be modified to use a SQL Server for Linux container to work with the current code.
+### Interactive Documentation
 
-## API Endpoints
+The easiest way to explore and test all endpoints is via Swagger UI.  
 
-The API provides the following endpoints to manage golf tournaments:
+- **Swagger URL:** `localhost:5001/swagger`
 
-- **Players**
-  - GET `/api/Players`: Get a list of all players.
-  - GET `/api/Players/{id}`: Get a player by ID.
-  - POST `/api/Players`: Create a new player.
-  - PUT `/api/Players/{id}`: Update a player.
-  - DELETE `/api/Players/{id}`: Delete a player.
-  - GET `/api/Players/{id}/Tournaments`: Get tournaments associated with a player.
+### Authentication Flow
 
-- **Tournaments**
-  - GET `/api/Tournaments`: Get a list of all tournaments.
-  - GET `/api/Tournaments/{id}`: Get a tournament by ID.
-  - POST `/api/Tournaments`: Create a new tournament.
-  - PUT `/api/Tournaments/{id}`: Update a tournament.
-  - DELETE `/api/Tournaments/{id}`: Delete a tournament.
-  - POST `/api/Tournaments/{id}/Players`: Add a player to a tournament.
-  - DELETE `/api/Tournaments/{id}/Players/{playerid}`: Remove a player from a tournament.
-  - GET `/api/Tournaments/{id}/Players`: Get players participating in a tournament.
-  - GET `/api/Tournaments/{id}/Categories`: Get categories for a tournament.
-  - POST `/api/Tournaments/{id}/Categories`: Add a category to a tournament.
-  - DELETE `/api/Tournaments/{id}/Categories/{categoryid}`: Remove a category from a tournament.
-  - GET `/api/Tournaments/{id}/Scorecards`: Get scorecards for a tournament.
+1. **User Registration:** `POST /register` - Creates a new user account (without a player profile yet).  
+2. **Login:** `POST /login` - Authenticates the user and returns a JWT token.  
+3. **Authorized Calls:** For all endpoints requiring authentication, include the token in the request header:  
+    ```
+    Authorization: Bearer <your-jwt-token>
+    ```
 
-- **Categories**
-  - GET `/api/Categories`: Get a list of all categories.
-  - GET `/api/Categories/{id}`: Get a category by ID.
-  - POST `/api/Categories`: Create a new category.
-  - PUT `/api/Categories/{id}`: Update a category.
-  - DELETE `/api/Categories/{id}`: Delete a category.
-  - POST `/api/Categories/{id}/Players`: Add a player to a category.
-  - GET `/api/Categories/{id}/Players`: Get players in a category.
-  - DELETE `/api/Categories/{id}/Players/{playerid}`: Remove a player from a category.
-  - POST `/api/Categories/{id}/SetOpenCourse`: Set the open course for a category.
-  - POST `/api/Categories/{id}/SetLadiesCourse`: Set the ladies course for a category.
+### Common Workflows
 
-- **Courses**
-  - GET `/api/Courses`: Get a list of all golf courses.
-  - GET `/api/Courses/{id}`: Get a course by ID.
-  - POST `/api/Courses`: Create a new golf course.
-  - PUT `/api/Courses/{id}`: Update a golf course.
-  - DELETE `/api/Courses/{id}`: Delete a golf course.
-  - DELETE `/api/Courses/{id}/Holes/{holeid}`: Delete a hole from a golf course.
-  - POST `/api/Courses/{id}/Holes`: Add a hole to a golf course.
-  - GET `/api/Courses/{id}/Holes`: Get holes for a golf course.
+Below are some high-level workflows for common tasks.  
 
-- **ScorecardResult**
-  - GET `/api/ScorecardResults/{scorecardId}/{holeId}`: Get a scorecard result.
-  - PUT `/api/ScorecardResults/{scorecardId}/{holeId}`: Update a scorecard result.
+#### Player Workflow
 
-- **Holes**
-  - PUT `/api/Holes/{id}`: Update a hole.
+1. **Create account and profile:**
+    - `POST /register` to create the account.  
+    - `POST /login` to obtain the token.  
+    - `POST /api/me/player-profile` to create a player profile linked to the account.  
+2. **Register for a tournament:**
+    - `GET /api/Tournaments` to view available tournaments.  
+    - `POST /api/tournaments/{tournamentId}/register` to sign up for a tournament in `OpenRegistration` state.  
 
-- **Scorecard**
-  - DELETE `/api/Scorecards/{id}`: Delete a scorecard.
+#### Tournament Organizer Workflow
 
-- **Results**
-  - GET `/api/TournamentRankings/{tournamentId}`: Get the ranking for a tournament.
+1. **Prepare environment:**
+    - (Admin) `POST /api/Courses` and `POST /api/Holes` to create courses and holes.  
+    - (Admin) `POST /api/Categories` to create categories.  
+2. **Create & configure tournament:**
+    - `POST /api/Tournaments` to create a tournament, specifying format, dates, and `HandicapAllowance`.  
+    - `POST /api/tournaments/{tournamentId}/categories/{categoryId}` to link categories to the tournament.  
+    - `PUT /api/tournaments/{tournamentId}/status` to switch to `OpenRegistration`.  
+3. **Manage tournament:**
+    - Once registration is closed, `PUT /api/tournaments/{tournamentId}/status` to switch to `InProgress`.  
+    - `POST /api/tournaments/{tournamentId}/rounds` to create tournament rounds.  
+    - `POST /api/tournaments/{tournamentId}/generate-teetimes` to generate tee times.  
+    - (For Match Play) `POST /api/tournaments/{tournamentId}/generate-matches` to create matches.  
+4. **Enter & finalize results:**
+    - `PUT /api/scorecardresults/{...}` to record strokes in Stroke Play/Stableford tournaments.  
+    - `POST /api/matches/{matchId}/holes` to record hole winners in Match Play.  
+    - `PUT /api/tournaments/{tournamentId}/status` to switch to `Completed` (this locks scorecards).  
+    - `POST /api/tournaments/{id}/calculate-results` to generate the final leaderboard (Stroke Play/Stableford only).  
 
-## Swagger Documentation
+---
 
-The API provides Swagger documentation to help you understand the available endpoints and how to use them. You can access the Swagger documentation at `/swagger` when the API is running.
+## Project Structure
 
-## CORS Configuration
+- `/Data`: Contains the Entity Framework `DbContext` and all database migrations.  
+- `/Models`: Contains domain models, DTOs (Data Transfer Objects), and Enums.  
+- `/Services`: Contains core business logic, separated by domain (Player, Tournament, etc.).  
+- `/Middleware`: Contains custom middleware, such as the exception handler.  
+- `/Validation`: Contains FluentValidation rules.  
+- `Program.cs`: API entry point. Configures services, middleware pipeline, and defines all endpoints (Minimal APIs).  
 
-CORS (Cross-Origin Resource Sharing) is configured to allow requests from any origin. You can further customize CORS settings in the code if needed.
+---
 
-## JWT Key Handling
+## Contributions
 
-For development, the JWT key is stored in `appsettings.Development.json`. In production environments, it is highly recommended to use more secure methods for managing sensitive information, such as environment variables, Azure Key Vault, or other secrets management solutions.
+This project follows the **GitFlow** workflow. Please make all new features and bug fixes on branches created from `develop`.
