@@ -2,9 +2,13 @@ namespace Api.Models.Engine;
 
 public static class GolfMath
 {
-
-    public static int CalculateCourseHandicap(Player player, Course course) // la funcion de verdad tomaria: int numberofholes, int courseslope, double courserating, double handiapindex
+    public static double CalculateCourseHandicap(Player player, Course course)
     {
-        return Convert.ToInt32(player.HandicapIndex * (course.CourseSlope / 113) + (course.CourseRating - course.Par));
+        return player.HandicapIndex * (course.CourseSlope / 113.0) + (course.CourseRating - course.Par);
+    }
+
+    public static int CalculatePlayingHandicap(double courseHandicap, double handicapAllowance)
+    {
+        return (int)Math.Round(courseHandicap * handicapAllowance);
     }
 }

@@ -73,6 +73,7 @@ namespace Api.Services
             tournament.StartDate = tournamentDto.StartDate;
             tournament.EndDate = tournamentDto.EndDate;
             tournament.RoundInfo = tournamentDto.RoundInfo;
+            tournament.HandicapAllowance = tournamentDto.HandicapAllowance ?? 1.0;
 
             await _db.SaveChangesAsync();
             _logger.LogInformation($"Tournament {id} updated.");
@@ -294,9 +295,12 @@ namespace Api.Services
 
             if (selectedCourse == null) return Result<bool>.Failure(new Error("CourseNotAssigned", "Cannot assign scorecard without a defined course."));
 
+            var courseHandicap = GolfMath.CalculateCourseHandicap(player, selectedCourse);
+            var playingHandicap = GolfMath.CalculatePlayingHandicap(courseHandicap, tournament.HandicapAllowance);
+
             var playerScorecard = new Scorecard
             {
-                PlayingHandicap = GolfMath.CalculateCourseHandicap(player, selectedCourse),
+                PlayingHandicap = playingHandicap,
                 PlayerId = player.Id,
                 TournamentId = tournament.Id,
                 ScorecardResults = new List<ScorecardResult>()
