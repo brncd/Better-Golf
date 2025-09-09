@@ -26,67 +26,43 @@ namespace Api.Services
                         .ThenInclude(sr => sr.Hole)
                 .FirstOrDefaultAsync(t => t.Id == tournamentId);
 
-            if (tournament == null)
+            if (tournament == null || !tournament.Scorecards.Any())
             {
                 return new List<TournamentRankingDTO>();
             }
 
-            var playerScores = new Dictionary<int, double>();
-
-            foreach (var scorecard in tournament.Scorecards)
-            {
+            var playerScores = tournament.Scorecards.Select(sc => {
                 double score = 0;
                 if (tournament.TournamentType == TournamentType.MedalPlay)
                 {
-                    score = ResultsEngine.MedalScratchScore(scorecard.PlayingHandicap, scorecard.ScorecardResults);
+                    score = ResultsEngine.MedalScratchScore(sc.PlayingHandicap, sc.ScorecardResults);
                 }
                 else if (tournament.TournamentType == TournamentType.Stableford)
                 {
-                    score = ResultsEngine.StablefordScore(scorecard.ScorecardResults);
+                    score = ResultsEngine.StablefordScore(sc.ScorecardResults);
                 }
-                // Add other tournament types as needed
+                return new PlayerScore(sc, score);
+            }).ToList();
 
-                if (playerScores.ContainsKey(scorecard.PlayerId))
-                {
-                    playerScores[scorecard.PlayerId] += score;
-                }
-                else
-                {
-                    playerScores.Add(scorecard.PlayerId, score);
-                }
-            }
-
-            // Order by score (ascending for MedalPlay, descending for Stableford)
-            var orderedPlayerScores = tournament.TournamentType == TournamentType.Stableford
-                ? playerScores.OrderByDescending(ps => ps.Value)
-                : playerScores.OrderBy(ps => ps.Value);
+            // Sort players using the custom tie-breaker logic
+            playerScores.Sort(new PlayerScoreComparer(tournament.TournamentType));
 
             var rankings = new List<TournamentRanking>();
             int currentPosition = 1;
-            int playersAtCurrentPosition = 1;
-            double? lastScore = null;
-
-            foreach (var ps in orderedPlayerScores)
+            for (int i = 0; i < playerScores.Count; i++)
             {
-
-                if (lastScore.HasValue && lastScore.Value != ps.Value)
+                if (i > 0 && new PlayerScoreComparer(tournament.TournamentType).Compare(playerScores[i-1], playerScores[i]) < 0)
                 {
-                    currentPosition += playersAtCurrentPosition;
-                    playersAtCurrentPosition = 1;
-                } else if (lastScore.HasValue && lastScore.Value == ps.Value)
-                {
-                    playersAtCurrentPosition++;
+                    currentPosition = i + 1;
                 }
 
                 rankings.Add(new TournamentRanking
                 {
                     TournamentId = tournamentId,
-                    PlayerId = ps.Key,
-                    TotalStrokes = (int)ps.Value, // Casting to int, consider if double is better
+                    PlayerId = playerScores[i].Scorecard.PlayerId,
+                    TotalStrokes = (int)playerScores[i].Score, // Casting to int, consider if double is better
                     Position = currentPosition
                 });
-
-                lastScore = ps.Value;
             }
 
             // Clear existing rankings and save new ones
@@ -107,6 +83,81 @@ namespace Api.Services
                 .ThenBy(r => r.TotalStrokes)
                 .Select(r => new TournamentRankingDTO(r))
                 .ToListAsync();
+        }
+    }
+
+    // Helper class to hold player score and scorecard for sorting
+    internal class PlayerScore
+    {
+        public Scorecard Scorecard { get; }
+        public double Score { get; }
+
+        public PlayerScore(Scorecard scorecard, double score)
+        {
+            Scorecard = scorecard;
+            Score = score;
+        }
+    }
+
+    // Custom comparer for sorting player scores with tie-breaking
+    internal class PlayerScoreComparer : IComparer<PlayerScore>
+    {
+        private readonly TournamentType _tournamentType;
+
+        public PlayerScoreComparer(TournamentType tournamentType)
+        {
+            _tournamentType = tournamentType;
+        }
+
+        public int Compare(PlayerScore? x, PlayerScore? y)
+        {
+            if (x == null || y == null) return 0;
+
+            // Primary comparison on total score
+            int scoreComparison = _tournamentType == TournamentType.Stableford 
+                ? y.Score.CompareTo(x.Score) // Descending for Stableford
+                : x.Score.CompareTo(y.Score); // Ascending for MedalPlay
+
+            if (scoreComparison != 0) return scoreComparison;
+
+            // Tie-breaking logic (countback)
+            int back9Comparison = CompareHoleRange(x.Scorecard, y.Scorecard, 10, 18);
+            if (back9Comparison != 0) return back9Comparison;
+
+            int back6Comparison = CompareHoleRange(x.Scorecard, y.Scorecard, 13, 18);
+            if (back6Comparison != 0) return back6Comparison;
+
+            int back3Comparison = CompareHoleRange(x.Scorecard, y.Scorecard, 16, 18);
+            if (back3Comparison != 0) return back3Comparison;
+
+            int lastHoleComparison = CompareHoleRange(x.Scorecard, y.Scorecard, 18, 18);
+            if (lastHoleComparison != 0) return lastHoleComparison;
+            
+            return 0; // Players are still tied
+        }
+
+        private int CompareHoleRange(Scorecard sc1, Scorecard sc2, int startHole, int endHole)
+        {
+            var results1 = sc1.ScorecardResults.Where(r => r.Hole.Number >= startHole && r.Hole.Number <= endHole).ToList();
+            var results2 = sc2.ScorecardResults.Where(r => r.Hole.Number >= startHole && r.Hole.Number <= endHole).ToList();
+
+            double score1 = 0;
+            double score2 = 0;
+
+            if (_tournamentType == TournamentType.Stableford)
+            {
+                score1 = ResultsEngine.StablefordScore(results1);
+                score2 = ResultsEngine.StablefordScore(results2);
+            }
+            else // MedalPlay
+            {
+                score1 = results1.Sum(r => r.Strokes);
+                score2 = results2.Sum(r => r.Strokes);
+            }
+
+            return _tournamentType == TournamentType.Stableford
+                ? score2.CompareTo(score1) // Descending for Stableford
+                : score1.CompareTo(score2); // Ascending for MedalPlay
         }
     }
 }
