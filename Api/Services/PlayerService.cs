@@ -53,6 +53,26 @@ namespace Api.Services
             return Result<SinglePLayerDTO>.Success(new SinglePLayerDTO(player));
         }
 
+        public async Task<Result<SinglePLayerDTO>> CreatePlayerForUserAsync(string userId, PLayerPostDTO playerDto)
+        {
+            var existingPlayer = await _db.Players.FirstOrDefaultAsync(p => p.ApplicationUserId == userId);
+            if (existingPlayer != null)
+            {
+                return Result<SinglePLayerDTO>.Failure(new Error("PlayerProfileAlreadyExists", "This user already has a player profile."));
+            }
+
+            var player = new Player(playerDto)
+            {
+                ApplicationUserId = userId
+            };
+
+            _db.Players.Add(player);
+            await _db.SaveChangesAsync();
+            _logger.LogInformation($"Player profile created for user {userId}.");
+
+            return Result<SinglePLayerDTO>.Success(new SinglePLayerDTO(player));
+        }
+
         public async Task<Result<bool>> UpdatePlayerAsync(int id, PLayerPostDTO playerDto)
         {
             var player = await _db.Players.FindAsync(id);
