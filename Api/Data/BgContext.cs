@@ -19,6 +19,8 @@ namespace Api.Data
         public DbSet<TournamentRanking> TournamentRankings { get; set; }
         public DbSet<Round> Rounds { get; set; } // Added DbSet for Round
         public DbSet<PlayerRound> PlayerRounds { get; set; } // Added DbSet for PlayerRound
+        public DbSet<Match> Matches { get; set; }
+        public DbSet<MatchHoleResult> MatchHoleResults { get; set; }
 
         public BgContext(DbContextOptions<BgContext> options)
             : base(options)
@@ -91,6 +93,31 @@ namespace Api.Data
                 .WithOne(sr => sr.Scorecard)
                 .HasForeignKey(sr => sr.ScorecardId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure Match Play models
+            modelBuilder.Entity<Match>()
+                .HasOne(m => m.Player1)
+                .WithMany()
+                .HasForeignKey(m => m.Player1Id)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Match>()
+                .HasOne(m => m.Player2)
+                .WithMany()
+                .HasForeignKey(m => m.Player2Id)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Match>()
+                .HasOne(m => m.WinningPlayer)
+                .WithMany()
+                .HasForeignKey(m => m.WinningPlayerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<MatchHoleResult>()
+                .HasOne(mhr => mhr.WinningPlayer)
+                .WithMany()
+                .HasForeignKey(mhr => mhr.WinningPlayerId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
