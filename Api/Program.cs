@@ -20,6 +20,7 @@ using FluentValidation.AspNetCore;
 using FluentValidation;
 using Api.Validation;
 using Api.Models.Results;
+using Api.Models.DTOs.RoundDTOs;
 using Api.Models.DTOs.ScorecardDTOs;
 using Api.Models.Common;
 using Api.Models.Authorization;
@@ -71,6 +72,7 @@ internal class Program
         builder.Services.AddScoped<ScorecardResultService>();
         builder.Services.AddScoped<ResultService>();
         builder.Services.AddScoped<RoundInfoService>();
+        builder.Services.AddScoped<RoundService>();
         builder.Services.AddScoped<RoleService>(); // Add RoleService
         builder.Services.AddScoped<ScorecardService>(); // No change needed here, dependencies are resolved automatically
 
@@ -356,6 +358,63 @@ internal class Program
             }
             return Results.NoContent();
         });
+
+        app.MapPost("/api/tournaments/{id}/rounds", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] RoundService service, int id) => {
+            var result = await service.CreateRoundsForTournament(id);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
+                    "RoundsAlreadyExist" => Results.Conflict(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok("Rounds created successfully.");
+        });
+
+        app.MapPost("/api/tournaments/{id}/generate-teetimes", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] RoundService service, int id) => {
+            var result = await service.GenerateTeeTimes(id);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
+                    "RoundInfoMissing" => Results.BadRequest(result.Error.Description),
+                    "NoPlayersInTournament" => Results.BadRequest(result.Error.Description),
+                    "NoRoundsForTournament" => Results.BadRequest(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok(result.Value);
+        });
+
+        app.MapGet("/api/tournaments/{id}/teetimes", [Authorize(Policy = "PlayerPolicy")] async ([FromServices] RoundService service, int id) => {
+            var result = await service.GetTeeTimes(id);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "NoTeeTimes" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok(result.Value);
+        });
+
+        app.MapPut("/api/rounds/{roundId}/players/{playerId}", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] RoundService service, int roundId, int playerId, [FromBody] TeeTimeDTO teeTimeUpdate) => {
+            var result = await service.UpdateTeeTime(roundId, playerId, teeTimeUpdate.TeeTime.Value, teeTimeUpdate.StartingHole.Value);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "PlayerRoundNotFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok(result.Value);
+        });
+
         app.MapGet("/api/Tournaments/{id}/Scorecards", async ([FromServices] TournamentService service, int id) => Results.Ok(await service.GetTournamentScorecardsAsync(id)));
 
         app.MapGet("/api/Tournaments/Active", async ([FromServices] TournamentService service) => Results.Ok(await service.GetActiveTournamentsAsync()));
