@@ -81,15 +81,48 @@ namespace Api.Services
 
         public async Task<Result<bool>> SetTournamentStatusAsync(int id, TournamentStatus newStatus)
         {
-            var tournament = await _db.Tournaments.FindAsync(id);
+            var tournament = await _db.Tournaments
+                .Include(t => t.Categories)
+                .Include(t => t.Scorecards)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
             if (tournament == null) return Result<bool>.Failure(new Error("TournamentNotFound", "Tournament not found."));
 
-            // Basic status transition validation (can be expanded)
-            // Example: Cannot set to OpenRegistration if already InProgress
-            // if (tournament.Status == TournamentStatus.InProgress && newStatus == TournamentStatus.OpenRegistration)
-            // {
-            //     return Result<bool>.Failure(new Error("InvalidStatusTransition", "Cannot transition from InProgress to OpenRegistration."));
-            // }
+            // Add business logic based on status transition
+            switch (newStatus)
+            {
+                case TournamentStatus.OpenRegistration:
+                    if (tournament.StartDate <= DateOnly.FromDateTime(DateTime.Now))
+                    {
+                        return Result<bool>.Failure(new Error("InvalidTransition", "Cannot open registration for a tournament that has already started or is in the past."));
+                    }
+                    if (!tournament.Categories.Any())
+                    {
+                        return Result<bool>.Failure(new Error("InvalidTransition", "Cannot open registration without at least one category."));
+                    }
+                    // You might add a check here to ensure categories have courses assigned
+                    break;
+
+                case TournamentStatus.InProgress:
+                    if (tournament.Status != TournamentStatus.OpenRegistration)
+                    {
+                        return Result<bool>.Failure(new Error("InvalidTransition", "Tournament must be open for registration before it can be in progress."));
+                    }
+                    break;
+
+                case TournamentStatus.Completed:
+                    if (tournament.Status != TournamentStatus.InProgress)
+                    {
+                        return Result<bool>.Failure(new Error("InvalidTransition", "Tournament must be in progress before it can be completed."));
+                    }
+                    // Lock all associated scorecards
+                    foreach (var scorecard in tournament.Scorecards)
+                    {
+                        scorecard.IsLocked = true;
+                    }
+                    _logger.LogInformation($"Locked all {tournament.Scorecards.Count} scorecards for completed tournament {id}.");
+                    break;
+            }
 
             tournament.Status = newStatus;
             await _db.SaveChangesAsync();
