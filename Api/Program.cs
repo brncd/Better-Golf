@@ -20,6 +20,7 @@ using FluentValidation.AspNetCore;
 using FluentValidation;
 using Api.Validation;
 using Api.Models.Results;
+using Api.Models.DTOs.MatchDTOs;
 using Api.Models.DTOs.RoleDTOs;
 using Api.Models.DTOs.RoundDTOs;
 using Api.Models.DTOs.ScorecardDTOs;
@@ -75,6 +76,7 @@ internal class Program
         builder.Services.AddScoped<RoundInfoService>();
         builder.Services.AddScoped<RoundService>();
         builder.Services.AddScoped<RoleService>(); // Add RoleService
+        builder.Services.AddScoped<MatchService>();
         builder.Services.AddScoped<ScorecardService>(); // No change needed here, dependencies are resolved automatically
 
         builder.Services.AddSingleton<IAuthorizationHandler, ScorecardOwnerAuthorizationHandler>(); // Register the custom authorization handler
@@ -811,6 +813,51 @@ internal class Program
                 };
             }
             return Results.NoContent();
+        });
+
+        // Seccion Match Play
+        app.MapPost("/api/tournaments/{tournamentId}/generate-matches", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] MatchService service, int tournamentId) => {
+            var result = await service.GenerateMatchesAsync(tournamentId);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
+                    "InvalidTournamentType" => Results.BadRequest(result.Error.Description),
+                    "NotEnoughPlayers" => Results.BadRequest(result.Error.Description),
+                    "MatchesAlreadyExist" => Results.Conflict(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok("Matches generated successfully.");
+        });
+
+        app.MapGet("/api/tournaments/{tournamentId}/matches", [Authorize(Policy = "PlayerPolicy")] async ([FromServices] MatchService service, int tournamentId) => {
+            var result = await service.GetMatchesForTournamentAsync(tournamentId);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "NoMatchesFound" => Results.NotFound(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok(result.Value);
+        });
+
+        app.MapPost("/api/matches/{matchId}/holes", [Authorize(Policy = "PlayerPolicy")] async ([FromServices] MatchService service, int matchId, [FromBody] PostMatchHoleResultDTO dto) => {
+            var result = await service.RecordHoleResultAsync(matchId, dto.HoleId, dto.WinningPlayerId);
+            if (!result.IsSuccess)
+            {
+                return result.Error.Code switch
+                {
+                    "MatchNotFound" => Results.NotFound(result.Error.Description),
+                    "MatchCompleted" => Results.Conflict(result.Error.Description),
+                    "InvalidWinner" => Results.BadRequest(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Ok(result.Value);
         });
 
         // Seccion Roles y Usuarios

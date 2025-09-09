@@ -58,6 +58,23 @@ namespace Api.Services
             return Result<bool>.Success(true);
         }
 
+        public async Task<Result<List<MatchDTO>>> GetMatchesForTournamentAsync(int tournamentId)
+        {
+            var matches = await _db.Matches
+                .Where(m => m.TournamentId == tournamentId)
+                .Include(m => m.Player1)
+                .Include(m => m.Player2)
+                .Include(m => m.WinningPlayer)
+                .ToListAsync();
+
+            if (!matches.Any())
+            {
+                return Result<List<MatchDTO>>.Failure(new Error("NoMatchesFound", "No matches have been generated for this tournament."));
+            }
+
+            return Result<List<MatchDTO>>.Success(matches.Select(m => new MatchDTO(m)).ToList());
+        }
+
         public async Task<Result<MatchDTO>> RecordHoleResultAsync(int matchId, int holeId, int? winningPlayerId)
         {
             var match = await _db.Matches
