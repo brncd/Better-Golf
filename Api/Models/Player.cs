@@ -1,4 +1,5 @@
 using Api.Models.DTOs.PlayerDTOs;
+using Microsoft.AspNetCore.Identity;
 
 namespace Api.Models;
 
@@ -15,6 +16,8 @@ public class Player
     public List<Category> Categories { get; set; } = new List<Category>();
     public List<Scorecard> Scorecards { get; set; } = new List<Scorecard>();
     public ICollection<PlayerRound> PlayerRounds { get; set; } = new List<PlayerRound>(); // Added PlayerRounds collection
+    public string? ApplicationUserId { get; set; }
+    public virtual Microsoft.AspNetCore.Identity.IdentityUser? ApplicationUser { get; set; }
 
     public Player(int matriculaAUG, string name, string lastName, float handicapIndex, bool isWoman)
 
