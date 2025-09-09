@@ -1,3 +1,4 @@
+using System.Security.Claims; // Added
 using Api.Data;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -190,6 +191,23 @@ internal class Program
                 };
             }
             return Results.Ok(result.Value);
+        });
+
+        app.MapPost("/api/me/player-profile", [Authorize] async (ClaimsPrincipal user, [FromServices] PlayerService service, PLayerPostDTO playerDto) => {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null) return Results.Unauthorized();
+
+            var result = await service.CreatePlayerForUserAsync(userId, playerDto);
+            if (!result.IsSuccess)
+            {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
+                return result.Error.Code switch
+                {
+                    "PlayerProfileAlreadyExists" => Results.Conflict(result.Error.Description),
+                    _ => Results.BadRequest(result.Error.Description)
+                };
+            }
+            return Results.Created($"/Players/{result.Value.Id}", result.Value);
         });
 
         // Seccion Tournaments
@@ -605,14 +623,7 @@ internal class Program
             return Results.Created($"/Scorecards/{createdScorecard.Id}", createdScorecard);
         });
 
-        app.MapPut("/api/Scorecards/{id}", [Authorize(Policy = "ManageOwnScorecard")] async ([FromServices] ScorecardService service, int id, ScorecardPostDTO scorecardDto, HttpContext httpContext) => {
-            var authorizationService = httpContext.RequestServices.GetRequiredService<IAuthorizationService>();
-            var authorized = await authorizationService.AuthorizeAsync(httpContext.User, id, new IsOwnerRequirement());
-            if (!authorized.Succeeded)
-            {
-                return Results.Forbid();
-            }
-
+        app.MapPut("/api/Scorecards/{id}", [Authorize(Policy = "ManageOwnScorecard")] async ([FromServices] ScorecardService service, int id, ScorecardPostDTO scorecardDto) => {
             var result = await service.UpdateScorecardAsync(id, scorecardDto);
             if (!result.IsSuccess)
             {

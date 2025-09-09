@@ -36,18 +36,18 @@ namespace Api.Models.Authorization
                 return;
             }
 
-            var scorecard = await _dbContext.Scorecards.FirstOrDefaultAsync(s => s.Id == scorecardId);
+            var scorecard = await _dbContext.Scorecards
+                .Include(s => s.Player) // Include the Player navigation property
+                .FirstOrDefaultAsync(s => s.Id == scorecardId);
 
             if (scorecard == null)
             {
-                // If the scorecard doesn't exist, we can't authorize based on ownership.
-                // The endpoint should handle the NotFound case.
                 context.Fail();
                 return;
             }
 
             // Check if the current user is the owner of the scorecard
-            if (scorecard.PlayerId.ToString() == userId)
+            if (scorecard.Player?.ApplicationUserId == userId)
             {
                 context.Succeed(requirement);
             }
