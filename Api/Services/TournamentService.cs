@@ -275,6 +275,17 @@ namespace Api.Services
             }
         }
 
+        public async Task<Result<SinglePLayerDTO>> RegisterCurrentUserToTournamentAsync(int tournamentId, string userId)
+        {
+            var player = await _db.Players.FirstOrDefaultAsync(p => p.ApplicationUserId == userId);
+            if (player == null)
+            {
+                return Result<SinglePLayerDTO>.Failure(new Error("PlayerProfileNotFound", "A player profile for the current user does not exist."));
+            }
+
+            return await AddPlayerToTournamentAsync(tournamentId, player.Id);
+        }
+
         private Result<bool> AssignScorecardToPlayer(Player player, Category category, Course defaultCourse, Tournament tournament)
         {
             Course selectedCourse = player.IsPreferredCategoryLadies
