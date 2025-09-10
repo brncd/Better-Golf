@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { MainLayout } from "@/components/layouts/MainLayout"
 import { PlayerForm } from "@/components/organisms/PlayerForm"
-import type { PlayerPostDTO } from "@/types"
+import type { PLayerPostDTO } from "@/types"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -13,19 +13,15 @@ export default function NewPlayerPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (data: PlayerPostDTO) => {
+  const handleSubmit = async (data: PLayerPostDTO) => {
     setIsLoading(true)
     try {
-      // In real app, this would call API to create player
-      console.log("Creating player:", data)
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Navigate back to players list
+      const { playerService } = await import("@/lib/services")
+      await playerService.create(data)
       router.push("/players")
     } catch (error) {
       console.error("Error creating player:", error)
+      // Error handling is done in the PlayerForm component
     } finally {
       setIsLoading(false)
     }

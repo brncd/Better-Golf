@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { MainLayout } from "@/components/layouts/MainLayout"
 import { Button } from "@/components/ui/button"
 import { PlayerTable } from "@/components/organisms/PlayerTable"
@@ -12,6 +13,7 @@ import { Plus, Grid, List, Users } from "lucide-react"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
 
 export default function PlayersPage() {
+  const router = useRouter()
   const [viewMode, setViewMode] = useState<"table" | "grid">("table")
   const [players, setPlayers] = useState<PlayerListGetDTO[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -34,11 +36,21 @@ export default function PlayersPage() {
   }, [])
 
   const handleEdit = (id: number) => {
-    console.log("Edit player:", id)
+    router.push(`/players/${id}/edit`)
   }
 
-  const handleDelete = (id: number) => {
-    console.log("Delete player:", id)
+  const handleDelete = async (id: number) => {
+    if (confirm("Are you sure you want to delete this player?")) {
+      try {
+        const { playerService } = await import("@/lib/services")
+        await playerService.delete(id.toString())
+        // Refresh the players list
+        const response = await apiClient.get<PaginationResponse<PlayerListGetDTO>>("/Players")
+        setPlayers(response.items)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to delete player")
+      }
+    }
   }
 
   const renderContent = () => {

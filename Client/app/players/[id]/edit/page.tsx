@@ -8,8 +8,7 @@ import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { mockPlayers } from "@/data/mockData"
-import type { PlayerCreateDTO } from "@/types"
+import type { PLayerPostDTO, SinglePlayerDTO } from "@/types"
 
 interface EditPlayerPageProps {
   params: { id: string }
@@ -17,33 +16,47 @@ interface EditPlayerPageProps {
 
 export default function EditPlayerPage({ params }: EditPlayerPageProps) {
   const router = useRouter()
-  const [player, setPlayer] = useState<PlayerCreateDTO | null>(null)
+  const [player, setPlayer] = useState<PLayerPostDTO | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Simulate API call
-    const foundPlayer = mockPlayers.find((p) => p.id === params.id)
-    if (foundPlayer) {
-      setPlayer({
-        firstName: foundPlayer.firstName,
-        lastName: foundPlayer.lastName,
-        email: foundPlayer.email,
-        phoneNumber: foundPlayer.phoneNumber,
-        dateOfBirth: foundPlayer.dateOfBirth,
-        gender: foundPlayer.gender,
-        handicap: foundPlayer.handicap,
-        membershipNumber: foundPlayer.membershipNumber,
-        categoryId: foundPlayer.categoryId,
-      })
+    const fetchPlayer = async () => {
+      try {
+        setIsLoading(true)
+        const { playerService } = await import("@/lib/services")
+        const playerData = await playerService.getById(params.id)
+        
+        // Convert SinglePlayerDTO to PLayerPostDTO for form
+        setPlayer({
+          firstName: playerData.firstName,
+          lastName: playerData.lastName,
+          email: playerData.email,
+          handicap: playerData.handicap,
+          gender: playerData.gender,
+          dateOfBirth: playerData.dateOfBirth,
+          phoneNumber: playerData.phoneNumber,
+          membershipNumber: playerData.membershipNumber,
+        })
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load player")
+      } finally {
+        setIsLoading(false)
+      }
     }
-    setIsLoading(false)
+
+    fetchPlayer()
   }, [params.id])
 
-  const handleSubmit = async (data: PlayerCreateDTO) => {
-    console.log("[v0] Updating player:", data)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    router.push(`/players/${params.id}`)
+  const handleSubmit = async (data: PLayerPostDTO) => {
+    try {
+      const { playerService } = await import("@/lib/services")
+      await playerService.update(params.id, data)
+      router.push(`/players/${params.id}`)
+    } catch (error) {
+      console.error("Error updating player:", error)
+      // Error handling is done in the PlayerForm component
+    }
   }
 
   if (isLoading) {
@@ -51,6 +64,20 @@ export default function EditPlayerPage({ params }: EditPlayerPageProps) {
       <MainLayout>
         <div className="flex items-center justify-center py-12">
           <LoadingSpinner size="lg" />
+        </div>
+      </MainLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <MainLayout>
+        <div className="text-center py-12 text-red-500">
+          <h1 className="text-2xl font-bold mb-4">Error Loading Player</h1>
+          <p className="mb-4">{error}</p>
+          <Button asChild>
+            <Link href="/players">Back to Players</Link>
+          </Button>
         </div>
       </MainLayout>
     )
@@ -85,7 +112,7 @@ export default function EditPlayerPage({ params }: EditPlayerPageProps) {
           </div>
         </div>
 
-        <PlayerForm initialData={player} onSubmit={handleSubmit} submitLabel="Update Player" />
+        <PlayerForm initialData={player} onSubmit={handleSubmit} onCancel={() => router.push(`/players/${params.id}`)} />
       </div>
     </MainLayout>
   )
