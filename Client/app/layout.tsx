@@ -5,10 +5,21 @@ import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import { AuthProvider } from "@/context/AuthContext"
+import { ErrorBoundary } from "@/components/atoms/ErrorBoundary"
+import { config, validateConfig } from "@/lib/config"
 import "./globals.css"
 
+// Validate configuration on app startup
+if (typeof window === 'undefined') {
+  try {
+    validateConfig()
+  } catch (error) {
+    console.error('Configuration validation failed:', error)
+  }
+}
+
 export const metadata: Metadata = {
-  title: "Golf Tournament Pro - Tournament Management System",
+  title: config.app.name + " - Tournament Management System",
   description:
     "Professional golf tournament management system for organizing tournaments, managing players, and tracking scores",
   generator: "v0.app",
@@ -22,9 +33,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <AuthProvider>
-          <Suspense fallback={null}>{children}</Suspense>
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <Suspense fallback={null}>{children}</Suspense>
+          </AuthProvider>
+        </ErrorBoundary>
         <Analytics />
       </body>
     </html>

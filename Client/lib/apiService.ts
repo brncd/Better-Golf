@@ -1,49 +1,101 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+import axios, { AxiosInstance, AxiosResponse, AxiosRequestConfig, AxiosError } from "axios"
+import { config } from "./config"
+import { logger } from "./logger"
+import { handleApiError, BetterGolfError } from "./errors"
 
-async function fetcher<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('authToken');
+class ApiService {
+  private client: AxiosInstance
 
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
+  constructor() {
+    this.client = axios.create({
+      baseURL: config.api.baseUrl,
+      timeout: config.api.timeout,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    // Request interceptor to add auth token and logging
+    this.client.interceptors.request.use(
+      (config: AxiosRequestConfig) => {
+        const token = localStorage.getItem("token")
+        if (token) {
+          config.headers = config.headers || {}
+          config.headers.Authorization = `Bearer ${token}`
+        }
+        
+        logger.apiRequest(
+          config.method?.toUpperCase() || 'UNKNOWN',
+          config.url || 'unknown',
+          config.data
+        )
+        
+        return config
+      },
+      (error: AxiosError) => {
+        logger.apiError('REQUEST', 'unknown', error)
+        return Promise.reject(handleApiError(error))
+      }
+    )
+
+    // Response interceptor for error handling and logging
+    this.client.interceptors.response.use(
+      (response: AxiosResponse) => {
+        logger.apiResponse(
+          response.config.method?.toUpperCase() || 'UNKNOWN',
+          response.config.url || 'unknown',
+          response.status,
+          response.data
+        )
+        return response
+      },
+      (error: AxiosError) => {
+        const betterGolfError = handleApiError(error)
+        
+        if (error.response?.status === 401) {
+          // Clear token and redirect to login
+          localStorage.removeItem("token")
+          localStorage.removeItem("user")
+          logger.authFailure('Token expired or invalid', error)
+          window.location.href = "/auth/login"
+        }
+        
+        return Promise.reject(betterGolfError)
+      }
+    )
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    try {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'An API error occurred');
-    } catch (e) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+  async get<T>(endpoint: string): Promise<T> {
+    const response = await this.client.get(endpoint);
+    if (!response.data) {
+      return {} as T;
     }
-  }
-  
-  if (response.status === 204) {
-    return {} as T;
+    return response.data;
   }
 
-  return response.json();
+  async post<T>(endpoint: string, body: any): Promise<T> {
+    const response = await this.client.post(endpoint, body);
+    if (!response.data) {
+      return {} as T;
+    }
+    return response.data;
+  }
+
+  async put<T>(endpoint: string, body: any): Promise<T> {
+    const response = await this.client.put(endpoint, body);
+    if (!response.data) {
+      return {} as T;
+    }
+    return response.data;
+  }
+
+  async delete<T>(endpoint: string): Promise<T> {
+    const response = await this.client.delete(endpoint);
+    if (!response.data) {
+      return {} as T;
+    }
+    return response.data;
+  }
 }
 
-export const apiClient = {
-  get: <T>(endpoint: string) => fetcher<T>(endpoint),
-  post: <T>(endpoint: string, body: any) => fetcher<T>(endpoint, {
-    method: 'POST',
-    body: JSON.stringify(body),
-  }),
-  put: <T>(endpoint: string, body: any) => fetcher<T>(endpoint, {
-    method: 'PUT',
-    body: JSON.stringify(body),
-  }),
-  delete: <T>(endpoint: string) => fetcher<T>(endpoint, {
-    method: 'DELETE',
-  }),
-};
+export const apiClient = new ApiService();
