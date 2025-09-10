@@ -1,12 +1,20 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 async function fetcher<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const token = localStorage.getItem('authToken');
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
     ...options,
+    headers,
   });
 
   if (!response.ok) {
