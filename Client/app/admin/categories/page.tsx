@@ -8,48 +8,91 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { CategoryForm } from "@/components/organisms/CategoryForm"
 import { apiClient } from "@/lib/apiService"
-import { CategoryListGetDTO, PaginationResponse, CategoryPostDTO } from "@/types"
+import { CategoryListGetDTO, PaginationResponse, CategoryPostDTO, SingleCategoryDTO } from "@/types"
 import { ArrowLeft, Plus, Edit, Trash2, Tag } from "lucide-react"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
+import { ConfirmDialog } from "@/components/molecules/ConfirmDialog"
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<CategoryListGetDTO[]>([])
   const [showForm, setShowForm] = useState(false)
-  const [editingCategory, setEditingCategory] = useState<CategoryListGetDTO | null>(null)
+  const [editingCategory, setEditingCategory] = useState<SingleCategoryDTO | null>(null)
+  const [deletingCategoryId, setDeletingCategoryId] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        setIsLoading(true)
-        const response = await apiClient.get<PaginationResponse<CategoryListGetDTO>>("/Categories")
-        setCategories(response.items)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An unknown error occurred")
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchCategories = async () => {
+    try {
+      setIsLoading(true)
+      const response = await apiClient.get<PaginationResponse<CategoryListGetDTO>>("/Categories")
+      setCategories(response.items)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred")
+    } finally {
+      setIsLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchCategories()
   }, [])
 
-
   const handleCreateCategory = async (data: CategoryPostDTO) => {
-    //... Phase 3
+    try {
+      setIsLoading(true)
+      await apiClient.post("/Categories", data)
+      setShowForm(false)
+      fetchCategories()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleEditCategory = async (data: CategoryPostDTO) => {
-    //... Phase 3
+    if (!editingCategory) return
+    try {
+      setIsLoading(true)
+      await apiClient.put(`/Categories/${editingCategory.id}`, data)
+      setEditingCategory(null)
+      fetchCategories()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleDeleteCategory = (id: number) => {
-    console.log("Deleting category:", id)
+  const handleDeleteCategory = async () => {
+    if (!deletingCategoryId) return
+    try {
+      setIsLoading(true)
+      await apiClient.delete(`/Categories/${deletingCategoryId}`)
+      setDeletingCategoryId(null)
+      fetchCategories()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred")
+    } finally {
+      setIsLoading(false)
+    }
   }
   
+  const openEditForm = async (category: CategoryListGetDTO) => {
+    try {
+        setIsLoading(true);
+        const fullCategory = await apiClient.get<SingleCategoryDTO>(`/Categories/${category.id}`);
+        setEditingCategory(fullCategory);
+        setShowForm(false);
+    } catch (err) {
+        setError(err instanceof Error ? err.message : "An unknown error occurred");
+    } finally {
+        setIsLoading(false);
+    }
+  }
+
   const renderContent = () => {
-    if (isLoading) {
+    if (isLoading && categories.length === 0) {
       return (
         <div className="flex justify-center items-center py-12">
           <LoadingSpinner size="lg" />
@@ -65,13 +108,13 @@ export default function CategoriesPage() {
       )
     }
 
-    if (categories.length === 0) {
+    if (categories.length === 0 && !showForm && !editingCategory) {
       return (
         <div className="text-center py-12">
           <Tag className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
           <h3 className="text-lg font-semibold mb-2">No categories created</h3>
           <p className="text-muted-foreground mb-4">Get started by creating your first category</p>
-          <Button onClick={() => setShowForm(true)}>
+          <Button onClick={() => { setShowForm(true); setEditingCategory(null); }}>
             <Plus className="h-4 w-4 mr-2" />
             Create Category
           </Button>
@@ -100,10 +143,10 @@ export default function CategoriesPage() {
                 <TableCell className="text-sm">{category.count}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => setEditingCategory(category)}>
+                    <Button variant="ghost" size="sm" onClick={() => openEditForm(category)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteCategory(category.id)}>
+                    <Button variant="ghost" size="sm" onClick={() => setDeletingCategoryId(category.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -135,7 +178,7 @@ export default function CategoriesPage() {
             <p className="text-muted-foreground">Create and manage player categories for tournaments</p>
           </div>
 
-          <Button onClick={() => setShowForm(true)}>
+          <Button onClick={() => { setShowForm(true); setEditingCategory(null); }}>
             <Plus className="h-4 w-4 mr-2" />
             New Category
           </Button>
@@ -148,7 +191,7 @@ export default function CategoriesPage() {
 
         {editingCategory && (
           <CategoryForm
-            initialData={editingCategory as any}
+            initialData={editingCategory}
             onSubmit={handleEditCategory}
             onCancel={() => setEditingCategory(null)}
             isLoading={isLoading}
@@ -167,6 +210,15 @@ export default function CategoriesPage() {
             {renderContent()}
           </CardContent>
         </Card>
+        
+        <ConfirmDialog
+          open={deletingCategoryId !== null}
+          onOpenChange={(isOpen) => !isOpen && setDeletingCategoryId(null)}
+          title="Are you sure?"
+          description="This action cannot be undone. This will permanently delete the category."
+          onConfirm={handleDeleteCategory}
+          variant="destructive"
+        />
       </div>
     </MainLayout>
   )
