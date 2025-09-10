@@ -8,13 +8,14 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { StatusBadge } from "@/components/atoms/StatusBadge"
 import { TournamentTypeBadge } from "@/components/atoms/TournamentTypeBadge"
+import { RoleGuard } from "@/components/auth/RoleGuard"
 import type { TournamentListGetDTO } from "@/types"
 import { Eye, Edit, Trash2, Search } from "lucide-react"
 
 interface TournamentTableProps {
   tournaments: TournamentListGetDTO[]
-  onEdit?: (id: number) => void
-  onDelete?: (id: number) => void
+  onEdit?: (id: string) => void
+  onDelete?: (id: string) => void
 }
 
 export function TournamentTable({ tournaments, onEdit, onDelete }: TournamentTableProps) {
@@ -98,14 +99,14 @@ export function TournamentTable({ tournaments, onEdit, onDelete }: TournamentTab
                     <StatusBadge status={tournament.status} />
                   </TableCell>
                   <TableCell>
-                    <TournamentTypeBadge type={tournament.tournamentType as any} />
+                    <TournamentTypeBadge type={tournament.type as any} />
                   </TableCell>
                   <TableCell className="text-sm">
                     <div>{formatDate(tournament.startDate)}</div>
                     <div className="text-muted-foreground">to {formatDate(tournament.endDate)}</div>
                   </TableCell>
                   <TableCell className="text-sm">
-                    {tournament.playerCount}
+                    {tournament.registeredPlayers}/{tournament.maxPlayers}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
@@ -115,17 +116,19 @@ export function TournamentTable({ tournaments, onEdit, onDelete }: TournamentTab
                         </Link>
                       </Button>
 
-                      {onEdit && (
-                        <Button variant="ghost" size="sm" onClick={() => onEdit(tournament.id)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <RoleGuard roles={["TournamentOrganizer", "Admin"]}>
+                        {onEdit && (
+                          <Button variant="ghost" size="sm" onClick={() => onEdit(tournament.id)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
 
-                      {onDelete && (
-                        <Button variant="ghost" size="sm" onClick={() => onDelete(tournament.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+                        {onDelete && (
+                          <Button variant="ghost" size="sm" onClick={() => onDelete(tournament.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </RoleGuard>
                     </div>
                   </TableCell>
                 </TableRow>

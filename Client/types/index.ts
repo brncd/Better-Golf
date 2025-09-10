@@ -1,6 +1,11 @@
 // types/index.ts
 
 // Base DTO for pagination
+export interface PaginationRequest {
+  pageNumber?: number;
+  pageSize?: number;
+}
+
 export interface PaginationResponse<T> {
   pageNumber: number;
   pageSize: number;
@@ -9,134 +14,245 @@ export interface PaginationResponse<T> {
   items: T[];
 }
 
-// ================== Player DTOs ==================
-export interface PlayerListGetDTO {
-  id: number;
-  matriculaAUG: number;
-  name: string;
-  lastName: string;
-  handicapIndex: string;
+// ================== Authentication DTOs ==================
+export interface LoginRequest {
+  email: string;
+  password: string;
 }
 
-export interface SinglePLayerDTO {
-    id: number;
-    matriculaAUG: number;
-    name: string;
-    lastName: string;
-    handicapIndex: number;
-    birthdate: string; // DateOnly
-    isPreferredCategoryLadies: boolean;
+export interface RegisterRequest {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  accessToken: string;
+  tokenType: string;
+  expiresIn: number;
+}
+
+export interface User {
+  email: string;
+  roles: string[];
+}
+
+// ================== Player DTOs ==================
+export interface PlayerListGetDTO {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  handicap: number;
+  gender: string;
+  dateOfBirth: string;
+  phoneNumber: string;
+  categoryId?: string;
+  categoryName?: string;
+  membershipNumber: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface SinglePlayerDTO {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  handicap: number;
+  gender: string;
+  dateOfBirth: string;
+  phoneNumber: string;
+  categoryId?: string;
+  categoryName?: string;
+  membershipNumber: string;
+  isActive: boolean;
+  createdAt: string;
 }
 
 export interface PLayerPostDTO {
-    matriculaAUG: number;
-    name: string;
-    lastName: string;
-    handicapIndex: number;
-    birthdate: string; // DateOnly
-    isPreferredCategoryLadies: boolean;
+  firstName: string;
+  lastName: string;
+  email: string;
+  handicap: number;
+  gender: string;
+  dateOfBirth: string;
+  phoneNumber: string;
+  membershipNumber: string;
 }
 
 // ================== Tournament DTOs ==================
 export interface TournamentListGetDTO {
-  id: number;
+  id: string;
   name: string;
-  tournamentType: string;
-  startDate: string; // DateOnly
-  endDate: string; // DateOnly
-  playerCount: number;
+  description: string;
   status: "Draft" | "OpenRegistration" | "InProgress" | "Completed" | "Archived";
+  type: string;
+  startDate: string;
+  endDate: string;
+  courseId: string;
+  courseName: string;
+  maxPlayers: number;
+  registeredPlayers: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SingleTournamentDTO {
-    id: number;
-    name: string;
-    count: number;
-    description: string;
-    tournamentType: string;
-    startDate: string; // DateOnly
-    endDate: string; // DateOnly
-    roundInfo: RoundInfo;
+  id: string;
+  name: string;
+  description: string;
+  status: "Draft" | "OpenRegistration" | "InProgress" | "Completed" | "Archived";
+  type: string;
+  startDate: string;
+  endDate: string;
+  courseId: string;
+  courseName: string;
+  maxPlayers: number;
+  registeredPlayers: number;
+  handicapAllowance?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TournamentPostDTO {
-    name: string;
-    description: string;
-    tournamentType: string; // Enum as string
-    startDate: string; // DateOnly
-    endDate: string; // DateOnly
-    roundInfo: RoundInfo;
-    handicapAllowance?: number;
+  name: string;
+  description: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+  courseId: string;
+  maxPlayers: number;
+  handicapAllowance?: number;
+}
+
+export interface TournamentRankingDTO {
+  position: number;
+  playerId: string;
+  playerName: string;
+  totalStrokes: number;
+  totalScore: number;
+  roundScores: number[];
+  handicap: number;
+  netScore: number;
 }
 
 // ================== Course DTOs ==================
 export interface CoursesListGetDTO {
-  id: number;
+  id: string;
   name: string;
+  location: string;
+  numberOfHoles: number;
+  par: number;
+  yardage: number;
+  rating: number;
+  slope: number;
+  description: string;
+  isActive: boolean;
 }
 
 export interface SingleCourseDTO {
-    id: number;
-    name: string;
-    courseSlope: number;
-    courseRating: number;
-    par: number;
+  id: string;
+  name: string;
+  location: string;
+  numberOfHoles: number;
+  par: number;
+  yardage: number;
+  rating: number;
+  slope: number;
+  description: string;
+  isActive: boolean;
 }
 
 export interface CoursePostDTO {
-    name: string;
-    courseSlope: number;
-    courseRating: number;
-    par: number;
+  name: string;
+  location: string;
+  numberOfHoles: number;
+  par: number;
+  yardage: number;
+  rating: number;
+  slope: number;
+  description: string;
 }
 
 // ================== Hole DTOs ==================
 export interface HoleListGetDTO {
-    id: number;
-    par: number;
-    number: number;
-    strokeIndex: number;
+  id: string;
+  courseId: string;
+  holeNumber: number;
+  par: number;
+  yardage: number;
+  handicap: number;
+  description: string;
 }
 
 export interface HolePostDTO {
-    par: number;
-    number: number;
-    strokeIndex: number;
+  holeNumber: number;
+  par: number;
+  yardage: number;
+  handicap: number;
+  description: string;
 }
 
 // ================== Category DTOs ==================
-export interface CategoryListGetDTO {
-    id: number;
-    name: string;
-    sex: string;
-    count: number;
-}
-
-export interface SingleCategoryDTO {
-    id: number;
-    name: string;
-    sex: string;
-    minAge: number;
-    maxAge: number;
-    minHcap: number;
-    maxHcap: number;
-    numberOfHoles: number;
+export interface CategoryDTO {
+  id: string;
+  name: string;
+  description: string;
+  handicapMin?: number;
+  handicapMax?: number;
+  gender: "male" | "female" | "mixed";
+  ageMin?: number;
+  ageMax?: number;
 }
 
 export interface CategoryPostDTO {
-    name: string;
-    sex: string; // Enum as string
-    minAge: number;
-    maxAge: number;
-    minHcap: number;
-    maxHcap: number;
-    numberOfHoles: number;
+  name: string;
+  description: string;
+  handicapMin?: number;
+  handicapMax?: number;
+  gender: "male" | "female" | "mixed";
+  ageMin?: number;
+  ageMax?: number;
 }
 
-// ================== Other DTOs ==================
-export interface RoundInfo {
-    id: number;
-    interval: number;
-    firstRoundTime: number;
-    isShotgun: boolean;
+// ================== Round & Tee Time DTOs ==================
+export interface TeeTimeDTO {
+  teeTime?: Date;
+  startingHole?: number;
+}
+
+export interface RoundDTO {
+  id: string;
+  tournamentId: string;
+  roundNumber: number;
+  date: string;
+}
+
+// ================== Role DTOs ==================
+export interface RoleAssignmentDTO {
+  userId: string;
+  userName: string;
+  email: string;
+  role: string;
+  assignedAt: string;
+  assignedBy: string;
+}
+
+// ================== Scorecard DTOs ==================
+export interface ScorecardDTO {
+  id: string;
+  playerId: string;
+  tournamentId: string;
+  roundId: string;
+  totalStrokes: number;
+  totalScore: number;
+  isCompleted: boolean;
+}
+
+export interface ScorecardResultDTO {
+  id: string;
+  scorecardId: string;
+  holeId: string;
+  strokes: number;
+  score: number;
 }

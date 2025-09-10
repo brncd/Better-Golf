@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { StatusBadge } from "@/components/atoms/StatusBadge"
 import { TournamentTypeBadge } from "@/components/atoms/TournamentTypeBadge"
-import { apiClient } from "@/lib/apiService"
+import { RoleGuard } from "@/components/auth/RoleGuard"
+import { tournamentService } from "@/lib/services"
 import { SingleTournamentDTO, PlayerListGetDTO, TournamentRankingDTO, PaginationResponse } from "@/types"
 import { ArrowLeft, Edit, Calendar, MapPin, Users, Trophy, Clock } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -29,14 +30,15 @@ export default function TournamentDetailPage() {
     const fetchTournamentData = async () => {
       try {
         setIsLoading(true)
-        const tournamentData = await apiClient.get<SingleTournamentDTO>(`/Tournaments/${tournamentId}`)
-        setTournament(tournamentData)
+        const [tournamentData, playersData, rankingsData] = await Promise.all([
+          tournamentService.getById(tournamentId),
+          tournamentService.getPlayers(tournamentId, { pageSize: 100 }),
+          tournamentService.getLeaderboard(tournamentId)
+        ]);
 
-        const playersData = await apiClient.get<PaginationResponse<PlayerListGetDTO>>(`/Tournaments/${tournamentId}/Players`)
-        setPlayers(playersData.items)
-
-        const rankingsData = await apiClient.get<TournamentRankingDTO[]>(`/TournamentRankings/${tournamentId}`)
-        setRankings(rankingsData)
+        setTournament(tournamentData);
+        setPlayers(playersData.items);
+        setRankings(rankingsData);
 
       } catch (err) {
         setError(err instanceof Error ? err.message : "An unknown error occurred")
@@ -91,24 +93,28 @@ export default function TournamentDetailPage() {
               <StatusBadge status={tournament.status as any} />
             </div>
             <div className="flex items-center gap-2">
-              <TournamentTypeBadge type={tournament.tournamentType as any} />
+              <TournamentTypeBadge type={tournament.type as any} />
             </div>
             {tournament.description && <p className="text-muted-foreground max-w-2xl">{tournament.description}</p>}
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" asChild>
-              <Link href={`/tournaments/${tournament.id}/edit`}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Tournament
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link href={`/scoring/tournament/${tournament.id}`}>
-                <Trophy className="h-4 w-4 mr-2" />
-                Enter Scores
-              </Link>
-            </Button>
+            <RoleGuard roles={["TournamentOrganizer", "Admin"]}>
+              <Button variant="outline" asChild>
+                <Link href={`/tournaments/${tournament.id}/edit`}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Tournament
+                </Link>
+              </Button>
+            </RoleGuard>
+            <RoleGuard roles={["TournamentOrganizer", "Admin", "Player"]}>
+              <Button asChild>
+                <Link href={`/scoring/tournament/${tournament.id}`}>
+                  <Trophy className="h-4 w-4 mr-2" />
+                  Enter Scores
+                </Link>
+              </Button>
+            </RoleGuard>
           </div>
         </div>
 
@@ -135,7 +141,7 @@ export default function TournamentDetailPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Players</p>
                   <p className="font-semibold">
-                    {tournament.count}
+                    {tournament.registeredPlayers} / {tournament.maxPlayers}
                   </p>
                 </div>
               </div>
@@ -175,16 +181,16 @@ export default function TournamentDetailPage() {
                     <div key={player.id} className="flex items-center gap-3 p-3 border rounded-lg">
                       <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                         <span className="text-sm font-semibold text-primary">
-                          {player.name[0]}
+                          {player.firstName[0]}
                           {player.lastName[0]}
                         </span>
                       </div>
                       <div>
                         <p className="font-medium">
-                          {player.name} {player.lastName}
+                          {player.firstName} {player.lastName}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          Handicap: {player.handicapIndex}
+                          Handicap: {player.handicap}
                         </p>
                       </div>
                     </div>
@@ -223,7 +229,7 @@ export default function TournamentDetailPage() {
                             <span className="text-sm font-bold text-primary">{ranking.position}</span>
                           </div>
                           <div>
-                            <p className="font-medium">Player ID: {ranking.playerId}</p>
+                            <p className="font-medium">{ranking.playerName}</p>
                             <p className="text-sm text-muted-foreground">Strokes: {ranking.totalStrokes}</p>
                           </div>
                         </div>
@@ -255,7 +261,7 @@ export default function TournamentDetailPage() {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Tournament Type</p>
                     <p className="text-sm">
-                      {tournament.tournamentType}
+                      {tournament.type}
                     </p>
                   </div>
                 </div>

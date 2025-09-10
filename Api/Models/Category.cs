@@ -17,6 +17,7 @@ public class Category
     public int NumberOfHoles { get; set; }
     public int Count { get; set; }
     public Tournament? Tournament { get; set; } = null!;
+    public int TournamentId { get; set; }
     public Category? ParentCategory { get; set; }
     public List<Category>? ChildrenCategories { get; set; }
     public List<Player>? Players { get; set; } = new List<Player>();

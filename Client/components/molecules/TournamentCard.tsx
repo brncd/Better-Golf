@@ -5,13 +5,14 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/atoms/StatusBadge"
 import { TournamentTypeBadge } from "@/components/atoms/TournamentTypeBadge"
+import { RoleGuard } from "@/components/auth/RoleGuard"
 import type { TournamentListGetDTO } from "@/types"
 import { Calendar, Users, Eye, Edit, Trash2 } from "lucide-react"
 
 interface TournamentCardProps {
   tournament: TournamentListGetDTO
-  onEdit?: (id: number) => void
-  onDelete?: (id: number) => void
+  onEdit?: (id: string) => void
+  onDelete?: (id: string) => void
 }
 
 export function TournamentCard({ tournament, onEdit, onDelete }: TournamentCardProps) {
@@ -35,7 +36,7 @@ export function TournamentCard({ tournament, onEdit, onDelete }: TournamentCardP
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <TournamentTypeBadge type={tournament.tournamentType as any} />
+          <TournamentTypeBadge type={tournament.type as any} />
         </div>
       </CardHeader>
 
@@ -51,7 +52,7 @@ export function TournamentCard({ tournament, onEdit, onDelete }: TournamentCardP
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Users className="h-4 w-4 shrink-0" />
             <span>
-              {tournament.playerCount} players
+              {tournament.registeredPlayers}/{tournament.maxPlayers} players
             </span>
           </div>
         </div>
@@ -65,21 +66,23 @@ export function TournamentCard({ tournament, onEdit, onDelete }: TournamentCardP
           </Link>
         </Button>
 
-        <div className="flex gap-2 w-full sm:w-auto">
-          {onEdit && (
-            <Button variant="outline" size="sm" onClick={() => onEdit(tournament.id)} className="flex-1 sm:flex-none">
-              <Edit className="h-4 w-4" />
-              <span className="ml-2 sm:hidden">Edit</span>
-            </Button>
-          )}
+        <RoleGuard roles={["TournamentOrganizer", "Admin"]}>
+          <div className="flex gap-2 w-full sm:w-auto">
+            {onEdit && (
+              <Button variant="outline" size="sm" onClick={() => onEdit(tournament.id)} className="flex-1 sm:flex-none">
+                <Edit className="h-4 w-4" />
+                <span className="ml-2 sm:hidden">Edit</span>
+              </Button>
+            )}
 
-          {onDelete && (
-            <Button variant="outline" size="sm" onClick={() => onDelete(tournament.id)} className="flex-1 sm:flex-none">
-              <Trash2 className="h-4 w-4" />
-              <span className="ml-2 sm:hidden">Delete</span>
-            </Button>
-          )}
-        </div>
+            {onDelete && (
+              <Button variant="outline" size="sm" onClick={() => onDelete(tournament.id)} className="flex-1 sm:flex-none">
+                <Trash2 className="h-4 w-4" />
+                <span className="ml-2 sm:hidden">Delete</span>
+              </Button>
+            )}
+          </div>
+        </RoleGuard>
       </CardFooter>
     </Card>
   )

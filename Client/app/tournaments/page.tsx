@@ -6,7 +6,8 @@ import { MainLayout } from "@/components/layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { TournamentTable } from "@/components/organisms/TournamentTable";
 import { TournamentCard } from "@/components/molecules/TournamentCard";
-import { apiClient } from "@/lib/apiService";
+import { RoleGuard } from "@/components/auth/RoleGuard";
+import { tournamentService } from "@/lib/services";
 import { TournamentListGetDTO, PaginationResponse } from "@/types";
 import { Plus, Grid, List } from "lucide-react";
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner";
@@ -21,7 +22,7 @@ export default function TournamentsPage() {
     const fetchTournaments = async () => {
       try {
         setIsLoading(true);
-        const response = await apiClient.get<PaginationResponse<TournamentListGetDTO>>("/Tournaments");
+        const response = await tournamentService.getAll({ pageSize: 50 });
         setTournaments(response.items);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An unknown error occurred");
@@ -33,12 +34,19 @@ export default function TournamentsPage() {
     fetchTournaments();
   }, []);
 
-  const handleEdit = (id: number) => {
+  const handleEdit = (id: string) => {
     console.log("Edit tournament:", id);
   };
 
-  const handleDelete = (id: number) => {
-    console.log("Delete tournament:", id);
+  const handleDelete = async (id: string) => {
+    if (confirm("Are you sure you want to delete this tournament?")) {
+      try {
+        await tournamentService.delete(id);
+        setTournaments(tournaments.filter(t => t.id !== id));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to delete tournament");
+      }
+    }
   };
 
   const renderContent = () => {
@@ -96,30 +104,37 @@ export default function TournamentsPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-balance">Tournaments</h1>
-            <p className="text-muted-foreground">Manage and organize golf tournaments</p>
+            <p className="text-muted-foreground">Manage and view all golf tournaments</p>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* View Mode Toggle */}
-            <div className="flex rounded-lg border p-1">
+            <RoleGuard roles={["TournamentOrganizer", "Admin"]}>
+              <Button asChild>
+                <Link href="/tournaments/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Tournament
+                </Link>
+              </Button>
+            </RoleGuard>
+
+            <div className="flex border rounded-lg">
               <Button
                 variant={viewMode === "table" ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setViewMode("table")}
+                className="rounded-r-none"
               >
                 <List className="h-4 w-4" />
               </Button>
-              <Button variant={viewMode === "grid" ? "default" : "ghost"} size="sm" onClick={() => setViewMode("grid")}>
+              <Button
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+                className="rounded-l-none"
+              >
                 <Grid className="h-4 w-4" />
               </Button>
             </div>
-
-            <Button asChild>
-              <Link href="/tournaments/new">
-                <Plus className="h-4 w-4 mr-2" />
-                New Tournament
-              </Link>
-            </Button>
           </div>
         </div>
 

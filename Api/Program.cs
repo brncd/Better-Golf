@@ -35,11 +35,11 @@ internal class Program
     private static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-        builder.Configuration["Urls"] = "http://*:5001";
         builder.Services.AddDbContext<BgContext>(options => 
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
         
         builder.Services.AddIdentityApiEndpoints<IdentityUser>() // Added
+            .AddRoles<IdentityRole>() // Added
             .AddEntityFrameworkStores<BgContext>(); // Added
 
         // Add FluentValidation
@@ -79,7 +79,7 @@ internal class Program
         builder.Services.AddScoped<MatchService>();
         builder.Services.AddScoped<ScorecardService>(); // No change needed here, dependencies are resolved automatically
 
-        builder.Services.AddSingleton<IAuthorizationHandler, ScorecardOwnerAuthorizationHandler>(); // Register the custom authorization handler
+        builder.Services.AddScoped<IAuthorizationHandler, ScorecardOwnerAuthorizationHandler>(); // Register the custom authorization handler
 
         builder.Services.AddAuthorization(options =>
         {

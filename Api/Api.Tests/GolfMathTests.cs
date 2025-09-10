@@ -13,10 +13,10 @@ namespace Api.Tests
             // Arrange
             var player = new Player { HandicapIndex = 10.5 };
             var course = new Course { CourseSlope = 120, CourseRating = 70.5, Par = 72 };
-            int expected = 9; // Convert.ToInt32(10.5 * (120 / 113) + (70.5 - 72))
+            double expected = 9.6; // 10.5 * (120 / 113.0) + (70.5 - 72)
 
             // Act
-            int actual = GolfMath.CalculateCourseHandicap(player, course);
+            double actual = GolfMath.CalculateCourseHandicap(player, course);
 
             // Assert
             Assert.Equal(expected, actual);

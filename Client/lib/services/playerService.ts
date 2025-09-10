@@ -1,0 +1,38 @@
+import { apiClient } from '../apiService';
+import type { 
+  PlayerListGetDTO, 
+  SinglePlayerDTO, 
+  PLayerPostDTO, 
+  PaginationRequest, 
+  PaginationResponse 
+} from '@/types';
+
+export const playerService = {
+  // Get all players with pagination
+  getAll: (pagination?: PaginationRequest): Promise<PaginationResponse<PlayerListGetDTO>> =>
+    apiClient.get(`/api/Players?pageNumber=${pagination?.pageNumber || 1}&pageSize=${pagination?.pageSize || 10}`),
+
+  // Get player by ID
+  getById: (id: string): Promise<SinglePlayerDTO> =>
+    apiClient.get(`/api/Players/${id}`),
+
+  // Create new player (Admin only)
+  create: (player: PLayerPostDTO): Promise<SinglePlayerDTO> =>
+    apiClient.post('/api/Players', player),
+
+  // Update player (Player/Admin)
+  update: (id: string, player: PLayerPostDTO): Promise<void> =>
+    apiClient.put(`/api/Players/${id}`, player),
+
+  // Delete player (Admin only)
+  delete: (id: string): Promise<void> =>
+    apiClient.delete(`/api/Players/${id}`),
+
+  // Get player tournaments
+  getTournaments: (id: string, pagination?: PaginationRequest): Promise<PaginationResponse<any>> =>
+    apiClient.get(`/api/Players/${id}/Tournaments?pageNumber=${pagination?.pageNumber || 1}&pageSize=${pagination?.pageSize || 10}`),
+
+  // Create player profile for current user
+  createProfile: (player: PLayerPostDTO): Promise<SinglePlayerDTO> =>
+    apiClient.post('/api/me/player-profile', player),
+};

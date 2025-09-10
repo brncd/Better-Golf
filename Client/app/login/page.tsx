@@ -23,8 +23,7 @@ export default function LoginPage() {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await authClient.login<{ accessToken: string }>({ email, password })
-      login(response.accessToken)
+      await login({ email, password })
       router.push("/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred")
