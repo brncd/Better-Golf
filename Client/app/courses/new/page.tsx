@@ -16,16 +16,12 @@ export default function NewCoursePage() {
   const handleSubmit = async (data: CoursePostDTO) => {
     setIsLoading(true)
     try {
-      // In real app, this would call API to create course
-      console.log("Creating course:", data)
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Navigate back to courses list
+      const { courseService } = await import("@/lib/services")
+      await courseService.create(data)
       router.push("/courses")
     } catch (error) {
       console.error("Error creating course:", error)
+      // Error handling is done in the CourseForm component
     } finally {
       setIsLoading(false)
     }

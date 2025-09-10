@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { MainLayout } from "@/components/layouts/MainLayout"
 import { Button } from "@/components/ui/button"
 import { CourseTable } from "@/components/organisms/CourseTable"
@@ -12,6 +13,7 @@ import { Plus, Grid, List, MapPin } from "lucide-react"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
 
 export default function CoursesPage() {
+  const router = useRouter()
   const [viewMode, setViewMode] = useState<"table" | "grid">("table")
   const [courses, setCourses] = useState<CoursesListGetDTO[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -35,13 +37,21 @@ export default function CoursesPage() {
 
 
   const handleEdit = (id: number) => {
-    // Navigate to edit page - in real app this would use router.push
-    console.log("Edit course:", id)
+    router.push(`/courses/${id}/edit`)
   }
 
-  const handleDelete = (id: number) => {
-    // Show confirmation dialog and delete - in real app this would call API
-    console.log("Delete course:", id)
+  const handleDelete = async (id: number) => {
+    if (confirm("Are you sure you want to delete this course?")) {
+      try {
+        const { courseService } = await import("@/lib/services")
+        await courseService.delete(id.toString())
+        // Refresh the courses list
+        const response = await apiClient.get<PaginationResponse<CoursesListGetDTO>>("/Courses")
+        setCourses(response.items)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to delete course")
+      }
+    }
   }
 
   const renderContent = () => {

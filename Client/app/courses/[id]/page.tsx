@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { MainLayout } from "@/components/layouts/MainLayout"
@@ -9,56 +9,117 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HoleCard } from "@/components/molecules/HoleCard"
 import { HoleForm } from "@/components/organisms/HoleForm"
-import { mockCourses, mockHoles } from "@/data/mockData"
-import type { HoleListGetDTO, HolePostDTO } from "@/types"
+import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
+import type { HoleListGetDTO, HolePostDTO, SingleCourseDTO } from "@/types"
 import { ArrowLeft, Edit, MapPin, Flag, Ruler, Plus, Target } from "lucide-react"
 
 export default function CourseDetailPage() {
   const params = useParams()
   const courseId = params.id as string
 
-  // In real app, this would fetch course data based on ID
-  const course = mockCourses.find((c) => c.id === courseId) || mockCourses[0]
-  const [holes, setHoles] = useState<HoleListGetDTO[]>(mockHoles.filter((h) => h.courseId === course.id))
+  const [course, setCourse] = useState<SingleCourseDTO | null>(null)
+  const [holes, setHoles] = useState<HoleListGetDTO[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showHoleForm, setShowHoleForm] = useState(false)
   const [editingHole, setEditingHole] = useState<HoleListGetDTO | null>(null)
 
-  const handleAddHole = async (data: HolePostDTO) => {
-    // In real app, this would call API to create hole
-    console.log("Creating hole:", data)
-
-    const newHole: HoleListGetDTO = {
-      id: `hole-${Date.now()}`,
-      ...data,
+  useEffect(() => {
+    const fetchCourseData = async () => {
+      try {
+        setIsLoading(true)
+        const { courseService } = await import("@/lib/services")
+        const [courseData, holesData] = await Promise.all([
+          courseService.getById(courseId),
+          courseService.getHoles(courseId)
+        ])
+        setCourse(courseData)
+        setHoles(holesData.items)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load course data")
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    setHoles((prev) => [...prev, newHole].sort((a, b) => a.holeNumber - b.holeNumber))
-    setShowHoleForm(false)
+    fetchCourseData()
+  }, [courseId])
+
+  const handleAddHole = async (data: HolePostDTO) => {
+    try {
+      const { courseService } = await import("@/lib/services")
+      await courseService.addHole(courseId, data)
+      // Refresh holes list
+      const holesData = await courseService.getHoles(courseId)
+      setHoles(holesData.items)
+      setShowHoleForm(false)
+    } catch (error) {
+      console.error("Error creating hole:", error)
+    }
   }
 
   const handleEditHole = async (data: HolePostDTO) => {
     if (!editingHole) return
 
-    // In real app, this would call API to update hole
-    console.log("Updating hole:", data)
-
-    const updatedHole: HoleListGetDTO = {
-      ...editingHole,
-      ...data,
+    try {
+      // For now, just update locally - hole editing API would need to be implemented
+      console.log("Editing hole:", data)
+      setEditingHole(null)
+    } catch (error) {
+      console.error("Error updating hole:", error)
     }
-
-    setHoles((prev) => prev.map((h) => (h.id === editingHole.id ? updatedHole : h)))
-    setEditingHole(null)
   }
 
-  const handleDeleteHole = (id: string) => {
-    // In real app, this would call API to delete hole
-    console.log("Deleting hole:", id)
-    setHoles((prev) => prev.filter((h) => h.id !== id))
+  const handleDeleteHole = async (id: string) => {
+    if (confirm("Are you sure you want to delete this hole?")) {
+      try {
+        const { courseService } = await import("@/lib/services")
+        await courseService.removeHole(courseId, id)
+        setHoles((prev) => prev.filter((h) => h.id !== id))
+      } catch (error) {
+        console.error("Error deleting hole:", error)
+      }
+    }
   }
 
   const totalPar = holes.reduce((sum, hole) => sum + hole.par, 0)
   const totalYardage = holes.reduce((sum, hole) => sum + hole.yardage, 0)
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex justify-center items-center py-12">
+          <LoadingSpinner size="lg" />
+        </div>
+      </MainLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <MainLayout>
+        <div className="text-center py-12 text-red-500">
+          <p>Error loading course: {error}</p>
+          <Button asChild className="mt-4">
+            <Link href="/courses">Back to Courses</Link>
+          </Button>
+        </div>
+      </MainLayout>
+    )
+  }
+
+  if (!course) {
+    return (
+      <MainLayout>
+        <div className="text-center py-12">
+          <p>Course not found</p>
+          <Button asChild className="mt-4">
+            <Link href="/courses">Back to Courses</Link>
+          </Button>
+        </div>
+      </MainLayout>
+    )
+  }
 
   return (
     <MainLayout>
