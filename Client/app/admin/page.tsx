@@ -1,13 +1,57 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { MainLayout } from "@/components/layouts/MainLayout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { mockCategories, mockRoleAssignments } from "@/data/mockData"
+import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
+import type { CategoryPostDTO, PaginationResponse } from "@/types"
 import { Settings, Users, Tag, Shield, Eye } from "lucide-react"
 
-export default function AdminPage() {
+function AdminPageContent() {
+  const [categories, setCategories] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      try {
+        setIsLoading(true)
+        const { categoryService } = await import("@/lib/services")
+        const categoriesData = await categoryService.getAll()
+        setCategories(categoriesData.items)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load admin data")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchAdminData()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex justify-center items-center py-12">
+          <LoadingSpinner size="lg" />
+        </div>
+      </MainLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <MainLayout>
+        <div className="text-center py-12 text-red-500">
+          <p>Error loading admin data: {error}</p>
+        </div>
+      </MainLayout>
+    )
+  }
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -25,7 +69,7 @@ export default function AdminPage() {
                 <Tag className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Categories</p>
-                  <p className="text-2xl font-bold">{mockCategories.length}</p>
+                  <p className="text-2xl font-bold">{categories.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -37,7 +81,7 @@ export default function AdminPage() {
                 <Shield className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">User Roles</p>
-                  <p className="text-2xl font-bold">{mockRoleAssignments.length}</p>
+                  <p className="text-2xl font-bold">-</p>
                 </div>
               </div>
             </CardContent>
@@ -49,7 +93,7 @@ export default function AdminPage() {
                 <Users className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Admins</p>
-                  <p className="text-2xl font-bold">{mockRoleAssignments.filter((r) => r.role === "admin").length}</p>
+                  <p className="text-2xl font-bold">-</p>
                 </div>
               </div>
             </CardContent>
@@ -89,7 +133,7 @@ export default function AdminPage() {
                 Create and manage player categories for tournaments and competitions.
               </p>
               <div className="space-y-2">
-                {mockCategories.slice(0, 3).map((category) => (
+                {categories.slice(0, 3).map((category: any) => (
                   <div key={category.id} className="flex items-center justify-between p-2 border rounded">
                     <div>
                       <p className="font-medium">{category.name}</p>
@@ -127,17 +171,9 @@ export default function AdminPage() {
                 Assign and manage user roles and permissions within the system.
               </p>
               <div className="space-y-2">
-                {mockRoleAssignments.slice(0, 3).map((assignment) => (
-                  <div key={assignment.userId} className="flex items-center justify-between p-2 border rounded">
-                    <div>
-                      <p className="font-medium">{assignment.userName}</p>
-                      <p className="text-sm text-muted-foreground">{assignment.email}</p>
-                    </div>
-                    <div className="text-sm">
-                      <span className="capitalize font-medium">{assignment.role.replace("-", " ")}</span>
-                    </div>
-                  </div>
-                ))}
+                <div className="text-center py-4 text-muted-foreground">
+                  <p>Role management functionality coming soon</p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -183,5 +219,13 @@ export default function AdminPage() {
         </Card>
       </div>
     </MainLayout>
+  )
+}
+
+export default function AdminPage() {
+  return (
+    <ProtectedRoute requiredRole="Admin">
+      <AdminPageContent />
+    </ProtectedRoute>
   )
 }
