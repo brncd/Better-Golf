@@ -2,9 +2,8 @@ import { apiClient } from '../apiService';
 import type { 
   CoursesListGetDTO, 
   SingleCourseDTO, 
-  CoursePostDTO,
-  HoleListGetDTO,
-  HolePostDTO,
+  CoursePostDTO, 
+  CourseDetailGetDTO,
   PaginationRequest, 
   PaginationResponse 
 } from '@/types';
@@ -15,8 +14,15 @@ export const courseService = {
     apiClient.get(`/api/Courses?pageNumber=${pagination?.pageNumber || 1}&pageSize=${pagination?.pageSize || 10}`),
 
   // Get course by ID
-  getById: (id: string): Promise<SingleCourseDTO> =>
-    apiClient.get(`/api/Courses/${id}`),
+  async getById(id: string): Promise<SingleCourseDTO> {
+    const response = await apiClient.get(`/api/Courses/${id}`)
+    return response.data
+  },
+
+  async getByIdWithHoles(id: string): Promise<CourseDetailGetDTO> {
+    const response = await apiClient.get(`/api/Courses/${id}/holes`)
+    return response.data
+  },
 
   // Create new course (Admin only)
   create: (course: CoursePostDTO): Promise<SingleCourseDTO> =>

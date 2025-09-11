@@ -253,15 +253,36 @@ export interface RoleAssignmentDTO {
 // ================== Scorecard DTOs ==================
 export interface ScorecardDTO {
   id: number;
+  playerId: number;
+  playerName: string;
+  courseId: number;
+  roundNumber: number;
   playingHandicap: number;
-  player: number;
   totalStrokes: number;
+  isLocked: boolean;
 }
 
 export interface ScorecardResultDTO {
   id: string;
   scorecardId: string;
-  holeId: string;
+  holeId: number;
   strokes: number;
   score: number;
+}
+
+// ================== Course Detail DTOs ==================
+export interface HoleDTO {
+  id: number;
+  holeNumber: number;
+  par: number;
+  distance: number;
+  courseId: number;
+}
+
+export interface CourseDetailGetDTO {
+  id: number;
+  name: string;
+  location: string;
+  description: string;
+  holes: HoleDTO[];
 }

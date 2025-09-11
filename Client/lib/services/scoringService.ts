@@ -1,14 +1,5 @@
 import { TournamentListGetDTO, ScorecardDTO, ScorecardResultDTO } from '@/types';
-import axios from 'axios';
-import { config } from '../config';
-
-const apiClient = axios.create({
-  baseURL: config.api.baseUrl,
-  timeout: config.api.timeout,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+import { apiClient } from '../apiService';
 
 export interface ScorecardWithResults extends ScorecardDTO {
   results: ScorecardResultDTO[];
@@ -17,19 +8,19 @@ export interface ScorecardWithResults extends ScorecardDTO {
 export const scoringService = {
   // Get active tournaments for scoring
   async getActiveTournaments(): Promise<TournamentListGetDTO[]> {
-    const response = await apiClient.get('/api/Tournaments/Active');
+    const response = await apiClient.get('/api/Tournaments/Active') as any;
     return response.data;
   },
 
   // Get tournament scorecards for scoring
   async getTournamentScorecards(tournamentId: string): Promise<ScorecardDTO[]> {
-    const response = await apiClient.get(`/api/Tournaments/${tournamentId}/Scorecards`);
+    const response = await apiClient.get(`/api/Tournaments/${tournamentId}/Scorecards`) as any;
     return response.data;
   },
 
   // Get specific scorecard with results
   async getScorecardWithResults(scorecardId: string): Promise<ScorecardWithResults> {
-    const response = await apiClient.get(`/api/Scorecards/${scorecardId}`);
+    const response = await apiClient.get(`/api/Scorecards/${scorecardId}`) as any;
     return response.data;
   },
 

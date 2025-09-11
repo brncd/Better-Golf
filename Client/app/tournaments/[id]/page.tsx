@@ -10,9 +10,13 @@ import { TournamentTypeBadge } from "@/components/atoms/TournamentTypeBadge"
 import { RoleGuard } from "@/components/auth/RoleGuard"
 import { tournamentService } from "@/lib/services"
 import { SingleTournamentDTO, PlayerListGetDTO, TournamentRankingDTO, PaginationResponse } from "@/types"
-import { ArrowLeft, Edit, Calendar, MapPin, Users, Trophy, Clock } from "lucide-react"
+import { ArrowLeft, Edit, Calendar, MapPin, Users, Trophy, Clock, UserPlus, UserMinus } from "lucide-react"
 import { useEffect, useState } from "react"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
+import { useAuth } from "@/hooks/useAuth"
+import { useErrorHandler } from "@/hooks/useErrorHandler"
+import { useToast } from "@/hooks/use-toast"
+import { ConfirmDialog } from "@/components/molecules/ConfirmDialog"
 
 export default function TournamentDetailPage() {
   const params = useParams()
@@ -22,7 +26,13 @@ export default function TournamentDetailPage() {
   const [players, setPlayers] = useState<PlayerListGetDTO[]>([])
   const [rankings, setRankings] = useState<TournamentRankingDTO[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [isRegistered, setIsRegistered] = useState(false)
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [showUnregisterDialog, setShowUnregisterDialog] = useState(false)
+  
+  const { user, hasRole } = useAuth()
+  const { handleError } = useErrorHandler({ context: 'TournamentDetailPage' })
+  const { toast } = useToast()
 
   useEffect(() => {
     if (!tournamentId) return;
@@ -30,18 +40,27 @@ export default function TournamentDetailPage() {
     const fetchTournamentData = async () => {
       try {
         setIsLoading(true)
-        const [tournamentData, playersData, rankingsData] = await Promise.all([
+        const [tournamentData, playersData] = await Promise.all([
           tournamentService.getById(tournamentId),
-          tournamentService.getPlayers(tournamentId, { pageSize: 100 }),
-          tournamentService.getLeaderboard(tournamentId)
+          tournamentService.getPlayers(tournamentId, { pageSize: 100 })
         ]);
+
+        // Check if current user is registered if they're a player
+        if (user && hasRole('Player')) {
+          try {
+            const registrationStatus = await tournamentService.checkRegistration(tournamentId);
+            setIsRegistered(registrationStatus.isRegistered);
+          } catch (err) {
+            // Registration check failed, assume not registered
+            setIsRegistered(false);
+          }
+        }
 
         setTournament(tournamentData);
         setPlayers(playersData.items);
-        setRankings(rankingsData);
 
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An unknown error occurred")
+        handleError(err, 'Failed to load tournament data')
       } finally {
         setIsLoading(false)
       }
@@ -58,6 +77,59 @@ export default function TournamentDetailPage() {
       month: "long",
       day: "numeric",
     })
+  }
+
+  const handleRegister = async () => {
+    if (!user || !tournament) return
+    
+    try {
+      setIsRegistering(true)
+      await tournamentService.register(tournamentId)
+      setIsRegistered(true)
+      toast({
+        title: "Registration successful",
+        description: `You have been registered for ${tournament.name}`,
+      })
+      // Refresh player list
+      const playersData = await tournamentService.getPlayers(tournamentId, { pageSize: 100 })
+      setPlayers(playersData.items)
+    } catch (err) {
+      handleError(err, 'Failed to register for tournament')
+    } finally {
+      setIsRegistering(false)
+    }
+  }
+
+  const handleUnregister = async () => {
+    if (!user || !tournament) return
+    
+    try {
+      setIsRegistering(true)
+      await tournamentService.unregisterPlayer(tournamentId, user.id)
+      setIsRegistered(false)
+      setShowUnregisterDialog(false)
+      toast({
+        title: "Unregistration successful",
+        description: `You have been unregistered from ${tournament.name}`,
+      })
+      // Refresh player list
+      const playersData = await tournamentService.getPlayers(tournamentId, { pageSize: 100 })
+      setPlayers(playersData.items)
+    } catch (err) {
+      handleError(err, 'Failed to unregister from tournament')
+    } finally {
+      setIsRegistering(false)
+    }
+  }
+
+  const canRegister = () => {
+    if (!tournament || !user || !hasRole('Player')) return false
+    return tournament.tournamentType === 'OpenRegistration' && !isRegistered
+  }
+
+  const canUnregister = () => {
+    if (!tournament || !user || !hasRole('Player')) return false
+    return tournament.tournamentType === 'OpenRegistration' && isRegistered
   }
 
   if (isLoading) {

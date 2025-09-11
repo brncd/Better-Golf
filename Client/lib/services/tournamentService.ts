@@ -25,9 +25,21 @@ export const tournamentService = {
   update: (id: string, tournament: TournamentPostDTO): Promise<void> =>
     apiClient.put(`/api/Tournaments/${id}`, tournament),
 
-  // Delete tournament (TournamentOrganizer/Admin)
+  // Delete tournament (Admin/TournamentOrganizer only)
   delete: (id: string): Promise<void> =>
     apiClient.delete(`/api/Tournaments/${id}`),
+
+  // Register player for tournament
+  registerPlayer: (tournamentId: string, playerId: string): Promise<void> =>
+    apiClient.post(`/api/Tournaments/${tournamentId}/register`, { playerId }),
+
+  // Unregister player from tournament
+  unregisterPlayer: (tournamentId: string, playerId: string): Promise<void> =>
+    apiClient.delete(`/api/Tournaments/${tournamentId}/register/${playerId}`),
+
+  // Check if current user is registered for tournament
+  checkRegistration: (tournamentId: string): Promise<{ isRegistered: boolean; playerId?: string }> =>
+    apiClient.get(`/api/Tournaments/${tournamentId}/registration-status`),
 
   // Set tournament status (TournamentOrganizer/Admin)
   setStatus: (id: string, status: string): Promise<void> =>
