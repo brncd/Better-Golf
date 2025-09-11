@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { MainLayout } from "@/components/layouts/MainLayout"
@@ -10,75 +10,43 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HoleCard } from "@/components/molecules/HoleCard"
 import { HoleForm } from "@/components/organisms/HoleForm"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
-import type { HoleListGetDTO, HolePostDTO, SingleCourseDTO } from "@/types"
+import { ErrorDisplay } from "@/components/atoms/ErrorDisplay"
+import { useCourse, useCourseHoles, useAddHole, useRemoveHole } from "@/hooks/useCourses"
+import type { HoleListGetDTO, HolePostDTO } from "@/types"
 import { ArrowLeft, Edit, MapPin, Flag, Ruler, Plus, Target } from "lucide-react"
 
 export default function CourseDetailPage() {
   const params = useParams()
   const courseId = params.id as string
 
-  const [course, setCourse] = useState<SingleCourseDTO | null>(null)
-  const [holes, setHoles] = useState<HoleListGetDTO[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [showHoleForm, setShowHoleForm] = useState(false)
   const [editingHole, setEditingHole] = useState<HoleListGetDTO | null>(null)
 
-  useEffect(() => {
-    const fetchCourseData = async () => {
-      try {
-        setIsLoading(true)
-        const { courseService } = await import("@/lib/services")
-        const [courseData, holesData] = await Promise.all([
-          courseService.getById(courseId),
-          courseService.getHoles(courseId)
-        ])
-        setCourse(courseData)
-        setHoles(holesData.items)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load course data")
-      } finally {
-        setIsLoading(false)
-      }
-    }
+  // Use TanStack Query for data fetching with caching
+  const { data: course, isLoading: courseLoading, error: courseError } = useCourse(courseId)
+  const { data: holesResponse, isLoading: holesLoading, error: holesError } = useCourseHoles(courseId)
+  const addHoleMutation = useAddHole()
+  const removeHoleMutation = useRemoveHole()
 
-    fetchCourseData()
-  }, [courseId])
+  const holes = holesResponse?.items || []
+  const isLoading = courseLoading || holesLoading
+  const error = courseError || holesError
 
-  const handleAddHole = async (data: HolePostDTO) => {
-    try {
-      const { courseService } = await import("@/lib/services")
-      await courseService.addHole(courseId, data)
-      // Refresh holes list
-      const holesData = await courseService.getHoles(courseId)
-      setHoles(holesData.items)
-      setShowHoleForm(false)
-    } catch (error) {
-      console.error("Error creating hole:", error)
-    }
+  const handleAddHole = (data: HolePostDTO) => {
+    addHoleMutation.mutate({ courseId, data });
+    setShowHoleForm(false);
   }
 
-  const handleEditHole = async (data: HolePostDTO) => {
-    if (!editingHole) return
-
-    try {
-      // For now, just update locally - hole editing API would need to be implemented
-      console.log("Editing hole:", data)
-      setEditingHole(null)
-    } catch (error) {
-      console.error("Error updating hole:", error)
-    }
+  const handleEditHole = (data: HolePostDTO) => {
+    if (!editingHole) return;
+    // For now, just close the form - hole editing API would need to be implemented
+    console.log("Editing hole:", data);
+    setEditingHole(null);
   }
 
-  const handleDeleteHole = async (id: string) => {
+  const handleDeleteHole = (id: string | number) => {
     if (confirm("Are you sure you want to delete this hole?")) {
-      try {
-        const { courseService } = await import("@/lib/services")
-        await courseService.removeHole(courseId, id)
-        setHoles((prev) => prev.filter((h) => h.id !== id))
-      } catch (error) {
-        console.error("Error deleting hole:", error)
-      }
+      removeHoleMutation.mutate({ courseId, holeId: id.toString() });
     }
   }
 
@@ -99,7 +67,7 @@ export default function CourseDetailPage() {
     return (
       <MainLayout>
         <div className="text-center py-12 text-red-500">
-          <p>Error loading course: {error}</p>
+          <p>Error loading course: {error instanceof Error ? error.message : 'Server error. Please try again later.'}</p>
           <Button asChild className="mt-4">
             <Link href="/courses">Back to Courses</Link>
           </Button>
@@ -223,12 +191,12 @@ export default function CourseDetailPage() {
             </div>
 
             {showHoleForm && (
-              <HoleForm courseId={course.id} onSubmit={handleAddHole} onCancel={() => setShowHoleForm(false)} />
+              <HoleForm courseId={course.id.toString()} onSubmit={handleAddHole} onCancel={() => setShowHoleForm(false)} />
             )}
 
             {editingHole && (
               <HoleForm
-                courseId={course.id}
+                courseId={course.id.toString()}
                 initialData={editingHole}
                 onSubmit={handleEditHole}
                 onCancel={() => setEditingHole(null)}
