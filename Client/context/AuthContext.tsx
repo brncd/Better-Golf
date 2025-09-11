@@ -9,7 +9,7 @@ import type { User, AuthResponse, LoginRequest } from '@/types';
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (credentials: LoginRequest) => Promise<void>;
+  login: (credentials: LoginRequest) => Promise<{ user: User; token: string }>;
   logout: () => void;
   isAuthenticated: boolean;
   loading: boolean;
@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = async (credentials: LoginRequest) => {
+  const login = async (credentials: LoginRequest): Promise<{ user: User; token: string }> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -66,11 +66,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setToken(newToken);
       
-      setUser({ 
+      const userData = { 
         email: response.email, 
         username: response.username,
         roles: response.roles || [] 
-      });
+      };
+      
+      setUser(userData);
+      
+      // Return user data and token directly
+      return { user: userData, token: newToken };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);

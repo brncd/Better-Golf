@@ -27,57 +27,46 @@ export function DemoUserButton({ className }: DemoUserButtonProps) {
     setError(null)
 
     try {
-      // Use AuthContext login method
-      await login({
-        email: "demo@bettergolf.com",
+      // Use AuthContext login method - now returns user data and token directly
+      const { token: authToken } = await login({
+        emailOrUsername: "demo@bettergolf.com",
         password: "Demo123!"
       })
 
-      // Get token from localStorage after login
-      const currentToken = localStorage.getItem('authToken')
-      if (currentToken) {
-        const response = await fetch(`${config.api.baseUrl}/api/seed-demo-data`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${currentToken}`,
-            'Content-Type': 'application/json'
-          }
-        })
-
-        if (response.ok) {
-          router.push('/dashboard')
-        } else {
-          // Even if seeding fails, still redirect to dashboard
-          router.push('/dashboard')
+      // Use the returned token directly
+      const response = await fetch(`${config.api.baseUrl}/api/seed-demo-data`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
         }
-      } else {
-        router.push('/dashboard')
-      }
+      })
+
+      // Redirect to dashboard regardless of seeding result
+      router.push('/dashboard')
     } catch (err) {
       // If login fails, try to register first
       try {
         await authClient.register({
+          username: "demo",
           email: "demo@bettergolf.com",
           password: "Demo123!"
         })
 
         // Then login using AuthContext
-        await login({
-          email: "demo@bettergolf.com",
+        const { token: authToken } = await login({
+          emailOrUsername: "demo@bettergolf.com",
           password: "Demo123!"
         })
 
-        // Get token from localStorage after login
-        const currentToken = localStorage.getItem('authToken')
-        if (currentToken) {
-          const response = await fetch(`${config.api.baseUrl}/api/seed-demo-data`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${currentToken}`,
-              'Content-Type': 'application/json'
-            }
-          })
-        }
+        // Use the returned token directly
+        const response = await fetch(`${config.api.baseUrl}/api/seed-demo-data`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        })
 
         router.push('/dashboard')
       } catch (registerErr) {

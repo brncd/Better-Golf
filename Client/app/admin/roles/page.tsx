@@ -26,17 +26,70 @@ export default function RolesPage() {
   const { handleError } = useErrorHandler({ context: 'RolesPage' })
   const { toast } = useToast()
 
-  const handleRoleChange = (userId: string, newRole: RoleAssignmentDTO["role"]) => {
-    // In real app, this would call API to update role
-    console.log("Updating role:", { userId, newRole })
+  useEffect(() => {
+    const loadRoleAssignments = async () => {
+      try {
+        const assignments = await userService.getRoleAssignments()
+        setRoleAssignments(assignments)
+      } catch (error) {
+        handleError(error, 'Failed to load role assignments')
+        // Use mock data as fallback
+        setRoleAssignments([
+          {
+            userId: "1",
+            userName: "John Admin",
+            email: "john@bettergolf.com",
+            role: "admin",
+            assignedAt: new Date().toISOString(),
+            assignedBy: "system"
+          },
+          {
+            userId: "2", 
+            userName: "Sarah Director",
+            email: "sarah@bettergolf.com",
+            role: "tournament-director",
+            assignedAt: new Date().toISOString(),
+            assignedBy: "john admin"
+          }
+        ])
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-    setRoleAssignments((prev) =>
-      prev.map((assignment) =>
-        assignment.userId === userId
-          ? { ...assignment, role: newRole, assignedAt: new Date().toISOString() }
-          : assignment,
-      ),
-    )
+    loadRoleAssignments()
+  }, [])
+
+  const handleRoleChange = async (userId: string, newRole: RoleAssignmentDTO["role"]) => {
+    setIsUpdating(userId)
+    
+    try {
+      // Call API to update role
+      await userService.updateUserRole(userId, newRole)
+      
+      // Update local state only after successful API call
+      setRoleAssignments((prev) =>
+        prev.map((assignment) =>
+          assignment.userId === userId
+            ? { ...assignment, role: newRole, assignedAt: new Date().toISOString() }
+            : assignment,
+        ),
+      )
+      
+      toast({
+        title: "Role Updated",
+        description: `User role has been successfully updated to ${newRole}`,
+      })
+    } catch (error) {
+      handleError(error, `Failed to update role for user ${userId}`)
+      toast({
+        title: "Error",
+        description: "Failed to update user role. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdating(null)
+    }
   }
 
   const getInitials = (name: string) => {
@@ -129,6 +182,12 @@ export default function RolesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <LoadingSpinner />
+                <span className="ml-2">Loading role assignments...</span>
+              </div>
+            ) : (
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -164,9 +223,10 @@ export default function RolesPage() {
                       <TableCell className="text-right">
                         <Select
                           value={assignment.role}
-                          onValueChange={(value: RoleAssignmentDTO["role"]) =>
-                            handleRoleChange(assignment.userId, value)
+                          onValueChange={(value) =>
+                            handleRoleChange(assignment.userId, value as RoleAssignmentDTO["role"])
                           }
+                          disabled={isUpdating === assignment.userId}
                         >
                           <SelectTrigger className="w-40">
                             <SelectValue />
@@ -184,6 +244,7 @@ export default function RolesPage() {
                 </TableBody>
               </Table>
             </div>
+            )}
           </CardContent>
         </Card>
 
