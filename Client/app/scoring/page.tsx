@@ -62,11 +62,11 @@ export default function ScoringPage() {
         )}
 
         {/* Active Tournaments */}
-        {!loading && (
+        {!loading && !error && (
           <div>
             <h2 className="text-xl font-semibold mb-4">Active Tournaments</h2>
 
-            {tournaments.length === 0 ? (
+            {tournaments && tournaments.length === 0 ? (
               <Card>
                 <CardContent className="text-center py-12">
                   <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
@@ -79,7 +79,7 @@ export default function ScoringPage() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {tournaments.map((tournament: TournamentListGetDTO) => (
+                {tournaments && tournaments.map((tournament: TournamentListGetDTO) => (
                   <Card key={tournament.id} className="hover:shadow-md transition-shadow">
                     <CardHeader>
                       <CardTitle className="text-lg text-balance">{tournament.name}</CardTitle>
@@ -101,7 +101,7 @@ export default function ScoringPage() {
 
                         <div className="flex items-center gap-2 text-sm">
                           <Users className="h-4 w-4 text-muted-foreground" />
-                          <span>{tournament.playerCount} players</span>
+                          <span>{tournament.count || 0} players</span>
                         </div>
 
                         <div className="flex items-center gap-2 text-sm">
