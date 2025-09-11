@@ -12,6 +12,8 @@ import { ErrorDisplay } from "@/components/atoms/ErrorDisplay"
 import { ConfirmDialog } from "@/components/molecules/ConfirmDialog"
 import { RoleGuard } from "@/components/auth/RoleGuard"
 import { PlayerImportExport } from "@/components/players/PlayerImportExport"
+import { PlayerTable } from "@/components/players/PlayerTable"
+import { PlayerCard } from "@/components/players/PlayerCard"
 import { usePlayers, useDeletePlayer } from "@/hooks/usePlayers"
 import { PlayerListGetDTO } from "@/types"
 import { Plus, Edit, Trash2, Users, Grid, List } from "lucide-react"
@@ -27,12 +29,12 @@ export default function PlayersPage() {
   
   const players = (playersResponse as any)?.items || []
 
-  const handleEdit = (id: number) => {
-    router.push(`/players/${id}/edit`)
+  const handleEdit = (player: PlayerListGetDTO) => {
+    router.push(`/players/${player.id}/edit`)
   }
 
-  const handleDelete = (id: number) => {
-    setDeletingPlayerId(id)
+  const handleDelete = (playerId: string) => {
+    setDeletingPlayerId(parseInt(playerId))
   }
 
   const confirmDelete = async () => {
