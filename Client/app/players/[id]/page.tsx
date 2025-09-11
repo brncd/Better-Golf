@@ -29,7 +29,8 @@ export default function PlayerDetailPage() {
     })
   }
 
-  const getInitials = (name: string, lastName: string) => {
+  const getInitials = (name?: string, lastName?: string) => {
+    if (!name || !lastName) return "??"
     return `${name[0]}${lastName[0]}`.toUpperCase()
   }
 
@@ -75,16 +76,16 @@ export default function PlayerDetailPage() {
           <div className="flex items-start gap-6">
             <Avatar className="h-24 w-24">
               <AvatarImage
-                src={`/abstract-geometric-shapes.png?height=96&width=96&query=${(player as any).name}+${(player as any).lastName}`}
+                src={`/abstract-geometric-shapes.png?height=96&width=96&query=${(player as any)?.firstName || ''}+${(player as any)?.lastName || ''}`}
               />
-              <AvatarFallback className="text-2xl">{getInitials((player as any).name, (player as any).lastName)}</AvatarFallback>
+              <AvatarFallback className="text-2xl">{getInitials((player as any)?.firstName, (player as any)?.lastName)}</AvatarFallback>
             </Avatar>
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-balance">
-                {(player as any).name} {(player as any).lastName}
+                {(player as any)?.firstName || 'Unknown'} {(player as any)?.lastName || 'Player'}
               </h1>
               <div className="flex items-center gap-3">
-                <HandicapBadge handicap={(player as any).handicapIndex} />
+                <HandicapBadge handicap={(player as any)?.handicapIndex || 0} />
               </div>
             </div>
           </div>
@@ -105,7 +106,7 @@ export default function PlayerDetailPage() {
                 <Target className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Handicap</p>
-                  <p className="text-xl font-bold">{(player as any).handicapIndex.toFixed(1)}</p>
+                  <p className="text-xl font-bold">{((player as any)?.handicapIndex || 0).toFixed(1)}</p>
                 </div>
               </div>
             </CardContent>
@@ -116,7 +117,7 @@ export default function PlayerDetailPage() {
                 <Award className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Matricula</p>
-                  <p className="text-xl font-bold">{(player as any).matriculaAUG || "N/A"}</p>
+                  <p className="text-xl font-bold">{(player as any)?.matriculaAUG || "N/A"}</p>
                 </div>
               </div>
             </CardContent>
@@ -127,7 +128,7 @@ export default function PlayerDetailPage() {
                 <Calendar className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Age</p>
-                  <p className="text-xl font-bold">{calculateAge((player as any).birthdate) || "N/A"}</p>
+                  <p className="text-xl font-bold">{calculateAge((player as any)?.birthdate) || "N/A"}</p>
                 </div>
               </div>
             </CardContent>
@@ -141,12 +142,12 @@ export default function PlayerDetailPage() {
               <CardTitle>Personal Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {(player as any).birthdate && (
+              {(player as any)?.birthdate && (
                 <div className="flex items-center gap-3">
                   <Calendar className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Date of Birth</p>
-                    <p className="font-medium">{formatDate((player as any).birthdate)}</p>
+                    <p className="font-medium">{formatDate((player as any)?.birthdate)}</p>
                   </div>
                 </div>
               )}
@@ -160,11 +161,11 @@ export default function PlayerDetailPage() {
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Current Handicap</p>
-                <p className="text-2xl font-bold">{(player as any).handicapIndex.toFixed(1)}</p>
+                <p className="text-2xl font-bold">{((player as any)?.handicapIndex || 0).toFixed(1)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Preferred Category</p>
-                <p className="font-medium capitalize">{(player as any).isPreferredCategoryLadies ? "Ladies" : "Open"}</p>
+                <p className="font-medium capitalize">{(player as any)?.isPreferredCategoryLadies ? "Ladies" : "Open"}</p>
               </div>
             </CardContent>
           </Card>

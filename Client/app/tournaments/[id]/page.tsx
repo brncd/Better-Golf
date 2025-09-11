@@ -58,18 +58,20 @@ export default function TournamentDetailPage() {
   };
 
   const confirmUnregister = () => {
-    unregisterMutation.mutate(tournamentId);
-    setShowUnregisterDialog(false);
+    if ((user as any)?.id) {
+      unregisterMutation.mutate({ tournamentId, playerId: (user as any).id });
+      setShowUnregisterDialog(false);
+    }
   };
 
   const canRegister = () => {
     if (!tournament || !user || !hasRole('Player')) return false
-    return (tournament as any).status === 'OpenRegistration' && !isRegistered
+    return (tournament as any)?.status === 'OpenRegistration' && !isRegistered
   }
 
   const canUnregister = () => {
     if (!tournament || !user || !hasRole('Player')) return false
-    return (tournament as any).status === 'OpenRegistration' && isRegistered
+    return (tournament as any)?.status === 'OpenRegistration' && isRegistered
   }
 
   const formatDate = (dateString: string) => {
@@ -112,19 +114,19 @@ export default function TournamentDetailPage() {
         <div className="flex flex-col lg:flex-row justify-between items-start gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-balance">{(tournament as any).name}</h1>
+              <h1 className="text-3xl font-bold text-balance">{(tournament as any)?.name || 'Tournament'}</h1>
               <StatusBadge status="InProgress" />
             </div>
             <div className="flex items-center gap-2">
-              <TournamentTypeBadge type={(tournament as any).tournamentType as any} />
+              <TournamentTypeBadge type={(tournament as any)?.tournamentType as any} />
             </div>
-            {(tournament as any).description && <p className="text-muted-foreground max-w-2xl">{(tournament as any).description}</p>}
+            {(tournament as any)?.description && <p className="text-muted-foreground max-w-2xl">{(tournament as any)?.description}</p>}
           </div>
 
           <div className="flex gap-2">
             <RoleGuard roles={["TournamentOrganizer", "Admin"]}>
               <Button variant="outline" asChild>
-                <Link href={`/tournaments/${(tournament as any).id}/edit`}>
+                <Link href={`/tournaments/${(tournament as any)?.id}/edit`}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Tournament
                 </Link>
@@ -132,7 +134,7 @@ export default function TournamentDetailPage() {
             </RoleGuard>
             <RoleGuard roles={["TournamentOrganizer", "Admin", "Player"]}>
               <Button asChild>
-                <Link href={`/scoring/tournament/${(tournament as any).id}`}>
+                <Link href={`/scoring/tournament/${(tournament as any)?.id}`}>
                   <Trophy className="h-4 w-4 mr-2" />
                   Enter Scores
                 </Link>
@@ -173,7 +175,7 @@ export default function TournamentDetailPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Duration</p>
                   <p className="font-semibold">
-                    {formatDate((tournament as any).startDate)} - {formatDate((tournament as any).endDate)}
+                    {formatDate((tournament as any)?.startDate)} - {formatDate((tournament as any)?.endDate)}
                   </p>
                 </div>
               </div>
@@ -186,7 +188,7 @@ export default function TournamentDetailPage() {
                 <Users className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Players</p>
-                  <p className="text-2xl font-bold">{(tournament as any).count || 0}</p>
+                  <p className="text-2xl font-bold">{(tournament as any)?.count || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -225,8 +227,8 @@ export default function TournamentDetailPage() {
                     <div key={player.id} className="flex items-center gap-3 p-3 border rounded-lg">
                       <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                         <span className="text-sm font-semibold text-primary">
-                          {player.firstName[0]}
-                          {player.lastName[0]}
+                          {player.firstName?.[0] || '?'}
+                          {player.lastName?.[0] || '?'}
                         </span>
                       </div>
                       <div>
@@ -305,7 +307,7 @@ export default function TournamentDetailPage() {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Tournament Type</p>
                     <p className="text-sm">
-                      {(tournament as any).tournamentType}
+                      {(tournament as any)?.tournamentType || 'N/A'}
                     </p>
                   </div>
                 </div>
