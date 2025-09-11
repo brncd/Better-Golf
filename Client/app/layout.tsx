@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import { AuthProvider } from "@/context/AuthContext"
+import { QueryProvider } from "@/providers/QueryProvider"
 import { ErrorBoundary } from "@/components/atoms/ErrorBoundary"
 import { config, validateConfig } from "@/lib/config"
 import "./globals.css"
@@ -34,9 +35,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <ErrorBoundary>
-          <AuthProvider>
-            <Suspense fallback={null}>{children}</Suspense>
-          </AuthProvider>
+          <QueryProvider>
+            <AuthProvider>
+              <Suspense fallback={null}>{children}</Suspense>
+            </AuthProvider>
+          </QueryProvider>
         </ErrorBoundary>
         <Analytics />
       </body>

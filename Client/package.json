@@ -41,6 +41,8 @@
     "@radix-ui/react-tooltip": "1.1.6",
     "@remix-run/react": "latest",
     "@sveltejs/kit": "latest",
+    "@tanstack/react-query": "^5.87.4",
+    "@tanstack/react-query-devtools": "^5.87.4",
     "@vercel/analytics": "latest",
     "autoprefixer": "^10.4.20",
     "axios": "^1.6.0",
