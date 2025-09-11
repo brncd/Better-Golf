@@ -3,6 +3,7 @@ import type {
   PlayerListGetDTO, 
   SinglePlayerDTO, 
   PlayerPostDTO, 
+  PlayerProfileDTO,
   PaginationRequest, 
   PaginationResponse 
 } from '@/types';
@@ -35,4 +36,12 @@ export const playerService = {
   // Create player profile for current user
   createProfile: (player: PlayerPostDTO): Promise<SinglePlayerDTO> =>
     apiClient.post('/api/me/player-profile', player),
+
+  // Get current user's player profile
+  getMyProfile: (): Promise<PlayerProfileDTO> =>
+    apiClient.get('/api/me/player-profile'),
+
+  // Update current user's player profile
+  updateMyProfile: (profile: Partial<PlayerProfileDTO>): Promise<PlayerProfileDTO> =>
+    apiClient.put('/api/me/player-profile', profile),
 };

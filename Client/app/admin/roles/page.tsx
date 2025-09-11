@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { MainLayout } from "@/components/layouts/MainLayout"
 import { Button } from "@/components/ui/button"
@@ -8,13 +8,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
 import { RoleBadge } from "@/components/atoms/RoleBadge"
-import { mockRoleAssignments } from "@/data/mockData"
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
+import { RoleGuard } from "@/components/auth/RoleGuard"
+import { userService } from "@/lib/services"
+import { useErrorHandler } from "@/hooks/useErrorHandler"
+import { useToast } from "@/hooks/use-toast"
 import type { RoleAssignmentDTO } from "@/types"
 import { ArrowLeft, Shield, Users } from "lucide-react"
 
 export default function RolesPage() {
-  const [roleAssignments, setRoleAssignments] = useState<RoleAssignmentDTO[]>(mockRoleAssignments)
+  const [roleAssignments, setRoleAssignments] = useState<RoleAssignmentDTO[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isUpdating, setIsUpdating] = useState<string | null>(null)
+
+  const { handleError } = useErrorHandler({ context: 'RolesPage' })
+  const { toast } = useToast()
 
   const handleRoleChange = (userId: string, newRole: RoleAssignmentDTO["role"]) => {
     // In real app, this would call API to update role

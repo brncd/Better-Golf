@@ -57,6 +57,23 @@ export interface PlayerListGetDTO {
   createdAt: string;
 }
 
+export interface PlayerProfileDTO {
+  id?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  dateOfBirth?: string;
+  handicap?: number;
+  homeClub?: string;
+  playingSince?: number;
+  preferredTeeTime?: string;
+  address?: string;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface SinglePlayerDTO {
   id: string;
   firstName: string;
