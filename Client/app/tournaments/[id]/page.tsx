@@ -162,10 +162,10 @@ export default function TournamentDetailPage() {
           <div className="space-y-2">
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold text-balance">{tournament.name}</h1>
-              <StatusBadge status={tournament.status as any} />
+              <StatusBadge status="InProgress" />
             </div>
             <div className="flex items-center gap-2">
-              <TournamentTypeBadge type={tournament.type as any} />
+              <TournamentTypeBadge type={tournament.tournamentType as any} />
             </div>
             {tournament.description && <p className="text-muted-foreground max-w-2xl">{tournament.description}</p>}
           </div>
@@ -212,9 +212,7 @@ export default function TournamentDetailPage() {
                 <Users className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Players</p>
-                  <p className="font-semibold">
-                    {tournament.registeredPlayers} / {tournament.maxPlayers}
-                  </p>
+                  <p className="text-2xl font-bold">{tournament.count || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -226,7 +224,7 @@ export default function TournamentDetailPage() {
                 <Clock className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Status</p>
-                  <p className="font-semibold capitalize">{tournament.status}</p>
+                  <p className="font-semibold capitalize">Active</p>
                 </div>
               </div>
             </CardContent>
@@ -302,12 +300,12 @@ export default function TournamentDetailPage() {
                           </div>
                           <div>
                             <p className="font-medium">{ranking.playerName}</p>
-                            <p className="text-sm text-muted-foreground">Strokes: {ranking.totalStrokes}</p>
+                            <p className="text-sm text-muted-foreground">Strokes: {ranking.totalScore}</p>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="font-semibold">
-                            {ranking.totalStrokes}
+                            <Badge variant="outline">{ranking.totalScore} strokes</Badge>
                           </p>
                         </div>
                       </div>
@@ -333,7 +331,7 @@ export default function TournamentDetailPage() {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Tournament Type</p>
                     <p className="text-sm">
-                      {tournament.type}
+                      {tournament.tournamentType}
                     </p>
                   </div>
                 </div>

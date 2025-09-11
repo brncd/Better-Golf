@@ -62,16 +62,15 @@ export interface PlayerProfileDTO {
   firstName: string;
   lastName: string;
   email: string;
-  phone?: string;
-  dateOfBirth?: string;
-  handicap?: number;
-  homeClub?: string;
-  playingSince?: number;
-  preferredTeeTime?: string;
-  address?: string;
-  notes?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  handicap: number;
+  gender: string;
+  dateOfBirth: string;
+  phoneNumber: string;
+  membershipNumber: string;
+  categoryId?: string;
+  categoryName?: string;
+  isActive: boolean;
+  createdAt: string;
 }
 
 export interface SinglePlayerDTO {
@@ -97,7 +96,7 @@ export interface PlayerPostDTO {
   handicap: number;
   gender: string;
   dateOfBirth: string;
-  phoneNumber?: string;
+  phoneNumber: string;
   membershipNumber: string;
 }
 
@@ -105,10 +104,11 @@ export interface PlayerPostDTO {
 export interface TournamentListGetDTO {
   id: number;
   name: string;
+  count: number;
+  description: string;
   tournamentType: string;
   startDate: string;
   endDate: string;
-  playerCount: number;
 }
 
 export interface SingleTournamentDTO {
@@ -122,22 +122,27 @@ export interface SingleTournamentDTO {
   roundInfo: RoundInfo;
 }
 
-export interface RoundInfo {
-  id: number;
-  tournamentId: number;
-  roundNumber: number;
-  date: string;
-}
-
 export interface TournamentPostDTO {
   name: string;
   description: string;
-  type: string;
+  tournamentType: TournamentType;
   startDate: string;
   endDate: string;
-  courseId: string;
-  maxPlayers: number;
+  roundInfo: RoundInfo;
   handicapAllowance?: number;
+}
+
+export enum TournamentType {
+  MedalPlay = "MedalPlay",
+  Stableford = "Stableford", 
+  MatchPlay = "MatchPlay"
+}
+
+export interface RoundInfo {
+  id: number;
+  interval: number;
+  firstRoundTime: number;
+  isShotgun: boolean;
 }
 
 export interface TournamentRankingDTO {

@@ -4,6 +4,8 @@ import type {
   SingleTournamentDTO, 
   TournamentPostDTO, 
   TournamentRankingDTO,
+  TournamentType,
+  RoundInfo,
   PaginationRequest, 
   PaginationResponse 
 } from '@/types';
