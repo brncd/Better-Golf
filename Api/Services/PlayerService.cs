@@ -31,18 +31,18 @@ namespace Api.Services
             return new PaginationResponse<PlayerListGetDTO>(pagination.PageNumber, pagination.PageSize, totalCount, items);
         }
 
-        public async Task<SinglePLayerDTO?> GetPlayerByIdAsync(int id)
+        public async Task<SinglePlayerDTO?> GetPlayerByIdAsync(int id)
         {
             var player = await _db.Players.FindAsync(id);
-            return player == null ? null : new SinglePLayerDTO(player);
+            return player == null ? null : new SinglePlayerDTO(player);
         }
 
-        public async Task<Result<SinglePLayerDTO>> CreatePlayerAsync(PLayerPostDTO playerDto)
+        public async Task<Result<SinglePlayerDTO>> CreatePlayerAsync(PlayerPostDTO playerDto)
         {
-            var existingPlayer = await _db.Players.FirstOrDefaultAsync(x => x.MatriculaAUG == playerDto.MatriculaAUG);
+            var existingPlayer = await _db.Players.FirstOrDefaultAsync(x => x.MatriculaAUG == int.Parse(playerDto.MembershipNumber));
             if (existingPlayer != null)
             {
-                return Result<SinglePLayerDTO>.Failure(new Error("PlayerAlreadyExists", "Ya existe un jugador con la misma MatriculaAUG"));
+                return Result<SinglePlayerDTO>.Failure(new Error("PlayerAlreadyExists", "Ya existe un jugador con la misma MatriculaAUG"));
             }
 
             var player = new Player(playerDto);
@@ -50,15 +50,15 @@ namespace Api.Services
             await _db.SaveChangesAsync();
             _logger.LogInformation($"Player {player.Id} created.");
 
-            return Result<SinglePLayerDTO>.Success(new SinglePLayerDTO(player));
+            return Result<SinglePlayerDTO>.Success(new SinglePlayerDTO(player));
         }
 
-        public async Task<Result<SinglePLayerDTO>> CreatePlayerForUserAsync(string userId, PLayerPostDTO playerDto)
+        public async Task<Result<SinglePlayerDTO>> CreatePlayerForUserAsync(string userId, PlayerPostDTO playerDto)
         {
             var existingPlayer = await _db.Players.FirstOrDefaultAsync(p => p.ApplicationUserId == userId);
             if (existingPlayer != null)
             {
-                return Result<SinglePLayerDTO>.Failure(new Error("PlayerProfileAlreadyExists", "This user already has a player profile."));
+                return Result<SinglePlayerDTO>.Failure(new Error("PlayerProfileAlreadyExists", "This user already has a player profile."));
             }
 
             var player = new Player(playerDto)
@@ -70,10 +70,10 @@ namespace Api.Services
             await _db.SaveChangesAsync();
             _logger.LogInformation($"Player profile created for user {userId}.");
 
-            return Result<SinglePLayerDTO>.Success(new SinglePLayerDTO(player));
+            return Result<SinglePlayerDTO>.Success(new SinglePlayerDTO(player));
         }
 
-        public async Task<Result<bool>> UpdatePlayerAsync(int id, PLayerPostDTO playerDto)
+        public async Task<Result<bool>> UpdatePlayerAsync(int id, PlayerPostDTO playerDto)
         {
             var player = await _db.Players.FindAsync(id);
             if (player == null)
@@ -81,12 +81,14 @@ namespace Api.Services
                 return Result<bool>.Failure(new Error("PlayerNotFound", "Player not found."));
             }
 
-            player.MatriculaAUG = playerDto.MatriculaAUG;
-            player.Name = playerDto.Name;
+            player.MatriculaAUG = int.Parse(playerDto.MembershipNumber);
+            player.Name = playerDto.FirstName;
             player.LastName = playerDto.LastName;
-            player.HandicapIndex = playerDto.HandicapIndex;
-            player.Birthdate = playerDto.Birthdate;
-            player.IsPreferredCategoryLadies = playerDto.IsPreferredCategoryLadies;
+            player.Email = playerDto.Email;
+            player.PhoneNumber = playerDto.PhoneNumber;
+            player.HandicapIndex = playerDto.Handicap;
+            player.Birthdate = DateOnly.Parse(playerDto.DateOfBirth);
+            player.IsPreferredCategoryLadies = playerDto.Gender.ToLower() == "female";
 
             await _db.SaveChangesAsync();
             _logger.LogInformation($"Player {id} updated.");

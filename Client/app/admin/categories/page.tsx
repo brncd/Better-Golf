@@ -17,14 +17,14 @@ export default function CategoriesPage() {
   const [categories, setCategories] = useState<CategoryListGetDTO[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editingCategory, setEditingCategory] = useState<SingleCategoryDTO | null>(null)
-  const [deletingCategoryId, setDeletingCategoryId] = useState<number | null>(null)
+  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchCategories = async () => {
     try {
       setIsLoading(true)
-      const response = await apiClient.get<PaginationResponse<CategoryListGetDTO>>("/Categories")
+      const response = await apiClient.get<PaginationResponse<CategoryListGetDTO>>("/api/Categories?pageNumber=1&pageSize=100")
       setCategories(response.items)
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred")
@@ -40,7 +40,7 @@ export default function CategoriesPage() {
   const handleCreateCategory = async (data: CategoryPostDTO) => {
     try {
       setIsLoading(true)
-      await apiClient.post("/Categories", data)
+      await apiClient.post("/api/Categories", data)
       setShowForm(false)
       fetchCategories()
     } catch (err) {
@@ -54,7 +54,7 @@ export default function CategoriesPage() {
     if (!editingCategory) return
     try {
       setIsLoading(true)
-      await apiClient.put(`/Categories/${editingCategory.id}`, data)
+      await apiClient.put(`/api/Categories/${editingCategory.id}`, data)
       setEditingCategory(null)
       fetchCategories()
     } catch (err) {
@@ -68,7 +68,7 @@ export default function CategoriesPage() {
     if (!deletingCategoryId) return
     try {
       setIsLoading(true)
-      await apiClient.delete(`/Categories/${deletingCategoryId}`)
+      await apiClient.delete(`/api/Categories/${deletingCategoryId}`)
       setDeletingCategoryId(null)
       fetchCategories()
     } catch (err) {
@@ -81,7 +81,7 @@ export default function CategoriesPage() {
   const openEditForm = async (category: CategoryListGetDTO) => {
     try {
         setIsLoading(true);
-        const fullCategory = await apiClient.get<SingleCategoryDTO>(`/Categories/${category.id}`);
+        const fullCategory = await apiClient.get<SingleCategoryDTO>(`/api/Categories/${category.id}`);
         setEditingCategory(fullCategory);
         setShowForm(false);
     } catch (err) {

@@ -23,11 +23,9 @@ export function TournamentTable({ tournaments, onEdit, onDelete }: TournamentTab
   const [statusFilter, setStatusFilter] = useState<string>("all")
 
   const filteredTournaments = tournaments.filter((tournament) => {
-    const matchesSearch =
-      tournament.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || tournament.status === statusFilter
-
-    return matchesSearch && matchesStatus
+    const matchesSearch = tournament.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesType = statusFilter === "all" || tournament.tournamentType === statusFilter
+    return matchesSearch && matchesType
   })
 
   const formatDate = (dateString: string) => {
@@ -96,17 +94,17 @@ export function TournamentTable({ tournaments, onEdit, onDelete }: TournamentTab
                     </div>
                   </TableCell>
                   <TableCell>
-                    <StatusBadge status={tournament.status} />
+                    <span className="text-sm text-muted-foreground">{tournament.tournamentType}</span>
                   </TableCell>
                   <TableCell>
-                    <TournamentTypeBadge type={tournament.type as any} />
+                    <span className="text-sm text-muted-foreground">{tournament.tournamentType}</span>
                   </TableCell>
                   <TableCell className="text-sm">
                     <div>{formatDate(tournament.startDate)}</div>
                     <div className="text-muted-foreground">to {formatDate(tournament.endDate)}</div>
                   </TableCell>
                   <TableCell className="text-sm">
-                    {tournament.registeredPlayers}/{tournament.maxPlayers}
+                    {tournament.playerCount}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
@@ -118,13 +116,13 @@ export function TournamentTable({ tournaments, onEdit, onDelete }: TournamentTab
 
                       <RoleGuard roles={["TournamentOrganizer", "Admin"]}>
                         {onEdit && (
-                          <Button variant="ghost" size="sm" onClick={() => onEdit(tournament.id)}>
+                          <Button variant="ghost" size="sm" onClick={() => onEdit(tournament.id.toString())}>
                             <Edit className="h-4 w-4" />
                           </Button>
                         )}
 
                         {onDelete && (
-                          <Button variant="ghost" size="sm" onClick={() => onDelete(tournament.id)}>
+                          <Button variant="ghost" size="sm" onClick={() => onDelete(tournament.id.toString())}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}

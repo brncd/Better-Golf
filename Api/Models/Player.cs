@@ -9,6 +9,8 @@ public class Player
     public int MatriculaAUG { get; set; }
     public string Name { get; set; } = null!;
     public string LastName { get; set; } = null!;
+    public string? Email { get; set; }
+    public string? PhoneNumber { get; set; }
     public double HandicapIndex { get; set; }
     public DateOnly Birthdate { get; set; }
     public bool IsPreferredCategoryLadies { get; set; }
@@ -33,14 +35,16 @@ public class Player
     {
         Birthdate = birthday;
     }
-    public Player(PLayerPostDTO playerdto)
+    public Player(PlayerPostDTO playerdto)
     {
-        Name = playerdto.Name;
-	    MatriculaAUG = playerdto.MatriculaAUG;
+        Name = playerdto.FirstName;
         LastName = playerdto.LastName;
-        HandicapIndex = playerdto.HandicapIndex;
-        IsPreferredCategoryLadies = playerdto.IsPreferredCategoryLadies;
-        Birthdate = playerdto.Birthdate;
+        Email = playerdto.Email;
+        PhoneNumber = playerdto.PhoneNumber;
+        HandicapIndex = playerdto.Handicap;
+        IsPreferredCategoryLadies = playerdto.Gender.ToLower() == "female";
+        Birthdate = DateOnly.Parse(playerdto.DateOfBirth);
+        MatriculaAUG = int.Parse(playerdto.MembershipNumber);
     }
     public Player()
     {

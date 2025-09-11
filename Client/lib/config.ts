@@ -2,6 +2,8 @@
  * Environment configuration for the Better Golf application
  */
 
+import { getEnvVar, getBooleanEnvVar, getNumberEnvVar } from './env'
+
 export interface AppConfig {
   api: {
     baseUrl: string
@@ -29,33 +31,9 @@ export interface AppConfig {
   }
 }
 
-const getEnvVar = (key: string, defaultValue?: string): string => {
-  const value = process.env[key]
-  if (!value && !defaultValue) {
-    throw new Error(`Environment variable ${key} is required but not set`)
-  }
-  return value || defaultValue!
-}
-
-const getBooleanEnvVar = (key: string, defaultValue: boolean): boolean => {
-  const value = process.env[key]
-  if (!value) return defaultValue
-  return value.toLowerCase() === 'true'
-}
-
-const getNumberEnvVar = (key: string, defaultValue: number): number => {
-  const value = process.env[key]
-  if (!value) return defaultValue
-  const parsed = parseInt(value, 10)
-  if (isNaN(parsed)) {
-    throw new Error(`Environment variable ${key} must be a valid number`)
-  }
-  return parsed
-}
-
 export const config: AppConfig = {
   api: {
-    baseUrl: getEnvVar('NEXT_PUBLIC_API_BASE_URL', 'http://localhost:5000'),
+    baseUrl: (typeof window !== 'undefined' ? 'http://localhost:5100' : process.env.NEXT_PUBLIC_API_BASE_URL) || 'http://localhost:5100',
     timeout: getNumberEnvVar('NEXT_PUBLIC_API_TIMEOUT', 30000),
   },
   auth: {
@@ -75,8 +53,8 @@ export const config: AppConfig = {
     logLevel: (getEnvVar('NEXT_PUBLIC_LOG_LEVEL', 'info') as AppConfig['development']['logLevel']),
   },
   external: {
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
-    analyticsId: process.env.NEXT_PUBLIC_ANALYTICS_ID,
+    googleMapsApiKey: getEnvVar('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY'),
+    analyticsId: getEnvVar('NEXT_PUBLIC_ANALYTICS_ID'),
   },
 }
 

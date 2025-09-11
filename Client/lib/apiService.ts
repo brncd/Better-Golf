@@ -17,11 +17,14 @@ class ApiService {
 
     // Request interceptor to add auth token and logging
     this.client.interceptors.request.use(
-      (config: AxiosRequestConfig) => {
-        const token = localStorage.getItem("token")
-        if (token) {
-          config.headers = config.headers || {}
-          config.headers.Authorization = `Bearer ${token}`
+      (config) => {
+        // Only access localStorage on client side
+        if (typeof window !== 'undefined') {
+          const token = localStorage.getItem("authToken")
+          if (token) {
+            config.headers = config.headers || {}
+            config.headers.Authorization = `Bearer ${token}`
+          }
         }
         
         logger.apiRequest(
@@ -53,11 +56,13 @@ class ApiService {
         const betterGolfError = handleApiError(error)
         
         if (error.response?.status === 401) {
-          // Clear token and redirect to login
-          localStorage.removeItem("token")
-          localStorage.removeItem("user")
-          logger.authFailure('Token expired or invalid', error)
-          window.location.href = "/auth/login"
+          // Clear token and redirect to login (only on client side)
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem("authToken")
+            localStorage.removeItem("user")
+            logger.authFailure('Token expired or invalid', error)
+            window.location.href = "/login"
+          }
         }
         
         return Promise.reject(betterGolfError)

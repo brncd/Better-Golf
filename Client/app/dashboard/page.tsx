@@ -1,6 +1,7 @@
 "use client"
 
 import { MainLayout } from "@/components/layouts/MainLayout"
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { StatCard } from "@/components/molecules/StatCard"
 import { QuickActionCard } from "@/components/molecules/QuickActionCard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,9 +24,9 @@ export default function DashboardPage() {
       try {
         setIsLoading(true)
         const [tournamentsData, playersData, coursesData] = await Promise.all([
-          tournamentService.getAll({ pageSize: 50 }),
-          playerService.getAll({ pageSize: 50 }),
-          courseService.getAll({ pageSize: 50 })
+          tournamentService.getAll({ pageNumber: 1, pageSize: 50 }),
+          playerService.getAll({ pageNumber: 1, pageSize: 50 }),
+          courseService.getAll({ pageNumber: 1, pageSize: 50 })
         ])
         
         setTournaments(tournamentsData.items)
@@ -41,8 +42,17 @@ export default function DashboardPage() {
     fetchData()
   }, [])
 
-  const activeTournaments = tournaments.filter((t) => t.status === "InProgress")
-  const upcomingTournaments = tournaments.filter((t) => t.status === "OpenRegistration")
+  // Since the new DTO doesn't have status, we'll use date-based filtering
+  const today = new Date()
+  const activeTournaments = tournaments.filter((t) => {
+    const startDate = new Date(t.startDate)
+    const endDate = new Date(t.endDate)
+    return startDate <= today && endDate >= today
+  })
+  const upcomingTournaments = tournaments.filter((t) => {
+    const startDate = new Date(t.startDate)
+    return startDate > today
+  })
   const totalPlayers = players.length
   const activePlayers = players.filter((p) => p.isActive).length
   const totalCourses = courses.length
@@ -56,33 +66,38 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <MainLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading dashboard data...</p>
+      <ProtectedRoute>
+        <MainLayout>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p>Loading dashboard data...</p>
+            </div>
           </div>
-        </div>
-      </MainLayout>
+        </MainLayout>
+      </ProtectedRoute>
     )
   }
 
   if (error) {
     return (
-      <MainLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <p className="text-red-500 mb-4">Error loading data: {error}</p>
-            <Button onClick={() => window.location.reload()}>Retry</Button>
+      <ProtectedRoute>
+        <MainLayout>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <p className="text-red-500 mb-4">Error loading data: {error}</p>
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+            </div>
           </div>
-        </div>
-      </MainLayout>
+        </MainLayout>
+      </ProtectedRoute>
     )
   }
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
+    <ProtectedRoute>
+      <MainLayout>
+        <div className="space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-balance">Dashboard</h1>
@@ -168,10 +183,10 @@ export default function DashboardPage() {
                     <div key={tournament.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
                         <p className="font-medium">{tournament.name}</p>
-                        <p className="text-sm text-muted-foreground">{tournament.courseName}</p>
+                        <p className="text-sm text-muted-foreground">{tournament.tournamentType}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-medium">{tournament.registeredPlayers} players</p>
+                        <p className="text-sm font-medium">{tournament.playerCount} players</p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(tournament.startDate).toLocaleDateString()}
                         </p>
@@ -206,10 +221,10 @@ export default function DashboardPage() {
                     <div key={tournament.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
                         <p className="font-medium">{tournament.name}</p>
-                        <p className="text-sm text-muted-foreground">{tournament.courseName}</p>
+                        <p className="text-sm text-muted-foreground">{tournament.tournamentType}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-medium">{tournament.registeredPlayers} players</p>
+                        <p className="text-sm font-medium">{tournament.playerCount} players</p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(tournament.startDate).toLocaleDateString()}
                         </p>
@@ -245,7 +260,8 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
-    </MainLayout>
+        </div>
+      </MainLayout>
+    </ProtectedRoute>
   )
 }

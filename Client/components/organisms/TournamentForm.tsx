@@ -38,7 +38,7 @@ export function TournamentForm({ initialData, onSubmit, onCancel, isLoading, err
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const response = await courseService.getAll({ pageSize: 100 });
+        const response = await courseService.getAll({ pageNumber: 1, pageSize: 100 });
         setCourses(response.items);
       } catch (error) {
         console.error("Failed to fetch courses:", error);
@@ -180,8 +180,8 @@ export function TournamentForm({ initialData, onSubmit, onCancel, isLoading, err
               </SelectTrigger>
               <SelectContent>
                 {courses.map((course) => (
-                  <SelectItem key={course.id} value={course.id}>
-                    {course.name} - {course.location}
+                  <SelectItem key={course.id} value={course.id.toString()}>
+                    {course.name}
                   </SelectItem>
                 ))}
               </SelectContent>

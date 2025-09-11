@@ -3,7 +3,7 @@ import type {
   PlayerListGetDTO,
   CoursesListGetDTO,
   HoleListGetDTO,
-  CategoryDTO,
+  Category,
   TournamentRankingDTO,
   RoleAssignmentDTO,
 } from "@/types"
@@ -11,40 +11,16 @@ import type {
 // Mock Courses
 export const mockCourses: CoursesListGetDTO[] = [
   {
-    id: "1",
+    id: 1,
     name: "Augusta National Golf Club",
-    location: "Augusta, Georgia",
-    numberOfHoles: 18,
-    par: 72,
-    yardage: 7435,
-    rating: 76.2,
-    slope: 137,
-    description: "Home of the Masters Tournament",
-    isActive: true,
   },
   {
-    id: "2",
+    id: 2,
     name: "Pebble Beach Golf Links",
-    location: "Pebble Beach, California",
-    numberOfHoles: 18,
-    par: 72,
-    yardage: 6828,
-    rating: 74.8,
-    slope: 142,
-    description: "Iconic oceanside course",
-    isActive: true,
   },
   {
-    id: "3",
+    id: 3,
     name: "St. Andrews Old Course",
-    location: "St. Andrews, Scotland",
-    numberOfHoles: 18,
-    par: 72,
-    yardage: 7297,
-    rating: 75.1,
-    slope: 129,
-    description: "The home of golf",
-    isActive: true,
   },
 ]
 
@@ -71,7 +47,7 @@ export const mockHoles: HoleListGetDTO[] = [
 ]
 
 // Mock Categories
-export const mockCategories: CategoryDTO[] = [
+export const mockCategories: Category[] = [
   {
     id: "1",
     name: "Championship",
@@ -208,49 +184,28 @@ export const mockPlayers: PlayerListGetDTO[] = [
 // Mock Tournaments
 export const mockTournaments: TournamentListGetDTO[] = [
   {
-    id: "1",
-    name: "Spring Championship",
-    description: "Annual spring tournament featuring stroke play format",
-    status: "active",
-    type: "stroke-play",
+    id: 1,
+    name: "Masters Tournament 2024",
+    tournamentType: "stroke-play",
     startDate: "2024-04-15",
     endDate: "2024-04-17",
-    courseId: "1",
-    courseName: "Augusta National Golf Club",
-    maxPlayers: 144,
-    registeredPlayers: 128,
-    createdAt: "2024-03-01T10:00:00Z",
-    updatedAt: "2024-04-10T15:30:00Z",
+    playerCount: 128,
   },
   {
-    id: "2",
-    name: "Member-Guest Tournament",
-    description: "Two-day best ball tournament for members and their guests",
-    status: "scheduled",
-    type: "best-ball",
+    id: 2,
+    name: "US Open 2024",
+    tournamentType: "stroke-play",
     startDate: "2024-05-20",
     endDate: "2024-05-21",
-    courseId: "2",
-    courseName: "Pebble Beach Golf Links",
-    maxPlayers: 80,
-    registeredPlayers: 64,
-    createdAt: "2024-03-15T10:00:00Z",
-    updatedAt: "2024-04-01T12:00:00Z",
+    playerCount: 64,
   },
   {
-    id: "3",
-    name: "Club Championship",
-    description: "Premier club championship with match play format",
-    status: "completed",
-    type: "match-play",
+    id: 3,
+    name: "The Open Championship 2024",
+    tournamentType: "stroke-play",
     startDate: "2024-03-10",
     endDate: "2024-03-12",
-    courseId: "3",
-    courseName: "St. Andrews Old Course",
-    maxPlayers: 64,
-    registeredPlayers: 64,
-    createdAt: "2024-02-01T10:00:00Z",
-    updatedAt: "2024-03-12T18:00:00Z",
+    playerCount: 64,
   },
 ]
 

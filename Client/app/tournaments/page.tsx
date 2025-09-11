@@ -22,7 +22,7 @@ export default function TournamentsPage() {
     const fetchTournaments = async () => {
       try {
         setIsLoading(true);
-        const response = await tournamentService.getAll({ pageSize: 50 });
+        const response = await tournamentService.getAll({ pageNumber: 1, pageSize: 50 });
         setTournaments(response.items);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An unknown error occurred");
@@ -35,7 +35,7 @@ export default function TournamentsPage() {
   }, []);
 
   const handleEdit = (id: string) => {
-    console.log("Edit tournament:", id);
+    window.location.href = `/tournaments/${id}/edit`;
   };
 
   const handleDelete = async (id: string) => {

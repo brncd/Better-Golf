@@ -20,7 +20,7 @@ function AdminPageContent() {
       try {
         setIsLoading(true)
         const { categoryService } = await import("@/lib/services")
-        const categoriesData = await categoryService.getAll()
+        const categoriesData = await categoryService.getAll({ pageNumber: 1, pageSize: 100 })
         setCategories(categoriesData.items)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load admin data")

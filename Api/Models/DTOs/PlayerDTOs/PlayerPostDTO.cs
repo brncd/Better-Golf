@@ -1,11 +1,13 @@
 namespace Api.Models.DTOs.PlayerDTOs;
 
-public class PLayerPostDTO
+public class PlayerPostDTO
 {
-    public int MatriculaAUG { get; set; }
-    public string Name { get; set; } = null!;
+    public string FirstName { get; set; } = null!;
     public string LastName { get; set; } = null!;
-    public double HandicapIndex { get; set; }
-    public DateOnly Birthdate { get; set; }
-    public bool IsPreferredCategoryLadies { get; set; }
+    public string Email { get; set; } = null!;
+    public double Handicap { get; set; }
+    public string Gender { get; set; } = null!;
+    public string DateOfBirth { get; set; } = null!;
+    public string PhoneNumber { get; set; } = null!;
+    public string MembershipNumber { get; set; } = null!;
 }

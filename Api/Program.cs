@@ -24,6 +24,7 @@ using Api.Models.DTOs.MatchDTOs;
 using Api.Models.DTOs.RoleDTOs;
 using Api.Models.DTOs.RoundDTOs;
 using Api.Models.DTOs.ScorecardDTOs;
+using Api.Models.DTOs.AuthDTOs;
 using Api.Models.Common;
 using Api.Models.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,15 +33,27 @@ using Api.Middleware;
 
 internal class Program
 {
-    private static void Main(string[] args)
+    private static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.AddDbContext<BgContext>(options => 
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
         
         builder.Services.AddIdentityApiEndpoints<IdentityUser>() // Added
             .AddRoles<IdentityRole>() // Added
             .AddEntityFrameworkStores<BgContext>(); // Added
+
+        // Configure Identity options for demo user
+        builder.Services.Configure<IdentityOptions>(options =>
+        {
+            // Password settings for development
+            options.Password.RequireDigit = false;
+            options.Password.RequireLowercase = false;
+            options.Password.RequireNonAlphanumeric = false;
+            options.Password.RequireUppercase = false;
+            options.Password.RequiredLength = 4;
+            options.Password.RequiredUniqueChars = 1;
+        });
 
         // Add FluentValidation
         builder.Services.AddFluentValidationAutoValidation();
@@ -65,17 +78,19 @@ internal class Program
             };
         });
 
-        builder.Services.AddAuthorization(); // Added
-
+        builder.Services.AddAuthorization();        // Register services
         builder.Services.AddScoped<PlayerService>();
+        builder.Services.AddScoped<CourseService>();
         builder.Services.AddScoped<TournamentService>();
         builder.Services.AddScoped<CategoryService>();
-        builder.Services.AddScoped<CourseService>();
+        builder.Services.AddScoped<RoleService>();
+        builder.Services.AddScoped<TournamentRankingService>();
+        builder.Services.AddScoped<DemoDataService>(); 
+        builder.Services.AddScoped<AuthService>(); 
         builder.Services.AddScoped<ScorecardResultService>();
         builder.Services.AddScoped<ResultService>();
         builder.Services.AddScoped<RoundInfoService>();
         builder.Services.AddScoped<RoundService>();
-        builder.Services.AddScoped<RoleService>(); // Add RoleService
         builder.Services.AddScoped<MatchService>();
         builder.Services.AddScoped<ScorecardService>(); // No change needed here, dependencies are resolved automatically
 
@@ -119,6 +134,25 @@ internal class Program
 
         app.UseAuthentication(); // Added
         app.UseAuthorization();  // Added
+        
+        // Custom Auth endpoints
+        app.MapPost("/api/auth/login", async ([FromServices] AuthService authService, LoginRequestDTO request) =>
+        {
+            var result = await authService.LoginAsync(request);
+            if (result == null)
+                return Results.Unauthorized();
+            
+            return Results.Ok(result);
+        });
+
+        app.MapPost("/api/auth/register", async ([FromServices] AuthService authService, RegisterRequestDTO request) =>
+        {
+            var result = await authService.RegisterAsync(request);
+            if (result == null)
+                return Results.BadRequest("Registration failed");
+            
+            return Results.Ok(result);
+        });
 
         app.MapGet("/", () =>
         {
@@ -143,29 +177,29 @@ internal class Program
             return player == null ? Results.NotFound() : Results.Ok(player);
         });
 
-        app.MapPost("/api/Players", [Authorize(Policy = "AdminPolicy")] async ([FromServices] PlayerService service, PLayerPostDTO playerDto) => {
+        app.MapPost("/api/Players", [Authorize(Policy = "AdminPolicy")] async ([FromServices] PlayerService service, PlayerPostDTO playerDto) => {
             var result = await service.CreatePlayerAsync(playerDto);
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "PlayerAlreadyExists" => Results.Conflict(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "PlayerAlreadyExists" => Results.Conflict(result.Error?.Description ?? "Player already exists"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Bad request")
                 };
             }
-            return Results.Created($"/Players/{result.Value.Id}", result.Value);
+            return Results.Created($"/Players/{result.Value?.Id}", result.Value);
         });
 
-        app.MapPut("/api/Players/{id}", [Authorize(Policy = "PlayerPolicy")] async ([FromServices] PlayerService service, int id, PLayerPostDTO playerDto) => {
+        app.MapPut("/api/Players/{id}", [Authorize(Policy = "PlayerPolicy")] async ([FromServices] PlayerService service, int id, PlayerPostDTO playerDto) => {
             var result = await service.UpdatePlayerAsync(id, playerDto);
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "PlayerNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "PlayerNotFound" => Results.NotFound(result.Error?.Description ?? "Player not found"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Bad request")
                 };
             }
             return Results.NoContent();
@@ -176,10 +210,10 @@ internal class Program
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "PlayerNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "PlayerNotFound" => Results.NotFound(result.Error?.Description ?? "Player not found"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Bad request")
                 };
             }
             return Results.NoContent();
@@ -189,16 +223,16 @@ internal class Program
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "PlayerNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "PlayerNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.Ok(result.Value);
         });
 
-        app.MapPost("/api/me/player-profile", [Authorize] async (ClaimsPrincipal user, [FromServices] PlayerService service, PLayerPostDTO playerDto) => {
+        app.MapPost("/api/me/player-profile", [Authorize] async (ClaimsPrincipal user, [FromServices] PlayerService service, PlayerPostDTO playerDto) => {
             var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (userId == null) return Results.Unauthorized();
 
@@ -206,13 +240,13 @@ internal class Program
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "PlayerProfileAlreadyExists" => Results.Conflict(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "PlayerProfileAlreadyExists" => Results.Conflict(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
-            return Results.Created($"/Players/{result.Value.Id}", result.Value);
+            return Results.Created($"/Players/{result.Value?.Id}", result.Value);
         });
 
         // Seccion Tournaments
@@ -233,10 +267,10 @@ internal class Program
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "TournamentNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -248,11 +282,11 @@ internal class Program
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
-                    "InvalidStatusTransition" => Results.BadRequest(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "TournamentNotFound" => Results.NotFound(result.Error?.Description ?? "Tournament not found"),
+                    "InvalidStatusTransition" => Results.BadRequest(result.Error?.Description ?? "Invalid status transition"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Bad request")
                 };
             }
             return Results.NoContent();
@@ -263,10 +297,10 @@ internal class Program
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "TournamentNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -279,14 +313,14 @@ internal class Program
             var result = await service.RegisterCurrentUserToTournamentAsync(tournamentId, userId);
             if (!result.IsSuccess)
             {
-                 return result.Error.Code switch
+                 return result.Error?.Code switch
                 {
-                    "PlayerProfileNotFound" => Results.NotFound(result.Error.Description),
-                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
-                    "PlayerNotFound" => Results.NotFound(result.Error.Description), // Should not happen if profile is found
-                    "PlayerAlreadyInTournament" => Results.Conflict(result.Error.Description),
-                    "TournamentNotOpenForRegistration" => Results.BadRequest(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "PlayerProfileNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "TournamentNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "PlayerNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"), // Should not happen if profile is found
+                    "PlayerAlreadyInTournament" => Results.Conflict(result.Error?.Description ?? "Error occurred"),
+                    "TournamentNotOpenForRegistration" => Results.BadRequest(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.Ok(result.Value);
@@ -297,10 +331,10 @@ internal class Program
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "TournamentNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.Ok(result.Value);
@@ -311,13 +345,13 @@ internal class Program
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
-                    "PlayerNotFound" => Results.NotFound(result.Error.Description),
-                    "PlayerAlreadyInTournament" => Results.Conflict(result.Error.Description),
-                    "TournamentNotOpenForRegistration" => Results.BadRequest(result.Error.Description), // Added new error case
-                    _ => Results.BadRequest(result.Error.Description)
+                    "TournamentNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "PlayerNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "PlayerAlreadyInTournament" => Results.Conflict(result.Error?.Description ?? "Error occurred"),
+                    "TournamentNotOpenForRegistration" => Results.BadRequest(result.Error?.Description ?? "Error occurred"), // Added new error case
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.Ok(result.Value);
@@ -328,11 +362,11 @@ internal class Program
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
-                    "PlayerNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "TournamentNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "PlayerNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -343,10 +377,10 @@ internal class Program
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "TournamentNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.Ok(result.Value);
@@ -357,12 +391,12 @@ internal class Program
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
-                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
-                    "CategoryAlreadyInTournament" => Results.Conflict(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "TournamentNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "CategoryNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "CategoryAlreadyInTournament" => Results.Conflict(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.Ok(result.Value);
@@ -372,11 +406,11 @@ internal class Program
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
-                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "TournamentNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "CategoryNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -386,11 +420,11 @@ internal class Program
             var result = await service.CreateRoundsForTournament(id);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
-                    "RoundsAlreadyExist" => Results.Conflict(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "TournamentNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "RoundsAlreadyExist" => Results.Conflict(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.Ok("Rounds created successfully.");
@@ -400,13 +434,13 @@ internal class Program
             var result = await service.GenerateTeeTimes(id);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
-                    "RoundInfoMissing" => Results.BadRequest(result.Error.Description),
-                    "NoPlayersInTournament" => Results.BadRequest(result.Error.Description),
-                    "NoRoundsForTournament" => Results.BadRequest(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "TournamentNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "RoundInfoMissing" => Results.BadRequest(result.Error?.Description ?? "Error occurred"),
+                    "NoPlayersInTournament" => Results.BadRequest(result.Error?.Description ?? "Error occurred"),
+                    "NoRoundsForTournament" => Results.BadRequest(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.Ok(result.Value);
@@ -416,23 +450,23 @@ internal class Program
             var result = await service.GetTeeTimes(id);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "NoTeeTimes" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "NoTeeTimes" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.Ok(result.Value);
         });
 
         app.MapPut("/api/rounds/{roundId}/players/{playerId}", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] RoundService service, int roundId, int playerId, [FromBody] TeeTimeDTO teeTimeUpdate) => {
-            var result = await service.UpdateTeeTime(roundId, playerId, teeTimeUpdate.TeeTime.Value, teeTimeUpdate.StartingHole.Value);
+            var result = await service.UpdateTeeTime(roundId, playerId, teeTimeUpdate.TeeTime ?? TimeSpan.Zero, teeTimeUpdate.StartingHole ?? 1);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "PlayerRoundNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "PlayerRoundNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.Ok(result.Value);
@@ -466,10 +500,10 @@ internal class Program
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "CategoryNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -480,10 +514,10 @@ internal class Program
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "CategoryNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -494,10 +528,10 @@ internal class Program
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "CategoryNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.Ok(result.Value);
@@ -507,12 +541,12 @@ internal class Program
             var result = await service.AddPlayerToCategoryAsync(id, playerId);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
-                    "PlayerNotFound" => Results.NotFound(result.Error.Description),
-                    "PlayerAlreadyInCategory" => Results.Conflict(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "CategoryNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "PlayerNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "PlayerAlreadyInCategory" => Results.Conflict(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.Ok(result.Value);
@@ -522,11 +556,11 @@ internal class Program
             var result = await service.RemovePlayerFromCategoryAsync(id, playerId);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
-                    "PlayerNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "CategoryNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "PlayerNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -536,11 +570,11 @@ internal class Program
             var result = await service.SetOpenCourseAsync(id, courseId);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
-                    "CourseNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "CategoryNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "CourseNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -550,11 +584,11 @@ internal class Program
             var result = await service.SetLadiesCourseAsync(id, courseId);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "CategoryNotFound" => Results.NotFound(result.Error.Description),
-                    "CourseNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "CategoryNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "CourseNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -577,10 +611,10 @@ internal class Program
             var result = await service.UpdateCourseAsync(id, courseDto);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "CourseNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "CourseNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -590,10 +624,10 @@ internal class Program
             var result = await service.DeleteCourseAsync(id);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "CourseNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "CourseNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -603,10 +637,10 @@ internal class Program
             var result = await service.GetCourseHolesAsync(id, pagination);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "CourseNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "CourseNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.Ok(result.Value);
@@ -616,10 +650,10 @@ internal class Program
             var result = await service.AddHoleToCourseAsync(id, holeDto);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "CourseNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "CourseNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -629,11 +663,11 @@ internal class Program
             var result = await service.RemoveHoleFromCourseAsync(id, holeId);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "CourseNotFound" => Results.NotFound(result.Error.Description),
-                    "HoleNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "CourseNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "HoleNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -658,10 +692,10 @@ internal class Program
             var result = await service.UpdateHoleAsync(id, holeDto);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "HoleNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "HoleNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -671,10 +705,10 @@ internal class Program
             var result = await service.DeleteHoleAsync(id);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "HoleNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "HoleNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -686,10 +720,10 @@ internal class Program
             if (!result.IsSuccess)
             {
                 if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "TournamentNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.Ok(result.Value);
@@ -709,10 +743,10 @@ internal class Program
             var result = await service.UpdateScorecardAsync(id, scorecardDto);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "ScorecardNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "ScorecardNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -723,11 +757,11 @@ internal class Program
             var result = await service.LockScorecardAsync(id);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "ScorecardNotFound" => Results.NotFound(result.Error.Description),
-                    "ScorecardAlreadyLocked" => Results.Conflict(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "ScorecardNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "ScorecardAlreadyLocked" => Results.Conflict(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -737,10 +771,10 @@ internal class Program
             var result = await service.DeleteScorecardAsync(id);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "ScorecardNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "ScorecardNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -755,10 +789,10 @@ internal class Program
             var result = await service.UpdateScorecardResultAsync(scorecardId, holeId, scorecardResultDto);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "ScorecardResultNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "ScorecardResultNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -767,10 +801,10 @@ internal class Program
             var result = await service.DeleteScorecardResultAsync(id);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "ScorecardResultNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "ScorecardResultNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -794,10 +828,10 @@ internal class Program
             var result = await service.UpdateRoundInfoAsync(id, roundInfo);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "RoundInfoNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "RoundInfoNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -806,10 +840,10 @@ internal class Program
             var result = await service.DeleteRoundInfoAsync(id);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "RoundInfoNotFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "RoundInfoNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.NoContent();
@@ -820,13 +854,13 @@ internal class Program
             var result = await service.GenerateMatchesAsync(tournamentId);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "TournamentNotFound" => Results.NotFound(result.Error.Description),
-                    "InvalidTournamentType" => Results.BadRequest(result.Error.Description),
-                    "NotEnoughPlayers" => Results.BadRequest(result.Error.Description),
-                    "MatchesAlreadyExist" => Results.Conflict(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "TournamentNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "InvalidTournamentType" => Results.BadRequest(result.Error?.Description ?? "Error occurred"),
+                    "NotEnoughPlayers" => Results.BadRequest(result.Error?.Description ?? "Error occurred"),
+                    "MatchesAlreadyExist" => Results.Conflict(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
             return Results.Ok("Matches generated successfully.");
@@ -836,10 +870,10 @@ internal class Program
             var result = await service.GetMatchesForTournamentAsync(tournamentId);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "NoMatchesFound" => Results.NotFound(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "NoMatchesFound" => Results.NotFound(result.Error?.Description ?? "No matches found"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Bad request")
                 };
             }
             return Results.Ok(result.Value);
@@ -849,12 +883,12 @@ internal class Program
             var result = await service.RecordHoleResultAsync(matchId, dto.HoleId, dto.WinningPlayerId);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "MatchNotFound" => Results.NotFound(result.Error.Description),
-                    "MatchCompleted" => Results.Conflict(result.Error.Description),
-                    "InvalidWinner" => Results.BadRequest(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "MatchNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "MatchCompleted" => Results.Conflict(result.Error?.Description ?? "Error occurred"),
+                    "InvalidWinner" => Results.BadRequest(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Unknown error")
                 };
             }
             return Results.Ok(result.Value);
@@ -865,10 +899,10 @@ internal class Program
             var result = await service.CreateRoleAsync(roleName);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "RoleAlreadyExists" => Results.Conflict(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "RoleAlreadyExists" => Results.Conflict(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Unknown error")
                 };
             }
             return Results.Ok($"Role {roleName} created successfully.");
@@ -878,12 +912,12 @@ internal class Program
             var result = await service.AssignUserToRoleAsync(userId, roleDto.RoleName);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "UserNotFound" => Results.NotFound(result.Error.Description),
-                    "RoleNotFound" => Results.NotFound(result.Error.Description),
-                    "UserAlreadyInRole" => Results.Conflict(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "UserNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "RoleNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "UserAlreadyInRole" => Results.Conflict(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Unknown error")
                 };
             }
             return Results.Ok($"Role {roleDto.RoleName} assigned to user {userId}.");
@@ -898,16 +932,29 @@ internal class Program
             var result = await service.RemoveUserFromRoleAsync(userId, roleDto.RoleName);
             if (!result.IsSuccess)
             {
-                return result.Error.Code switch
+                return result.Error?.Code switch
                 {
-                    "UserNotFound" => Results.NotFound(result.Error.Description),
-                    "RoleNotFound" => Results.NotFound(result.Error.Description),
-                    "UserNotInRole" => Results.BadRequest(result.Error.Description),
-                    _ => Results.BadRequest(result.Error.Description)
+                    "UserNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "RoleNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    "UserNotInRole" => Results.BadRequest(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Unknown error")
                 };
             }
             return Results.NoContent();
         });
+
+        // Seed demo data endpoint
+        app.MapPost("/api/seed-demo-data", [Authorize] async ([FromServices] DemoDataService demoDataService) => {
+            await demoDataService.SeedDemoDataAsync();
+            return Results.Ok("Demo data seeded successfully");
+        });
+
+        // Seed demo data on startup
+        using (var scope = app.Services.CreateScope())
+        {
+            var demoDataService = scope.ServiceProvider.GetRequiredService<DemoDataService>();
+            await demoDataService.SeedDemoDataAsync();
+        }
 
         app.Run();
     }

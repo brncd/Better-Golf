@@ -23,7 +23,7 @@ export default function PlayersPage() {
     const fetchPlayers = async () => {
       try {
         setIsLoading(true)
-        const response = await apiClient.get<PaginationResponse<PlayerListGetDTO>>("/Players")
+        const response = await apiClient.get<PaginationResponse<PlayerListGetDTO>>("/api/Players?pageNumber=1&pageSize=10")
         setPlayers(response.items)
       } catch (err) {
         setError(err instanceof Error ? err.message : "An unknown error occurred")
@@ -45,7 +45,7 @@ export default function PlayersPage() {
         const { playerService } = await import("@/lib/services")
         await playerService.delete(id.toString())
         // Refresh the players list
-        const response = await apiClient.get<PaginationResponse<PlayerListGetDTO>>("/Players")
+        const response = await apiClient.get<PaginationResponse<PlayerListGetDTO>>("/api/Players?pageNumber=1&pageSize=10")
         setPlayers(response.items)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to delete player")

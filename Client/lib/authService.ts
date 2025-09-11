@@ -1,46 +1,83 @@
-const AUTH_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+import { config } from './config';
+import { logger } from './logger';
+import { BetterGolfError, createError, ErrorType } from './errors';
+
+const AUTH_BASE_URL = config.api.baseUrl;
 
 async function fetcher<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${AUTH_BASE_URL}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-    ...options,
-  });
-
-  if (!response.ok) {
-    try {
-      const errorData = await response.json();
-      throw new Error(errorData.title || 'An API error occurred');
-    } catch (e) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-  }
+  const url = `${AUTH_BASE_URL}${endpoint}`;
   
-  if (response.status === 204) {
-    return {} as T;
-  }
+  logger.apiRequest('POST', url, options.body);
+  
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      ...options,
+    });
 
-  return response.json();
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = { message: `HTTP error! status: ${response.status}` };
+      }
+      
+      logger.apiResponse(response.status.toString(), url, errorData);
+      throw createError(ErrorType.AUTHENTICATION, errorData.title || errorData.message || 'Authentication failed', errorData);
+    }
+    
+    if (response.status === 204) {
+      logger.apiResponse(response.status.toString(), url, 0);
+      return {} as T;
+    }
+
+    const data = await response.json();
+    logger.apiResponse(response.status.toString(), url, data);
+    return data;
+  } catch (error) {
+    if (error instanceof BetterGolfError) {
+      throw error;
+    }
+    logger.error('Auth API Error', { url, endpoint, error: (error as Error).message });
+    throw createError(ErrorType.NETWORK, 'Network error occurred', 500);
+  }
 }
 
 export const authClient = {
-  login: <T>(body: { email: string; password: string }) => fetcher<T>('/login?useCookies=false&useSessionCookies=false', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  }),
-  register: <T>(body: { email: string; password: string }) => fetcher<T>('/register', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  }),
-  // Get current user info
-  getUserInfo: <T>() => fetcher<T>('/manage/info', {
-    method: 'GET',
-  }),
-  // Refresh token
-  refresh: <T>(body: { refreshToken: string }) => fetcher<T>('/refresh', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  }),
+  login: <T>(body: { emailOrUsername: string; password: string }) => {
+    logger.info('Login attempt', { emailOrUsername: body.emailOrUsername });
+    return fetcher<T>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+  
+  register: <T>(body: { username: string; email: string; password: string }) => {
+    logger.info('Registration attempt', { email: body.email, username: body.username });
+    return fetcher<T>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+  
+  getUserInfo: <T>(token: string) => {
+    return fetcher<T>('/manage/info', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+  
+  refresh: <T>(body: { refreshToken: string }) => {
+    logger.info('Token refresh attempt');
+    return fetcher<T>('/refresh', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
 };

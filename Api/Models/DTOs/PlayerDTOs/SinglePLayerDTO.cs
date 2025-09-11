@@ -1,23 +1,34 @@
 namespace Api.Models.DTOs.PlayerDTOs;
 
-public class SinglePLayerDTO 
+public class SinglePlayerDTO 
 {
-    public int Id { get; set; }
-    public int MatriculaAUG { get; set; }
-    public string Name { get; set; } = null!;
+    public string Id { get; set; } = null!;
+    public string FirstName { get; set; } = null!;
     public string LastName { get; set; } = null!;
-    public double HandicapIndex { get; set; }
-    public DateOnly Birthdate { get; set; }
-    public bool IsPreferredCategoryLadies { get; set; }
+    public string Email { get; set; } = null!;
+    public double Handicap { get; set; }
+    public string Gender { get; set; } = null!;
+    public string DateOfBirth { get; set; } = null!;
+    public string PhoneNumber { get; set; } = null!;
+    public string? CategoryId { get; set; }
+    public string? CategoryName { get; set; }
+    public string MembershipNumber { get; set; } = null!;
+    public bool IsActive { get; set; }
+    public string CreatedAt { get; set; } = null!;
 
-    public SinglePLayerDTO(Player player)
+    public SinglePlayerDTO(Player player)
     {
-        Id = player.Id;
-        MatriculaAUG = player.MatriculaAUG;
-        Name = player.Name;
+        Id = player.Id.ToString();
+        FirstName = player.Name;
         LastName = player.LastName;
-        HandicapIndex = player.HandicapIndex;
-        Birthdate = player.Birthdate;
-        IsPreferredCategoryLadies = player.IsPreferredCategoryLadies;
+        Email = player.Email ?? "";
+        Handicap = player.HandicapIndex;
+        Gender = player.IsPreferredCategoryLadies ? "female" : "male";
+        DateOfBirth = player.Birthdate.ToString("yyyy-MM-dd");
+        PhoneNumber = player.PhoneNumber ?? "";
+        MembershipNumber = player.MatriculaAUG.ToString();
+        IsActive = true;
+        CreatedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+        // CategoryId and CategoryName will be set by service if needed
     }
 }

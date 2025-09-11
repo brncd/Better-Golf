@@ -32,11 +32,11 @@ export function TournamentCard({ tournament, onEdit, onDelete }: TournamentCardP
             {tournament.name}
           </CardTitle>
           <div className="shrink-0">
-            <StatusBadge status={tournament.status} />
+            <TournamentTypeBadge type={tournament.tournamentType as any} />
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <TournamentTypeBadge type={tournament.type as any} />
+          <span className="text-sm text-muted-foreground">{tournament.tournamentType}</span>
         </div>
       </CardHeader>
 
@@ -52,7 +52,7 @@ export function TournamentCard({ tournament, onEdit, onDelete }: TournamentCardP
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Users className="h-4 w-4 shrink-0" />
             <span>
-              {tournament.registeredPlayers}/{tournament.maxPlayers} players
+              {tournament.playerCount} players
             </span>
           </div>
         </div>
@@ -69,14 +69,14 @@ export function TournamentCard({ tournament, onEdit, onDelete }: TournamentCardP
         <RoleGuard roles={["TournamentOrganizer", "Admin"]}>
           <div className="flex gap-2 w-full sm:w-auto">
             {onEdit && (
-              <Button variant="outline" size="sm" onClick={() => onEdit(tournament.id)} className="flex-1 sm:flex-none">
+              <Button variant="outline" size="sm" onClick={() => onEdit(tournament.id.toString())} className="flex-1 sm:flex-none">
                 <Edit className="h-4 w-4" />
                 <span className="ml-2 sm:hidden">Edit</span>
               </Button>
             )}
 
             {onDelete && (
-              <Button variant="outline" size="sm" onClick={() => onDelete(tournament.id)} className="flex-1 sm:flex-none">
+              <Button variant="outline" size="sm" onClick={() => onDelete(tournament.id.toString())} className="flex-1 sm:flex-none">
                 <Trash2 className="h-4 w-4" />
                 <span className="ml-2 sm:hidden">Delete</span>
               </Button>

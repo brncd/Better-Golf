@@ -23,7 +23,7 @@ export default function CoursesPage() {
     const fetchCourses = async () => {
       try {
         setIsLoading(true)
-        const response = await apiClient.get<PaginationResponse<CoursesListGetDTO>>("/Courses")
+        const response = await apiClient.get<PaginationResponse<CoursesListGetDTO>>("/api/Courses?pageNumber=1&pageSize=10")
         setCourses(response.items)
       } catch (err) {
         setError(err instanceof Error ? err.message : "An unknown error occurred")
@@ -46,7 +46,7 @@ export default function CoursesPage() {
         const { courseService } = await import("@/lib/services")
         await courseService.delete(id.toString())
         // Refresh the courses list
-        const response = await apiClient.get<PaginationResponse<CoursesListGetDTO>>("/Courses")
+        const response = await apiClient.get<PaginationResponse<CoursesListGetDTO>>("/api/Courses?pageNumber=1&pageSize=10")
         setCourses(response.items)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to delete course")

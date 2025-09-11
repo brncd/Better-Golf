@@ -5,18 +5,19 @@ import { useParams } from "next/navigation"
 import Link from "next/link"
 import { MainLayout } from "@/components/layouts/MainLayout"
 import { Button } from "@/components/ui/button"
-import { Scorecard } from "@/components/organisms/Scorecard"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
-import { tournamentService, courseService } from "@/lib/services"
-import { SingleTournamentDTO, SingleCourseDTO } from "@/types"
-import { ArrowLeft, Trophy } from "lucide-react"
+import { scoringService } from "@/lib/services/scoringService"
+import { ScoringTournament, ScorecardDTO } from "@/types"
+import { ArrowLeft, Trophy, Users, Target, Calendar } from "lucide-react"
 
 export default function TournamentScoringPage() {
   const params = useParams()
-  const tournamentId = params.id as string
-  const [tournament, setTournament] = useState<SingleTournamentDTO | null>(null)
-  const [course, setCourse] = useState<SingleCourseDTO | null>(null)
+  const tournamentId = parseInt(params.id as string)
+  const [tournament, setTournament] = useState<ScoringTournament | null>(null)
+  const [scorecards, setScorecards] = useState<ScorecardDTO[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -24,11 +25,16 @@ export default function TournamentScoringPage() {
     const fetchData = async () => {
       try {
         setIsLoading(true)
-        const tournamentData = await tournamentService.getById(tournamentId)
-        setTournament(tournamentData)
+        const [tournamentData, scorecardsData] = await Promise.all([
+          scoringService.getActiveTournaments(),
+          scoringService.getTournamentScorecards(tournamentId.toString())
+        ])
         
-        const courseData = await courseService.getById(tournamentData.courseId)
-        setCourse(courseData)
+        const currentTournament = tournamentData.find(t => t.id === tournamentId)
+        if (currentTournament) {
+          setTournament(currentTournament)
+        }
+        setScorecards(scorecardsData)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load tournament data")
       } finally {
@@ -48,7 +54,7 @@ export default function TournamentScoringPage() {
     )
   }
 
-  if (error || !tournament || !course) {
+  if (error || !tournament) {
     return (
       <MainLayout>
         <div className="text-center py-12">
@@ -79,9 +85,16 @@ export default function TournamentScoringPage() {
           <div className="flex flex-col lg:flex-row justify-between items-start gap-4">
             <div>
               <h1 className="text-3xl font-bold text-balance">{tournament.name}</h1>
-              <p className="text-muted-foreground">
-                {course.name} • {course.location}
-              </p>
+              <div className="flex items-center gap-4 mt-2">
+                <Badge variant="outline">
+                  <Calendar className="h-3 w-3 mr-1" />
+                  {new Date(tournament.startDate).toLocaleDateString()}
+                </Badge>
+                <Badge variant="outline">
+                  <Target className="h-3 w-3 mr-1" />
+                  {tournament.tournamentType}
+                </Badge>
+              </div>
             </div>
 
             <Button asChild>
@@ -92,8 +105,53 @@ export default function TournamentScoringPage() {
             </Button>
           </div>
 
-          {/* Scorecard */}
-          <Scorecard tournamentId={tournament.id} courseId={tournament.courseId} roundNumber={1} />
+          {/* Scorecards */}
+          <div className="grid gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Tournament Scorecards
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {scorecards.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    No scorecards available for this tournament yet.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {scorecards.map((scorecard) => (
+                      <Card key={scorecard.id} className="p-4">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h3 className="font-semibold">{scorecard.playerName}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Round {scorecard.roundNumber} • Status: {scorecard.isLocked ? 'Locked' : 'In Progress'}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/scoring/scorecard/${scorecard.id}`}>
+                                View Scorecard
+                              </Link>
+                            </Button>
+                            {!scorecard.isLocked && (
+                              <Button size="sm" asChild>
+                                <Link href={`/scoring/scorecard/${scorecard.id}/edit`}>
+                                  Edit Scores
+                                </Link>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </MainLayout>
     </ProtectedRoute>

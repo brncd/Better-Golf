@@ -2,6 +2,7 @@ using Api.Data;
 using Api.Models;
 using Api.Models.DTOs.CategoryDTOs;
 using Api.Models.DTOs.PlayerDTOs;
+using Api.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Api.Models.Results;
 using Api.Models.Common;
@@ -52,11 +53,12 @@ namespace Api.Services
             if (category == null) return Result<bool>.Failure(new Error("CategoryNotFound", "Category not found."));
 
             category.Name = categoryDto.Name;
-            category.MinAge = categoryDto.MinAge;
-            category.MaxAge = categoryDto.MaxAge;
-            category.MinHcap = categoryDto.MinHcap;
-            category.MaxHcap = categoryDto.MaxHcap;
-            category.NumberOfHoles = categoryDto.NumberOfHoles;
+            category.Description = categoryDto.Description;
+            category.AgeMin = categoryDto.AgeMin;
+            category.AgeMax = categoryDto.AgeMax;
+            category.HandicapMin = categoryDto.HandicapMin;
+            category.HandicapMax = categoryDto.HandicapMax;
+            category.Sex = Enum.Parse<Gender>(categoryDto.Gender, true);
 
             await _db.SaveChangesAsync();
             _logger.LogInformation($"Category {id} updated.");
@@ -92,13 +94,13 @@ namespace Api.Services
             return Result<PaginationResponse<PlayerListGetDTO>>.Success(new PaginationResponse<PlayerListGetDTO>(pagination.PageNumber, pagination.PageSize, totalCount, items));
         }
 
-        public async Task<Result<SinglePLayerDTO>> AddPlayerToCategoryAsync(int categoryId, int playerId)
+        public async Task<Result<SinglePlayerDTO>> AddPlayerToCategoryAsync(int categoryId, int playerId)
         {
             var category = await _db.Categories.Include(c => c.Players).FirstOrDefaultAsync(c => c.Id == categoryId);
-            if (category == null) return Result<SinglePLayerDTO>.Failure(new Error("CategoryNotFound", "Category not found."));
+            if (category == null) return Result<SinglePlayerDTO>.Failure(new Error("CategoryNotFound", "Category not found."));
 
             var player = await _db.Players.FindAsync(playerId);
-            if (player == null) return Result<SinglePLayerDTO>.Failure(new Error("PlayerNotFound", "Player not found."));
+            if (player == null) return Result<SinglePlayerDTO>.Failure(new Error("PlayerNotFound", "Player not found."));
 
             if (category.Players != null && !category.Players.Any(p => p.Id == playerId))
             {
@@ -106,10 +108,10 @@ namespace Api.Services
                 category.Count = category.Players.Count;
                 await _db.SaveChangesAsync();
                 _logger.LogInformation($"Player {playerId} added to category {categoryId}.");
-                return Result<SinglePLayerDTO>.Success(new SinglePLayerDTO(player));
+                return Result<SinglePlayerDTO>.Success(new SinglePlayerDTO(player));
             }
             
-            return Result<SinglePLayerDTO>.Failure(new Error("PlayerAlreadyInCategory", "Player already in category."));
+            return Result<SinglePlayerDTO>.Failure(new Error("PlayerAlreadyInCategory", "Player already in category."));
         }
 
         public async Task<Result<bool>> RemovePlayerFromCategoryAsync(int categoryId, int playerId)

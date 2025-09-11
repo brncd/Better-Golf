@@ -73,7 +73,19 @@ namespace Api.Services
             await _db.SaveChangesAsync();
 
             // Return DTOs
-            return rankings.Select(r => new TournamentRankingDTO(r)).ToList();
+            return rankings.Select(r => new TournamentRankingDTO 
+            {
+                PlayerId = r.PlayerId,
+                PlayerName = "", // Will be populated by join if needed
+                Position = r.Position,
+                TotalStrokes = r.TotalStrokes,
+                RoundsPlayed = 0, // Calculate if needed
+                AverageStrokes = 0, // Calculate if needed
+                Handicap = 0, // Get from player if needed
+                StrokesBehindPrevious = 0,
+                PercentileRank = 0,
+                Quartile = 0
+            }).ToList();
         }
 
         public async Task<List<TournamentRankingDTO>> GetTournamentRankingAsync(int tournamentId)
@@ -81,7 +93,19 @@ namespace Api.Services
             return await _db.TournamentRankings.Where(ranking => ranking.TournamentId == tournamentId)
                 .OrderBy(r => r.Position)
                 .ThenBy(r => r.TotalStrokes)
-                .Select(r => new TournamentRankingDTO(r))
+                .Select(r => new TournamentRankingDTO 
+                {
+                    PlayerId = r.PlayerId,
+                    PlayerName = "", // Will be populated by join if needed
+                    Position = r.Position,
+                    TotalStrokes = r.TotalStrokes,
+                    RoundsPlayed = 0, // Calculate if needed
+                    AverageStrokes = 0, // Calculate if needed
+                    Handicap = 0, // Get from player if needed
+                    StrokesBehindPrevious = 0,
+                    PercentileRank = 0,
+                    Quartile = 0
+                })
                 .ToListAsync();
         }
     }

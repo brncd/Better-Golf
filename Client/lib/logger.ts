@@ -22,7 +22,12 @@ class Logger {
   private currentLevel: LogLevel
 
   constructor() {
-    this.currentLevel = logLevelMap[config.development.logLevel] ?? LogLevel.INFO
+    // Safe access to config on both client and server
+    try {
+      this.currentLevel = logLevelMap[config.development.logLevel] ?? LogLevel.INFO
+    } catch {
+      this.currentLevel = LogLevel.INFO
+    }
   }
 
   private shouldLog(level: LogLevel): boolean {

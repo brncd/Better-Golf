@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authClient } from '@/lib/authService';
+import { logger } from '@/lib/logger';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import type { User, AuthResponse, LoginRequest } from '@/types';
 
 interface AuthContextType {
@@ -12,6 +14,10 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
+  hasRole: (role: string) => boolean;
+  isAdmin: () => boolean;
+  isTournamentOrganizer: () => boolean;
+  isPlayer: () => boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,15 +29,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('authToken');
-    if (storedToken) {
-      setToken(storedToken);
-      try {
-        const payload = JSON.parse(atob(storedToken.split('.')[1]));
-        setUser({ email: payload.email, roles: payload.role || [] });
-      } catch (e) {
-        console.error("Failed to decode token", e);
-        localStorage.removeItem('authToken');
+    // Only run on client side
+    if (typeof window !== 'undefined') {
+      const storedToken = localStorage.getItem('authToken');
+      if (storedToken) {
+        setToken(storedToken);
+        try {
+          const payload = JSON.parse(atob(storedToken.split('.')[1]));
+          const roles = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role || [];
+          const email = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || payload.email || '';
+          const username = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || payload.unique_name || payload.name || '';
+          
+          setUser({ 
+            email: email, 
+            username: username,
+            roles: Array.isArray(roles) ? roles : [roles] 
+          });
+        } catch (e) {
+          console.error("Failed to decode token", e);
+          localStorage.removeItem('authToken');
+        }
       }
     }
     setIsLoading(false);
@@ -42,18 +59,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       const response = await authClient.login<AuthResponse>(credentials);
-      const newToken = response.accessToken;
+      const newToken = response.token;
       
-      localStorage.setItem('authToken', newToken);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('authToken', newToken);
+      }
       setToken(newToken);
       
-      try {
-        const payload = JSON.parse(atob(newToken.split('.')[1]));
-        setUser({ email: payload.email, roles: payload.role || [] });
-      } catch (e) {
-        console.error("Failed to decode token", e);
-        setUser({ email: credentials.email, roles: [] });
-      }
+      setUser({ 
+        email: response.email, 
+        username: response.username,
+        roles: response.roles || [] 
+      });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);
@@ -64,11 +81,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('authToken');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('authToken');
+    }
     setUser(null);
     setToken(null);
     setError(null);
+    logger.authSuccess('User logged out');
   };
+
+  const hasRole = (role: string): boolean => {
+    if (!user || !user.roles) return false;
+    return Array.isArray(user.roles) ? user.roles.includes(role) : user.roles === role;
+  };
+
+  const isAdmin = (): boolean => hasRole('Admin');
+  const isTournamentOrganizer = (): boolean => hasRole('TournamentOrganizer');
+  const isPlayer = (): boolean => hasRole('Player');
 
   return (
     <AuthContext.Provider value={{ 
@@ -78,7 +107,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout, 
       isAuthenticated: !!user,
       loading: isLoading, 
-      error 
+      error,
+      hasRole,
+      isAdmin,
+      isTournamentOrganizer,
+      isPlayer
     }}>
       {children}
     </AuthContext.Provider>

@@ -16,23 +16,27 @@ export interface PaginationResponse<T> {
 
 // ================== Authentication DTOs ==================
 export interface LoginRequest {
-  email: string;
+  emailOrUsername: string;
   password: string;
 }
 
 export interface RegisterRequest {
+  username: string;
   email: string;
   password: string;
 }
 
 export interface AuthResponse {
-  accessToken: string;
-  tokenType: string;
-  expiresIn: number;
+  token: string;
+  email: string;
+  username: string;
+  roles: string[];
+  expiration: string;
 }
 
 export interface User {
   email: string;
+  username: string;
   roles: string[];
 }
 
@@ -69,49 +73,43 @@ export interface SinglePlayerDTO {
   createdAt: string;
 }
 
-export interface PLayerPostDTO {
+export interface PlayerPostDTO {
   firstName: string;
   lastName: string;
   email: string;
   handicap: number;
   gender: string;
   dateOfBirth: string;
-  phoneNumber: string;
+  phoneNumber?: string;
   membershipNumber: string;
 }
 
 // ================== Tournament DTOs ==================
 export interface TournamentListGetDTO {
-  id: string;
+  id: number;
   name: string;
-  description: string;
-  status: "Draft" | "OpenRegistration" | "InProgress" | "Completed" | "Archived";
-  type: string;
+  tournamentType: string;
   startDate: string;
   endDate: string;
-  courseId: string;
-  courseName: string;
-  maxPlayers: number;
-  registeredPlayers: number;
-  createdAt: string;
-  updatedAt: string;
+  playerCount: number;
 }
 
 export interface SingleTournamentDTO {
-  id: string;
+  id: number;
   name: string;
+  count: number;
   description: string;
-  status: "Draft" | "OpenRegistration" | "InProgress" | "Completed" | "Archived";
-  type: string;
+  tournamentType: string;
   startDate: string;
   endDate: string;
-  courseId: string;
-  courseName: string;
-  maxPlayers: number;
-  registeredPlayers: number;
-  handicapAllowance?: number;
-  createdAt: string;
-  updatedAt: string;
+  roundInfo: RoundInfo;
+}
+
+export interface RoundInfo {
+  id: number;
+  tournamentId: number;
+  roundNumber: number;
+  date: string;
 }
 
 export interface TournamentPostDTO {
@@ -138,16 +136,8 @@ export interface TournamentRankingDTO {
 
 // ================== Course DTOs ==================
 export interface CoursesListGetDTO {
-  id: string;
+  id: number;
   name: string;
-  location: string;
-  numberOfHoles: number;
-  par: number;
-  yardage: number;
-  rating: number;
-  slope: number;
-  description: string;
-  isActive: boolean;
 }
 
 export interface SingleCourseDTO {
@@ -194,15 +184,37 @@ export interface HolePostDTO {
 }
 
 // ================== Category DTOs ==================
-export interface CategoryDTO {
+export interface Category {
   id: string;
   name: string;
   description: string;
   handicapMin?: number;
   handicapMax?: number;
-  gender: "male" | "female" | "mixed";
   ageMin?: number;
   ageMax?: number;
+  gender: string;
+}
+
+export interface CategoryListGetDTO {
+  id: string;
+  name: string;
+  description: string;
+  handicapMin?: number;
+  handicapMax?: number;
+  ageMin?: number;
+  ageMax?: number;
+  gender: string;
+}
+
+export interface SingleCategoryDTO {
+  id: string;
+  name: string;
+  description: string;
+  handicapMin?: number;
+  handicapMax?: number;
+  ageMin?: number;
+  ageMax?: number;
+  gender: string;
 }
 
 export interface CategoryPostDTO {
@@ -210,9 +222,9 @@ export interface CategoryPostDTO {
   description: string;
   handicapMin?: number;
   handicapMax?: number;
-  gender: "male" | "female" | "mixed";
   ageMin?: number;
   ageMax?: number;
+  gender: string;
 }
 
 // ================== Round & Tee Time DTOs ==================
@@ -240,13 +252,10 @@ export interface RoleAssignmentDTO {
 
 // ================== Scorecard DTOs ==================
 export interface ScorecardDTO {
-  id: string;
-  playerId: string;
-  tournamentId: string;
-  roundId: string;
+  id: number;
+  playingHandicap: number;
+  player: number;
   totalStrokes: number;
-  totalScore: number;
-  isCompleted: boolean;
 }
 
 export interface ScorecardResultDTO {

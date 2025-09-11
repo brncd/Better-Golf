@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
+import { ClientOnly } from "@/components/ClientOnly"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -17,7 +18,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Trophy, Users, MapPin, BarChart3, Settings, Menu, LogOut, User, Target } from "lucide-react"
+import { Trophy, Users, MapPin, BarChart3, Settings, Menu, LogOut, User, Target, Shield } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
+import { useRouter } from "next/navigation"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
@@ -35,10 +38,17 @@ interface MainLayoutProps {
 export function MainLayout({ children }: MainLayoutProps) {
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const { user, logout, isAuthenticated, isAdmin } = useAuth()
+  const router = useRouter()
 
   const NavItems = ({ mobile = false }: { mobile?: boolean }) => (
     <>
       {navigation.map((item) => {
+        // Hide Admin panel for non-admin users
+        if (item.name === "Admin" && !isAdmin()) {
+          return null;
+        }
+        
         const isActive = pathname.startsWith(item.href)
         const Icon = item.icon
 
@@ -136,38 +146,70 @@ export function MainLayout({ children }: MainLayoutProps) {
             <div className="flex flex-1"></div>
             <div className="flex items-center gap-x-4 lg:gap-x-6">
               {/* User Menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src="/golf-professional.jpg" alt="User" />
-                      <AvatarFallback>AD</AvatarFallback>
-                    </Avatar>
+              <ClientOnly>
+                {isAuthenticated ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src="/golf-professional.jpg" alt="User" />
+                          <AvatarFallback>
+                            {user?.email?.charAt(0).toUpperCase() || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56" align="end">
+                      <DropdownMenuLabel className="font-normal">
+                        <div className="flex flex-col space-y-1">
+                          <p className="text-sm font-medium leading-none">
+                            {user?.email || 'User'}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {user?.roles?.join(', ') || 'No roles'}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => router.push('/dashboard')}>
+                      <BarChart3 className="mr-2 h-4 w-4" />
+                      <span>Dashboard</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push('/profile')}>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push('/settings')}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                    {user?.roles?.includes('Admin') && (
+                      <DropdownMenuItem onClick={() => router.push('/admin')}>
+                        <Shield className="mr-2 h-4 w-4" />
+                        <span>Admin Panel</span>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => {
+                      logout()
+                      router.push('/login')
+                    }}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                ) : (
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" onClick={() => router.push('/login')}>
+                    Login
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">Admin User</p>
-                      <p className="text-xs leading-none text-muted-foreground">admin@golfclub.com</p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  <Button onClick={() => router.push('/register')}>
+                    Register
+                  </Button>
+                </div>
+              )}
+              </ClientOnly>
             </div>
           </div>
         </div>

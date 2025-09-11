@@ -2,16 +2,24 @@ namespace Api.Models.DTOs.CategoryDTOs;
 
 public class CategoryListGetDTO
 {
-    public int Id { get; set; }
+    public string Id { get; set; } = null!;
     public string Name { get; set; } = null!;
-    public string Sex { get; set; } = "mixed";
-    public int Count { get; set; }
+    public string Description { get; set; } = null!;
+    public double? HandicapMin { get; set; }
+    public double? HandicapMax { get; set; }
+    public string Gender { get; set; } = "mixed";
+    public int? AgeMin { get; set; }
+    public int? AgeMax { get; set; }
 
     public CategoryListGetDTO(Category category)
     {
-        Id = category.Id;
+        Id = category.Id.ToString();
         Name = category.Name;
-        Sex = category.Sex.ToString();
-        Count = category.Count;
+        Description = category.Description ?? "";
+        HandicapMin = category.HandicapMin;
+        HandicapMax = category.HandicapMax;
+        Gender = category.Sex.ToString().ToLower();
+        AgeMin = category.AgeMin;
+        AgeMax = category.AgeMax;
     }
 }

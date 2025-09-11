@@ -8,10 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/context/AuthContext"
-import { authClient } from "@/lib/authService"
+import { DemoUserButton } from "@/components/DemoUserButton"
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("")
+  const [emailOrUsername, setEmailOrUsername] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -23,7 +23,7 @@ export default function LoginPage() {
     setIsLoading(true)
     setError(null)
     try {
-      await login({ email, password })
+      await login({ emailOrUsername, password })
       router.push("/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred")
@@ -42,14 +42,14 @@ export default function LoginPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="emailOrUsername">Email or Username</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
+                  id="emailOrUsername"
+                  type="text"
+                  placeholder="email@example.com or username"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={emailOrUsername}
+                  onChange={(e) => setEmailOrUsername(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -66,6 +66,12 @@ export default function LoginPage() {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-sm text-muted-foreground text-center mb-2">
+                  Or try the demo:
+                </p>
+                <DemoUserButton />
+              </div>
             </form>
           </CardContent>
         </Card>

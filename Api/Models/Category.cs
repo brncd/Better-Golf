@@ -7,13 +7,14 @@ public class Category
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;
+    public string? Description { get; set; }
     public Gender Sex { get; set; }
     public Course? OpenCourse { get; set; }
     public Course? LadiesCourse { get; set; }
-    public int MinAge { get; set; }
-    public int MaxAge { get; set; }
-    public double MinHcap { get; set; }
-    public double MaxHcap { get; set; }
+    public int? AgeMin { get; set; }
+    public int? AgeMax { get; set; }
+    public double? HandicapMin { get; set; }
+    public double? HandicapMax { get; set; }
     public int NumberOfHoles { get; set; }
     public int Count { get; set; }
     public Tournament? Tournament { get; set; } = null!;
@@ -22,16 +23,38 @@ public class Category
     public List<Category>? ChildrenCategories { get; set; }
     public List<Player>? Players { get; set; } = new List<Player>();
 
+    // Legacy properties for backward compatibility
+    public int MinAge 
+    { 
+        get => AgeMin ?? 0; 
+        set => AgeMin = value; 
+    }
+    public int MaxAge 
+    { 
+        get => AgeMax ?? 100; 
+        set => AgeMax = value; 
+    }
+    public double MinHcap 
+    { 
+        get => HandicapMin ?? 0.0; 
+        set => HandicapMin = value; 
+    }
+    public double MaxHcap 
+    { 
+        get => HandicapMax ?? 54.0; 
+        set => HandicapMax = value; 
+    }
+
     
     public Category(CategoryPostDTO categoryPostDTO)
     {
         Name = categoryPostDTO.Name;
-        Sex = categoryPostDTO.Sex;
-        MinAge = categoryPostDTO.MinAge;
-        MaxAge = categoryPostDTO.MaxAge;
-        MinHcap = categoryPostDTO.MinHcap;
-        MaxHcap = categoryPostDTO.MaxHcap;
-        NumberOfHoles = categoryPostDTO.NumberOfHoles;
+        Description = categoryPostDTO.Description;
+        AgeMin = categoryPostDTO.AgeMin;
+        AgeMax = categoryPostDTO.AgeMax;
+        HandicapMin = categoryPostDTO.HandicapMin;
+        HandicapMax = categoryPostDTO.HandicapMax;
+        Sex = Enum.Parse<Gender>(categoryPostDTO.Gender, true);
     }
     public Category()
     {

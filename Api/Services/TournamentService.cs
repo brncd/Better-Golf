@@ -176,7 +176,7 @@ namespace Api.Services
             return Result<PaginationResponse<CategoryListGetDTO>>.Success(new PaginationResponse<CategoryListGetDTO>(pagination.PageNumber, pagination.PageSize, totalCount, items));
         }
 
-        public async Task<Result<SinglePLayerDTO>> AddPlayerToTournamentAsync(int tournamentId, int playerId)
+        public async Task<Result<SinglePlayerDTO>> AddPlayerToTournamentAsync(int tournamentId, int playerId)
         {
             var tournament = await _db.Tournaments
                 .Include(t => t.Players)
@@ -185,20 +185,20 @@ namespace Api.Services
                 .Include(t => t.Scorecards)
                 .FirstOrDefaultAsync(t => t.Id == tournamentId);
 
-            if (tournament == null) return Result<SinglePLayerDTO>.Failure(new Error("TournamentNotFound", "Tournament not found."));
+            if (tournament == null) return Result<SinglePlayerDTO>.Failure(new Error("TournamentNotFound", "Tournament not found."));
 
             // Check if tournament is in OpenRegistration status
             if (tournament.Status != TournamentStatus.OpenRegistration)
             {
-                return Result<SinglePLayerDTO>.Failure(new Error("TournamentNotOpenForRegistration", "Tournament is not open for registration."));
+                return Result<SinglePlayerDTO>.Failure(new Error("TournamentNotOpenForRegistration", "Tournament is not open for registration."));
             }
 
             var player = await _db.Players.FindAsync(playerId);
-            if (player == null) return Result<SinglePLayerDTO>.Failure(new Error("PlayerNotFound", "Player not found."));
+            if (player == null) return Result<SinglePlayerDTO>.Failure(new Error("PlayerNotFound", "Player not found."));
 
             if (tournament.Players.Any(p => p.Id == playerId))
             {
-                return Result<SinglePLayerDTO>.Failure(new Error("PlayerAlreadyInTournament", "Player is already in the tournament."));
+                return Result<SinglePlayerDTO>.Failure(new Error("PlayerAlreadyInTournament", "Player is already in the tournament."));
             }
 
             using var transaction = await _db.Database.BeginTransactionAsync();
@@ -218,20 +218,20 @@ namespace Api.Services
                     if (!assignResult.IsSuccess)
                     {
                         await transaction.RollbackAsync();
-                        return Result<SinglePLayerDTO>.Failure(assignResult.Error);
+                        return Result<SinglePlayerDTO>.Failure(assignResult.Error);
                     }
                 }
 
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
                 _logger.LogInformation($"Player {playerId} added to tournament {tournamentId}.");
-                return Result<SinglePLayerDTO>.Success(new SinglePLayerDTO(player));
+                return Result<SinglePlayerDTO>.Success(new SinglePlayerDTO(player));
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
                 _logger.LogError(ex, $"Error adding player {playerId} to tournament {tournamentId}.");
-                return Result<SinglePLayerDTO>.Failure(new Error("UnknownError", "An error occurred while adding the player to the tournament."));
+                return Result<SinglePlayerDTO>.Failure(new Error("UnknownError", "An error occurred while adding the player to the tournament."));
             }
         }
 
@@ -276,12 +276,12 @@ namespace Api.Services
             }
         }
 
-        public async Task<Result<SinglePLayerDTO>> RegisterCurrentUserToTournamentAsync(int tournamentId, string userId)
+        public async Task<Result<SinglePlayerDTO>> RegisterCurrentUserToTournamentAsync(int tournamentId, string userId)
         {
             var player = await _db.Players.FirstOrDefaultAsync(p => p.ApplicationUserId == userId);
             if (player == null)
             {
-                return Result<SinglePLayerDTO>.Failure(new Error("PlayerProfileNotFound", "A player profile for the current user does not exist."));
+                return Result<SinglePlayerDTO>.Failure(new Error("PlayerProfileNotFound", "A player profile for the current user does not exist."));
             }
 
             return await AddPlayerToTournamentAsync(tournamentId, player.Id);
@@ -358,7 +358,7 @@ namespace Api.Services
 
         public async Task<List<TournamentListGetDTO>> GetActiveTournamentsAsync()
         {
-            var tournaments = await _db.Tournaments.Where(x => x.StartDate < DateOnly.FromDateTime(DateTime.Now) && x.EndDate > DateOnly.FromDateTime(DateTime.Now)).ToListAsync();
+            var tournaments = await _db.Tournaments.Where(x => x.Status == TournamentStatus.InProgress || x.Status == TournamentStatus.OpenRegistration).ToListAsync();
             return tournaments.Select(t => new TournamentListGetDTO(t)).ToList();
         }
 

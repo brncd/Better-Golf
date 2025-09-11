@@ -2,7 +2,7 @@ import { apiClient } from '../apiService';
 import type { 
   PlayerListGetDTO, 
   SinglePlayerDTO, 
-  PLayerPostDTO, 
+  PlayerPostDTO, 
   PaginationRequest, 
   PaginationResponse 
 } from '@/types';
@@ -17,11 +17,11 @@ export const playerService = {
     apiClient.get(`/api/Players/${id}`),
 
   // Create new player (Admin only)
-  create: (player: PLayerPostDTO): Promise<SinglePlayerDTO> =>
+  create: (player: PlayerPostDTO): Promise<SinglePlayerDTO> =>
     apiClient.post('/api/Players', player),
 
   // Update player (Player/Admin)
-  update: (id: string, player: PLayerPostDTO): Promise<void> =>
+  update: (id: string, player: PlayerPostDTO): Promise<void> =>
     apiClient.put(`/api/Players/${id}`, player),
 
   // Delete player (Admin only)
@@ -33,6 +33,6 @@ export const playerService = {
     apiClient.get(`/api/Players/${id}/Tournaments?pageNumber=${pagination?.pageNumber || 1}&pageSize=${pagination?.pageSize || 10}`),
 
   // Create player profile for current user
-  createProfile: (player: PLayerPostDTO): Promise<SinglePlayerDTO> =>
+  createProfile: (player: PlayerPostDTO): Promise<SinglePlayerDTO> =>
     apiClient.post('/api/me/player-profile', player),
 };
