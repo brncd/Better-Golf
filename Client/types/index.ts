@@ -124,14 +124,12 @@ export interface TournamentPostDTO {
 }
 
 export interface TournamentRankingDTO {
-  position: number;
   playerId: string;
   playerName: string;
-  totalStrokes: number;
   totalScore: number;
+  scoreToPar: number;
+  position: number;
   roundScores: number[];
-  handicap: number;
-  netScore: number;
 }
 
 // ================== Course DTOs ==================
@@ -229,8 +227,17 @@ export interface CategoryPostDTO {
 
 // ================== Round & Tee Time DTOs ==================
 export interface TeeTimeDTO {
-  teeTime?: Date;
+  id?: string;
+  teeTime?: string;
   startingHole?: number;
+  players?: TeeTimePlayerDTO[];
+}
+
+export interface TeeTimePlayerDTO {
+  id: string;
+  name: string;
+  email: string;
+  handicap?: number;
 }
 
 export interface RoundDTO {
@@ -286,3 +293,4 @@ export interface CourseDetailGetDTO {
   description: string;
   holes: HoleDTO[];
 }
+
