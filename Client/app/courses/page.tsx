@@ -7,26 +7,31 @@ import { MainLayout } from "@/components/layouts/MainLayout"
 import { Button } from "@/components/ui/button"
 import { CourseTable } from "@/components/organisms/CourseTable"
 import { CourseCard } from "@/components/molecules/CourseCard"
-import { apiClient } from "@/lib/apiService"
+import { courseService } from "@/lib/services"
 import { CoursesListGetDTO, PaginationResponse } from "@/types"
 import { Plus, Grid, List, MapPin } from "lucide-react"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
+import { ConfirmDialog } from "@/components/molecules/ConfirmDialog"
+import { useErrorHandler } from "@/hooks/useErrorHandler"
+import { useToast } from "@/hooks/use-toast"
 
 export default function CoursesPage() {
   const router = useRouter()
   const [viewMode, setViewMode] = useState<"table" | "grid">("table")
   const [courses, setCourses] = useState<CoursesListGetDTO[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [deletingCourseId, setDeletingCourseId] = useState<number | null>(null)
+  const { handleError, clearError } = useErrorHandler({ context: 'CoursesPage' })
+  const { toast } = useToast()
 
   useEffect(() => {
     const fetchCourses = async () => {
       try {
         setIsLoading(true)
-        const response = await apiClient.get<PaginationResponse<CoursesListGetDTO>>("/api/Courses?pageNumber=1&pageSize=10")
+        const response = await courseService.getAll({ pageNumber: 1, pageSize: 10 })
         setCourses(response.items)
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An unknown error occurred")
+        handleError(err, 'Failed to fetch courses')
       } finally {
         setIsLoading(false)
       }
@@ -40,17 +45,28 @@ export default function CoursesPage() {
     router.push(`/courses/${id}/edit`)
   }
 
-  const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this course?")) {
-      try {
-        const { courseService } = await import("@/lib/services")
-        await courseService.delete(id.toString())
-        // Refresh the courses list
-        const response = await apiClient.get<PaginationResponse<CoursesListGetDTO>>("/api/Courses?pageNumber=1&pageSize=10")
-        setCourses(response.items)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to delete course")
-      }
+  const handleDelete = (id: number) => {
+    setDeletingCourseId(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!deletingCourseId) return
+    
+    try {
+      setIsLoading(true)
+      await courseService.delete(deletingCourseId.toString())
+      // Refresh the courses list
+      const response = await courseService.getAll({ pageNumber: 1, pageSize: 10 })
+      setCourses(response.items)
+      setDeletingCourseId(null)
+      toast({
+        title: "Success",
+        description: "Course deleted successfully",
+      })
+    } catch (err) {
+      handleError(err, 'Failed to delete course')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -63,13 +79,7 @@ export default function CoursesPage() {
       )
     }
 
-    if (error) {
-      return (
-        <div className="text-center py-12 text-red-500">
-          <p>Error loading courses: {error}</p>
-        </div>
-      )
-    }
+    // Error handling is now managed by useErrorHandler hook
 
     if (courses.length === 0) {
       return (
@@ -105,16 +115,10 @@ export default function CoursesPage() {
   return (
     <MainLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-balance">Courses</h1>
-            <p className="text-muted-foreground">Manage golf courses and hole configurations</p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* View Mode Toggle */}
-            <div className="flex rounded-lg border p-1">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Golf Courses</h1>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center border rounded-lg p-1">
               <Button
                 variant={viewMode === "table" ? "default" : "ghost"}
                 size="sm"
@@ -122,34 +126,31 @@ export default function CoursesPage() {
               >
                 <List className="h-4 w-4" />
               </Button>
-              <Button variant={viewMode === "grid" ? "default" : "ghost"} size="sm" onClick={() => setViewMode("grid")}>
+              <Button
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+              >
                 <Grid className="h-4 w-4" />
               </Button>
             </div>
-
             <Button asChild>
               <Link href="/courses/new">
                 <Plus className="h-4 w-4 mr-2" />
-                New Course
+                Add Course
               </Link>
             </Button>
           </div>
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-card rounded-lg p-4 border">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-primary" />
-              <span className="text-sm font-medium text-muted-foreground">Total Courses</span>
-            </div>
-            <p className="text-2xl font-bold mt-1">{courses.length}</p>
-          </div>
-        </div>
-
-        {/* Content */}
         {renderContent()}
       </div>
+      <ConfirmDialog
+        open={deletingCourseId !== null}
+        onOpenChange={(open) => !open && setDeletingCourseId(null)}
+        title="Delete Course"
+        description="Are you sure you want to delete this course? This action cannot be undone."
+        onConfirm={confirmDelete}
+      />
     </MainLayout>
   )
 }

@@ -7,26 +7,31 @@ import { MainLayout } from "@/components/layouts/MainLayout"
 import { Button } from "@/components/ui/button"
 import { PlayerTable } from "@/components/organisms/PlayerTable"
 import { PlayerCard } from "@/components/molecules/PlayerCard"
-import { apiClient } from "@/lib/apiService"
+import { playerService } from "@/lib/services"
 import { PlayerListGetDTO, PaginationResponse } from "@/types"
 import { Plus, Grid, List, Users } from "lucide-react"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
+import { ConfirmDialog } from "@/components/molecules/ConfirmDialog"
+import { useErrorHandler } from "@/hooks/useErrorHandler"
+import { useToast } from "@/hooks/use-toast"
 
 export default function PlayersPage() {
   const router = useRouter()
   const [viewMode, setViewMode] = useState<"table" | "grid">("table")
   const [players, setPlayers] = useState<PlayerListGetDTO[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [deletingPlayerId, setDeletingPlayerId] = useState<number | null>(null)
+  const { handleError, clearError } = useErrorHandler({ context: 'PlayersPage' })
+  const { toast } = useToast()
 
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
         setIsLoading(true)
-        const response = await apiClient.get<PaginationResponse<PlayerListGetDTO>>("/api/Players?pageNumber=1&pageSize=10")
+        const response = await playerService.getAll({ pageNumber: 1, pageSize: 10 })
         setPlayers(response.items)
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An unknown error occurred")
+        handleError(err, 'Failed to fetch players')
       } finally {
         setIsLoading(false)
       }
@@ -39,17 +44,28 @@ export default function PlayersPage() {
     router.push(`/players/${id}/edit`)
   }
 
-  const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this player?")) {
-      try {
-        const { playerService } = await import("@/lib/services")
-        await playerService.delete(id.toString())
-        // Refresh the players list
-        const response = await apiClient.get<PaginationResponse<PlayerListGetDTO>>("/api/Players?pageNumber=1&pageSize=10")
-        setPlayers(response.items)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to delete player")
-      }
+  const handleDelete = (id: number) => {
+    setDeletingPlayerId(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!deletingPlayerId) return
+    
+    try {
+      setIsLoading(true)
+      await playerService.delete(deletingPlayerId.toString())
+      // Refresh the players list
+      const response = await playerService.getAll({ pageNumber: 1, pageSize: 10 })
+      setPlayers(response.items)
+      setDeletingPlayerId(null)
+      toast({
+        title: "Success",
+        description: "Player deleted successfully",
+      })
+    } catch (err) {
+      handleError(err, 'Failed to delete player')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -62,13 +78,7 @@ export default function PlayersPage() {
       )
     }
 
-    if (error) {
-      return (
-        <div className="text-center py-12 text-red-500">
-          <p>Error loading players: {error}</p>
-        </div>
-      )
-    }
+    // Error handling is now managed by useErrorHandler hook
 
     if (players.length === 0) {
       return (
@@ -148,6 +158,16 @@ export default function PlayersPage() {
 
         {/* Content */}
         {renderContent()}
+
+        {/* Confirm Delete Dialog */}
+        <ConfirmDialog
+          open={deletingPlayerId !== null}
+          onOpenChange={(isOpen) => !isOpen && setDeletingPlayerId(null)}
+          title="Delete Player"
+          description="Are you sure you want to delete this player? This action cannot be undone."
+          onConfirm={confirmDelete}
+          variant="destructive"
+        />
       </div>
     </MainLayout>
   )

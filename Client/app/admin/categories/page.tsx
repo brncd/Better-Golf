@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { CategoryForm } from "@/components/organisms/CategoryForm"
-import { apiClient } from "@/lib/apiService"
+import { categoryService } from "@/lib/services"
 import { CategoryListGetDTO, PaginationResponse, CategoryPostDTO, SingleCategoryDTO } from "@/types"
 import { ArrowLeft, Plus, Edit, Trash2, Tag } from "lucide-react"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
 import { ConfirmDialog } from "@/components/molecules/ConfirmDialog"
+import { useErrorHandler } from "@/hooks/useErrorHandler"
+import { useToast } from "@/hooks/use-toast"
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<CategoryListGetDTO[]>([])
@@ -19,15 +21,16 @@ export default function CategoriesPage() {
   const [editingCategory, setEditingCategory] = useState<SingleCategoryDTO | null>(null)
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { handleError, clearError } = useErrorHandler({ context: 'CategoriesPage' })
+  const { toast } = useToast()
 
   const fetchCategories = async () => {
     try {
       setIsLoading(true)
-      const response = await apiClient.get<PaginationResponse<CategoryListGetDTO>>("/api/Categories?pageNumber=1&pageSize=100")
+      const response = await categoryService.getAll({ pageNumber: 1, pageSize: 100 })
       setCategories(response.items)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred")
+      handleError(err, 'Failed to fetch categories')
     } finally {
       setIsLoading(false)
     }
@@ -40,11 +43,15 @@ export default function CategoriesPage() {
   const handleCreateCategory = async (data: CategoryPostDTO) => {
     try {
       setIsLoading(true)
-      await apiClient.post("/api/Categories", data)
+      await categoryService.create(data)
       setShowForm(false)
       fetchCategories()
+      toast({
+        title: "Success",
+        description: "Category created successfully",
+      })
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred")
+      handleError(err, 'Failed to create category')
     } finally {
       setIsLoading(false)
     }
@@ -54,11 +61,15 @@ export default function CategoriesPage() {
     if (!editingCategory) return
     try {
       setIsLoading(true)
-      await apiClient.put(`/api/Categories/${editingCategory.id}`, data)
+      await categoryService.update(editingCategory.id, data)
       setEditingCategory(null)
       fetchCategories()
+      toast({
+        title: "Success",
+        description: "Category updated successfully",
+      })
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred")
+      handleError(err, 'Failed to update category')
     } finally {
       setIsLoading(false)
     }
@@ -68,11 +79,15 @@ export default function CategoriesPage() {
     if (!deletingCategoryId) return
     try {
       setIsLoading(true)
-      await apiClient.delete(`/api/Categories/${deletingCategoryId}`)
+      await categoryService.delete(deletingCategoryId)
       setDeletingCategoryId(null)
       fetchCategories()
+      toast({
+        title: "Success",
+        description: "Category deleted successfully",
+      })
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred")
+      handleError(err, 'Failed to delete category')
     } finally {
       setIsLoading(false)
     }
@@ -81,11 +96,11 @@ export default function CategoriesPage() {
   const openEditForm = async (category: CategoryListGetDTO) => {
     try {
         setIsLoading(true);
-        const fullCategory = await apiClient.get<SingleCategoryDTO>(`/api/Categories/${category.id}`);
+        const fullCategory = await categoryService.getById(category.id);
         setEditingCategory(fullCategory);
         setShowForm(false);
     } catch (err) {
-        setError(err instanceof Error ? err.message : "An unknown error occurred");
+        handleError(err, 'Failed to load category details');
     } finally {
         setIsLoading(false);
     }
@@ -100,13 +115,7 @@ export default function CategoriesPage() {
       )
     }
 
-    if (error) {
-      return (
-        <div className="text-center py-12 text-red-500">
-          <p>Error loading categories: {error}</p>
-        </div>
-      )
-    }
+    // Error handling is now managed by useErrorHandler hook
 
     if (categories.length === 0 && !showForm && !editingCategory) {
       return (
@@ -139,8 +148,8 @@ export default function CategoriesPage() {
               <TableRow key={category.id}>
                 <TableCell>{category.id}</TableCell>
                 <TableCell className="font-medium">{category.name}</TableCell>
-                <TableCell className="text-sm capitalize">{category.sex}</TableCell>
-                <TableCell className="text-sm">{category.count}</TableCell>
+                <TableCell className="text-sm capitalize">{category.gender}</TableCell>
+                <TableCell className="text-sm">-</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button variant="ghost" size="sm" onClick={() => openEditForm(category)}>
