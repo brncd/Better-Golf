@@ -5,13 +5,16 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { MainLayout } from "@/components/layouts/MainLayout"
 import { Button } from "@/components/ui/button"
-import { PlayerTable } from "@/components/organisms/PlayerTable"
-import { PlayerCard } from "@/components/molecules/PlayerCard"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
+import { ErrorDisplay } from "@/components/atoms/ErrorDisplay"
+import { ConfirmDialog } from "@/components/molecules/ConfirmDialog"
+import { RoleGuard } from "@/components/auth/RoleGuard"
+import { PlayerImportExport } from "@/components/players/PlayerImportExport"
 import { usePlayers, useDeletePlayer } from "@/hooks/usePlayers"
 import { PlayerListGetDTO } from "@/types"
-import { Plus, Grid, List, Users } from "lucide-react"
-import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
-import { ConfirmDialog } from "@/components/molecules/ConfirmDialog"
+import { Plus, Edit, Trash2, Users, Grid, List } from "lucide-react"
 
 export default function PlayersPage() {
   const router = useRouter()
@@ -96,28 +99,19 @@ export default function PlayersPage() {
             <h1 className="text-3xl font-bold text-balance">Players</h1>
             <p className="text-muted-foreground">Manage player registrations and information</p>
           </div>
-
-          <div className="flex items-center gap-2">
-            {/* View Mode Toggle */}
-            <div className="flex rounded-lg border p-1">
-              <Button
-                variant={viewMode === "table" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("table")}
-              >
-                <List className="h-4 w-4" />
+          <div className="flex gap-2">
+            <RoleGuard roles={['Admin', 'TournamentOrganizer']}>
+              <PlayerImportExport onImportComplete={(count) => {
+                // Refresh data after import
+                window.location.reload();
+              }} />
+              <Button asChild>
+                <Link href="/players/create">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Player
+                </Link>
               </Button>
-              <Button variant={viewMode === "grid" ? "default" : "ghost"} size="sm" onClick={() => setViewMode("grid")}>
-                <Grid className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <Button asChild>
-              <Link href="/players/new">
-                <Plus className="h-4 w-4 mr-2" />
-                Register Player
-              </Link>
-            </Button>
+            </RoleGuard>
           </div>
         </div>
 

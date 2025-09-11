@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import type { CategoryPostDTO, PaginationResponse } from "@/types"
+import { UserManagement } from "@/components/admin/UserManagement"
+import { useAuth } from "@/context/AuthContext"
 import { Settings, Users, Tag, Shield, Eye } from "lucide-react"
 
 function AdminPageContent() {
