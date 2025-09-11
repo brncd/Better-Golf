@@ -1,44 +1,28 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { MainLayout } from "@/components/layouts/MainLayout"
 import { Button } from "@/components/ui/button"
 import { PlayerTable } from "@/components/organisms/PlayerTable"
 import { PlayerCard } from "@/components/molecules/PlayerCard"
-import { playerService } from "@/lib/services"
-import { PlayerListGetDTO, PaginationResponse } from "@/types"
+import { usePlayers, useDeletePlayer } from "@/hooks/usePlayers"
+import { PlayerListGetDTO } from "@/types"
 import { Plus, Grid, List, Users } from "lucide-react"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
 import { ConfirmDialog } from "@/components/molecules/ConfirmDialog"
-import { useErrorHandler } from "@/hooks/useErrorHandler"
-import { useToast } from "@/hooks/use-toast"
 
 export default function PlayersPage() {
   const router = useRouter()
   const [viewMode, setViewMode] = useState<"table" | "grid">("table")
-  const [players, setPlayers] = useState<PlayerListGetDTO[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [deletingPlayerId, setDeletingPlayerId] = useState<number | null>(null)
-  const { handleError, clearError } = useErrorHandler({ context: 'PlayersPage' })
-  const { toast } = useToast()
-
-  useEffect(() => {
-    const fetchPlayers = async () => {
-      try {
-        setIsLoading(true)
-        const response = await playerService.getAll({ pageNumber: 1, pageSize: 10 })
-        setPlayers(response.items)
-      } catch (err) {
-        handleError(err, 'Failed to fetch players')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchPlayers()
-  }, [])
+  
+  // Use TanStack Query for data fetching with caching
+  const { data: playersResponse, isLoading, error } = usePlayers({ pageNumber: 1, pageSize: 50 })
+  const deletePlayerMutation = useDeletePlayer()
+  
+  const players = (playersResponse as any)?.items || []
 
   const handleEdit = (id: number) => {
     router.push(`/players/${id}/edit`)
@@ -50,23 +34,8 @@ export default function PlayersPage() {
 
   const confirmDelete = async () => {
     if (!deletingPlayerId) return
-    
-    try {
-      setIsLoading(true)
-      await playerService.delete(deletingPlayerId.toString())
-      // Refresh the players list
-      const response = await playerService.getAll({ pageNumber: 1, pageSize: 10 })
-      setPlayers(response.items)
-      setDeletingPlayerId(null)
-      toast({
-        title: "Success",
-        description: "Player deleted successfully",
-      })
-    } catch (err) {
-      handleError(err, 'Failed to delete player')
-    } finally {
-      setIsLoading(false)
-    }
+    deletePlayerMutation.mutate(deletingPlayerId.toString())
+    setDeletingPlayerId(null)
   }
 
   const renderContent = () => {
@@ -78,7 +47,14 @@ export default function PlayersPage() {
       )
     }
 
-    // Error handling is now managed by useErrorHandler hook
+    if (error) {
+      return (
+        <div className="text-center py-12">
+          <p className="text-red-500 mb-4">{error instanceof Error ? error.message : 'An error occurred'}</p>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
+        </div>
+      )
+    }
 
     if (players.length === 0) {
       return (
@@ -104,7 +80,7 @@ export default function PlayersPage() {
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {players.map((player) => (
+        {players.map((player: PlayerListGetDTO) => (
           <PlayerCard key={player.id} player={player} onEdit={handleEdit} onDelete={handleDelete} />
         ))}
       </div>

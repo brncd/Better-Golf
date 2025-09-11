@@ -7,37 +7,17 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { HandicapBadge } from "@/components/atoms/HandicapBadge"
-import { apiClient } from "@/lib/apiService"
-import { SinglePLayerDTO } from "@/types"
+import { usePlayer } from "@/hooks/usePlayers"
+import { SinglePlayerDTO } from "@/types"
 import { ArrowLeft, Edit, Calendar, Trophy, Target, Award } from "lucide-react"
-import { useEffect, useState } from "react"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
 
 export default function PlayerDetailPage() {
   const params = useParams()
   const playerId = params.id as string
 
-  const [player, setPlayer] = useState<SinglePLayerDTO | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!playerId) return;
-
-    const fetchPlayerData = async () => {
-      try {
-        setIsLoading(true)
-        const playerData = await apiClient.get<SinglePLayerDTO>(`/Players/${playerId}`)
-        setPlayer(playerData)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An unknown error occurred")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchPlayerData()
-  }, [playerId])
+  // Use TanStack Query for data fetching with caching
+  const { data: player, isLoading, error } = usePlayer(playerId)
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Not provided"
@@ -70,7 +50,7 @@ export default function PlayerDetailPage() {
   }
 
   if (error) {
-    return <MainLayout><div>Error: {error}</div></MainLayout>
+    return <MainLayout><div>Error: {error instanceof Error ? error.message : 'An error occurred'}</div></MainLayout>
   }
 
   if (!player) {
@@ -95,22 +75,22 @@ export default function PlayerDetailPage() {
           <div className="flex items-start gap-6">
             <Avatar className="h-24 w-24">
               <AvatarImage
-                src={`/abstract-geometric-shapes.png?height=96&width=96&query=${player.name}+${player.lastName}`}
+                src={`/abstract-geometric-shapes.png?height=96&width=96&query=${(player as any).name}+${(player as any).lastName}`}
               />
-              <AvatarFallback className="text-2xl">{getInitials(player.name, player.lastName)}</AvatarFallback>
+              <AvatarFallback className="text-2xl">{getInitials((player as any).name, (player as any).lastName)}</AvatarFallback>
             </Avatar>
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-balance">
-                {player.name} {player.lastName}
+                {(player as any).name} {(player as any).lastName}
               </h1>
               <div className="flex items-center gap-3">
-                <HandicapBadge handicap={player.handicapIndex} />
+                <HandicapBadge handicap={(player as any).handicapIndex} />
               </div>
             </div>
           </div>
 
           <Button asChild>
-            <Link href={`/players/${player.id}/edit`}>
+            <Link href={`/players/${(player as any).id}/edit`}>
               <Edit className="h-4 w-4 mr-2" />
               Edit Player
             </Link>
@@ -125,7 +105,7 @@ export default function PlayerDetailPage() {
                 <Target className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Handicap</p>
-                  <p className="text-xl font-bold">{player.handicapIndex.toFixed(1)}</p>
+                  <p className="text-xl font-bold">{(player as any).handicapIndex.toFixed(1)}</p>
                 </div>
               </div>
             </CardContent>
@@ -136,7 +116,7 @@ export default function PlayerDetailPage() {
                 <Award className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Matricula</p>
-                  <p className="text-xl font-bold">{player.matriculaAUG || "N/A"}</p>
+                  <p className="text-xl font-bold">{(player as any).matriculaAUG || "N/A"}</p>
                 </div>
               </div>
             </CardContent>
@@ -147,7 +127,7 @@ export default function PlayerDetailPage() {
                 <Calendar className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Age</p>
-                  <p className="text-xl font-bold">{calculateAge(player.birthdate) || "N/A"}</p>
+                  <p className="text-xl font-bold">{calculateAge((player as any).birthdate) || "N/A"}</p>
                 </div>
               </div>
             </CardContent>
@@ -161,12 +141,12 @@ export default function PlayerDetailPage() {
               <CardTitle>Personal Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {player.birthdate && (
+              {(player as any).birthdate && (
                 <div className="flex items-center gap-3">
                   <Calendar className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Date of Birth</p>
-                    <p className="font-medium">{formatDate(player.birthdate)}</p>
+                    <p className="font-medium">{formatDate((player as any).birthdate)}</p>
                   </div>
                 </div>
               )}
@@ -180,11 +160,11 @@ export default function PlayerDetailPage() {
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Current Handicap</p>
-                <p className="text-2xl font-bold">{player.handicapIndex.toFixed(1)}</p>
+                <p className="text-2xl font-bold">{(player as any).handicapIndex.toFixed(1)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Preferred Category</p>
-                <p className="font-medium capitalize">{player.isPreferredCategoryLadies ? "Ladies" : "Open"}</p>
+                <p className="font-medium capitalize">{(player as any).isPreferredCategoryLadies ? "Ladies" : "Open"}</p>
               </div>
             </CardContent>
           </Card>

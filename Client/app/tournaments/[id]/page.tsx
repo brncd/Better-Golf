@@ -5,69 +5,72 @@ import { MainLayout } from "@/components/layouts/MainLayout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
 import { StatusBadge } from "@/components/atoms/StatusBadge"
 import { TournamentTypeBadge } from "@/components/atoms/TournamentTypeBadge"
 import { RoleGuard } from "@/components/auth/RoleGuard"
-import { tournamentService } from "@/lib/services"
-import { SingleTournamentDTO, PlayerListGetDTO, TournamentRankingDTO, PaginationResponse } from "@/types"
-import { ArrowLeft, Edit, Calendar, MapPin, Users, Trophy, Clock, UserPlus, UserMinus } from "lucide-react"
-import { useEffect, useState } from "react"
+import { 
+  useTournament, 
+  useTournamentPlayers, 
+  useTournamentRankings,
+  useRegisterForTournament,
+  useUnregisterFromTournament 
+} from "@/hooks/useTournaments"
+import { PlayerListGetDTO, TournamentRankingDTO } from "@/types"
+import { ArrowLeft, Edit, Calendar, Users, Trophy, Clock, UserPlus, UserMinus } from "lucide-react"
+import { useState } from "react"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
-import { useAuth } from "@/hooks/useAuth"
-import { useErrorHandler } from "@/hooks/useErrorHandler"
-import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/context/AuthContext"
 import { ConfirmDialog } from "@/components/molecules/ConfirmDialog"
 
 export default function TournamentDetailPage() {
   const params = useParams()
   const tournamentId = params.id as string
 
-  const [tournament, setTournament] = useState<SingleTournamentDTO | null>(null)
-  const [players, setPlayers] = useState<PlayerListGetDTO[]>([])
-  const [rankings, setRankings] = useState<TournamentRankingDTO[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRegistered, setIsRegistered] = useState(false)
-  const [isRegistering, setIsRegistering] = useState(false)
   const [showUnregisterDialog, setShowUnregisterDialog] = useState(false)
   
   const { user, hasRole } = useAuth()
-  const { handleError } = useErrorHandler({ context: 'TournamentDetailPage' })
-  const { toast } = useToast()
+  
+  // Use TanStack Query hooks for data fetching with caching
+  const { data: tournament, isLoading: tournamentLoading, error: tournamentError } = useTournament(tournamentId)
+  const { data: playersResponse, isLoading: playersLoading } = useTournamentPlayers(tournamentId)
+  const { data: rankings, isLoading: rankingsLoading } = useTournamentRankings(tournamentId)
+  
+  // Mutations for registration
+  const registerMutation = useRegisterForTournament()
+  const unregisterMutation = useUnregisterFromTournament()
+  
+  const players = (playersResponse as any)?.items || []
+  const isLoading = tournamentLoading || playersLoading || rankingsLoading
+  const rankingsData = (rankings as TournamentRankingDTO[]) || []
+  
+  // Check if current user is registered
+  const isRegistered = user && players.some((player: PlayerListGetDTO) => player.email === user.email)
 
-  useEffect(() => {
-    if (!tournamentId) return;
+  const handleRegister = () => {
+    if (!user) return;
+    registerMutation.mutate(tournamentId);
+  };
 
-    const fetchTournamentData = async () => {
-      try {
-        setIsLoading(true)
-        const [tournamentData, playersData] = await Promise.all([
-          tournamentService.getById(tournamentId),
-          tournamentService.getPlayers(tournamentId, { pageSize: 100 })
-        ]);
+  const handleUnregister = () => {
+    if (!user) return;
+    setShowUnregisterDialog(true);
+  };
 
-        // Check if current user is registered if they're a player
-        if (user && hasRole('Player')) {
-          try {
-            const registrationStatus = await tournamentService.checkRegistration(tournamentId);
-            setIsRegistered(registrationStatus.isRegistered);
-          } catch (err) {
-            // Registration check failed, assume not registered
-            setIsRegistered(false);
-          }
-        }
+  const confirmUnregister = () => {
+    unregisterMutation.mutate(tournamentId);
+    setShowUnregisterDialog(false);
+  };
 
-        setTournament(tournamentData);
-        setPlayers(playersData.items);
+  const canRegister = () => {
+    if (!tournament || !user || !hasRole('Player')) return false
+    return (tournament as any).status === 'OpenRegistration' && !isRegistered
+  }
 
-      } catch (err) {
-        handleError(err, 'Failed to load tournament data')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchTournamentData()
-  }, [tournamentId])
+  const canUnregister = () => {
+    if (!tournament || !user || !hasRole('Player')) return false
+    return (tournament as any).status === 'OpenRegistration' && isRegistered
+  }
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A"
@@ -79,65 +82,13 @@ export default function TournamentDetailPage() {
     })
   }
 
-  const handleRegister = async () => {
-    if (!user || !tournament) return
-    
-    try {
-      setIsRegistering(true)
-      await tournamentService.register(tournamentId)
-      setIsRegistered(true)
-      toast({
-        title: "Registration successful",
-        description: `You have been registered for ${tournament.name}`,
-      })
-      // Refresh player list
-      const playersData = await tournamentService.getPlayers(tournamentId, { pageSize: 100 })
-      setPlayers(playersData.items)
-    } catch (err) {
-      handleError(err, 'Failed to register for tournament')
-    } finally {
-      setIsRegistering(false)
-    }
-  }
-
-  const handleUnregister = async () => {
-    if (!user || !tournament) return
-    
-    try {
-      setIsRegistering(true)
-      await tournamentService.unregisterPlayer(tournamentId, user.id)
-      setIsRegistered(false)
-      setShowUnregisterDialog(false)
-      toast({
-        title: "Unregistration successful",
-        description: `You have been unregistered from ${tournament.name}`,
-      })
-      // Refresh player list
-      const playersData = await tournamentService.getPlayers(tournamentId, { pageSize: 100 })
-      setPlayers(playersData.items)
-    } catch (err) {
-      handleError(err, 'Failed to unregister from tournament')
-    } finally {
-      setIsRegistering(false)
-    }
-  }
-
-  const canRegister = () => {
-    if (!tournament || !user || !hasRole('Player')) return false
-    return tournament.tournamentType === 'OpenRegistration' && !isRegistered
-  }
-
-  const canUnregister = () => {
-    if (!tournament || !user || !hasRole('Player')) return false
-    return tournament.tournamentType === 'OpenRegistration' && isRegistered
-  }
 
   if (isLoading) {
     return <MainLayout><LoadingSpinner /></MainLayout>
   }
 
-  if (error) {
-    return <MainLayout><div>Error: {error}</div></MainLayout>
+  if (tournamentError) {
+    return <MainLayout><div>Error: {tournamentError instanceof Error ? tournamentError.message : 'An error occurred'}</div></MainLayout>
   }
 
   if (!tournament) {
@@ -161,19 +112,19 @@ export default function TournamentDetailPage() {
         <div className="flex flex-col lg:flex-row justify-between items-start gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-balance">{tournament.name}</h1>
+              <h1 className="text-3xl font-bold text-balance">{(tournament as any).name}</h1>
               <StatusBadge status="InProgress" />
             </div>
             <div className="flex items-center gap-2">
-              <TournamentTypeBadge type={tournament.tournamentType as any} />
+              <TournamentTypeBadge type={(tournament as any).tournamentType as any} />
             </div>
-            {tournament.description && <p className="text-muted-foreground max-w-2xl">{tournament.description}</p>}
+            {(tournament as any).description && <p className="text-muted-foreground max-w-2xl">{(tournament as any).description}</p>}
           </div>
 
           <div className="flex gap-2">
             <RoleGuard roles={["TournamentOrganizer", "Admin"]}>
               <Button variant="outline" asChild>
-                <Link href={`/tournaments/${tournament.id}/edit`}>
+                <Link href={`/tournaments/${(tournament as any).id}/edit`}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Tournament
                 </Link>
@@ -181,11 +132,34 @@ export default function TournamentDetailPage() {
             </RoleGuard>
             <RoleGuard roles={["TournamentOrganizer", "Admin", "Player"]}>
               <Button asChild>
-                <Link href={`/scoring/tournament/${tournament.id}`}>
+                <Link href={`/scoring/tournament/${(tournament as any).id}`}>
                   <Trophy className="h-4 w-4 mr-2" />
                   Enter Scores
                 </Link>
               </Button>
+            </RoleGuard>
+            
+            {/* Registration buttons for players */}
+            <RoleGuard roles={["Player"]}>
+              {canRegister() && (
+                <Button 
+                  onClick={handleRegister}
+                  disabled={registerMutation.isPending}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  {registerMutation.isPending ? 'Registering...' : 'Register'}
+                </Button>
+              )}
+              {canUnregister() && (
+                <Button 
+                  variant="outline"
+                  onClick={handleUnregister}
+                  disabled={unregisterMutation.isPending}
+                >
+                  <UserMinus className="h-4 w-4 mr-2" />
+                  Unregister
+                </Button>
+              )}
             </RoleGuard>
           </div>
         </div>
@@ -199,7 +173,7 @@ export default function TournamentDetailPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Duration</p>
                   <p className="font-semibold">
-                    {formatDate(tournament.startDate)} - {formatDate(tournament.endDate)}
+                    {formatDate((tournament as any).startDate)} - {formatDate((tournament as any).endDate)}
                   </p>
                 </div>
               </div>
@@ -212,7 +186,7 @@ export default function TournamentDetailPage() {
                 <Users className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Players</p>
-                  <p className="text-2xl font-bold">{tournament.count || 0}</p>
+                  <p className="text-2xl font-bold">{(tournament as any).count || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -247,7 +221,7 @@ export default function TournamentDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {players.map((player) => (
+                  {players.map((player: any) => (
                     <div key={player.id} className="flex items-center gap-3 p-3 border rounded-lg">
                       <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                         <span className="text-sm font-semibold text-primary">
@@ -290,9 +264,9 @@ export default function TournamentDetailPage() {
                 <CardTitle>Current Leaderboard</CardTitle>
               </CardHeader>
               <CardContent>
-                {rankings.length > 0 ? (
+                {rankingsData.length > 0 ? (
                   <div className="space-y-2">
-                    {rankings.map((ranking) => (
+                    {rankingsData.map((ranking: any) => (
                       <div key={ranking.playerId} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -331,7 +305,7 @@ export default function TournamentDetailPage() {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Tournament Type</p>
                     <p className="text-sm">
-                      {tournament.tournamentType}
+                      {(tournament as any).tournamentType}
                     </p>
                   </div>
                 </div>
@@ -340,6 +314,18 @@ export default function TournamentDetailPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Unregister Confirmation Dialog */}
+      <ConfirmDialog
+        open={showUnregisterDialog}
+        onOpenChange={setShowUnregisterDialog}
+        title="Confirm Unregistration"
+        description="Are you sure you want to unregister from this tournament? This action cannot be undone."
+        confirmLabel="Unregister"
+        cancelLabel="Cancel"
+        onConfirm={confirmUnregister}
+        variant="destructive"
+      />
     </MainLayout>
   )
 }

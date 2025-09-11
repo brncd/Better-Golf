@@ -1,38 +1,25 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { TournamentTable } from "@/components/organisms/TournamentTable";
 import { TournamentCard } from "@/components/molecules/TournamentCard";
 import { RoleGuard } from "@/components/auth/RoleGuard";
-import { tournamentService } from "@/lib/services";
-import { TournamentListGetDTO, PaginationResponse } from "@/types";
+import { useTournaments, useDeleteTournament } from "@/hooks/useTournaments";
+import { TournamentListGetDTO } from "@/types";
 import { Plus, Grid, List } from "lucide-react";
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner";
 
 export default function TournamentsPage() {
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
-  const [tournaments, setTournaments] = useState<TournamentListGetDTO[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchTournaments = async () => {
-      try {
-        setIsLoading(true);
-        const response = await tournamentService.getAll({ pageNumber: 1, pageSize: 50 });
-        setTournaments(response.items);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An unknown error occurred");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchTournaments();
-  }, []);
+  
+  // Use TanStack Query for data fetching with caching
+  const { data: tournamentsResponse, isLoading, error } = useTournaments({ pageNumber: 1, pageSize: 50 });
+  const deleteTournamentMutation = useDeleteTournament();
+  
+  const tournaments = tournamentsResponse?.items || [];
 
   const handleEdit = (id: string) => {
     window.location.href = `/tournaments/${id}/edit`;
@@ -40,12 +27,7 @@ export default function TournamentsPage() {
 
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this tournament?")) {
-      try {
-        await tournamentService.delete(id);
-        setTournaments(tournaments.filter(t => t.id !== id));
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to delete tournament");
-      }
+      deleteTournamentMutation.mutate(id);
     }
   };
 
@@ -60,8 +42,9 @@ export default function TournamentsPage() {
 
     if (error) {
       return (
-        <div className="text-center py-12 text-red-500">
-          <p>Error loading tournaments: {error}</p>
+        <div className="text-center py-12">
+          <p className="text-red-500 mb-4">{error instanceof Error ? error.message : 'An error occurred'}</p>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
         </div>
       );
     }
