@@ -1,0 +1,79 @@
+name: API Type Synchronization
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # Allow manual triggering
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'Api/**/*.cs'
+
+jobs:
+  sync-types:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: Client/package-lock.json
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Install dependencies
+      run: |
+        cd Client
+        npm ci
+    
+    - name: Start API server
+      run: |
+        cd Api
+        dotnet run --urls=http://localhost:5100 &
+        echo $! > api.pid
+        # Wait for API to be ready
+        timeout 60 bash -c 'until curl -f http://localhost:5100/health; do sleep 2; done'
+      
+    - name: Generate TypeScript types
+      run: |
+        cd Client
+        npm run generate-types
+      
+    - name: Type check
+      run: |
+        cd Client
+        npm run type-check
+      
+    - name: Stop API server
+      run: |
+        if [ -f Api/api.pid ]; then
+          kill $(cat Api/api.pid) || true
+          rm Api/api.pid
+        fi
+      
+    - name: Create Pull Request
+      if: github.event_name == 'schedule'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: sync TypeScript types with API'
+        title: 'Auto-sync: Update TypeScript types from API'
+        body: |
+          This PR automatically updates TypeScript types to match the current API specification.
+          
+          **Changes:**
+          - Updated TypeScript types from OpenAPI specification
+          - Ensured client-server DTO synchronization
+          
+          Please review the changes and merge if everything looks correct.
+        branch: auto-sync-types
+        delete-branch: true
