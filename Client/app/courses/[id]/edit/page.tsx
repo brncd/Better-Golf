@@ -1,47 +1,38 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { MainLayout } from "@/components/layouts/MainLayout"
 import { CourseForm } from "@/components/organisms/CourseForm"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { mockCourses } from "@/data/mockData"
-import type { CourseCreateDTO } from "@/types"
+import { useCourse, useUpdateCourse } from "@/hooks/useCourses"
+import type { CoursePostDTO, SingleCourseDTO } from "@/types"
 
 interface EditCoursePageProps {
   params: { id: string }
 }
 
-export default function EditCoursePage({ params }: EditCoursePageProps) {
+export default function EditCoursePage() {
+  const params = useParams()
   const router = useRouter()
-  const [course, setCourse] = useState<CourseCreateDTO | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const courseId = Number(params.id)
+  
+  const { data: course, isLoading, error } = useCourse(courseId)
+  const updateCourseMutation = useUpdateCourse()
 
-  useEffect(() => {
-    // Simulate API call
-    const foundCourse = mockCourses.find((c) => c.id === params.id)
-    if (foundCourse) {
-      setCourse({
-        name: foundCourse.name,
-        location: foundCourse.location,
-        description: foundCourse.description,
-        par: foundCourse.par,
-        length: foundCourse.length,
-        rating: foundCourse.rating,
-        slope: foundCourse.slope,
-      })
+  const handleSubmit = async (data: CoursePostDTO) => {
+    try {
+      await updateCourseMutation.mutateAsync({ id: courseId, data })
+      router.push(`/courses/${courseId}`)
+    } catch (error) {
+      console.error('Failed to update course:', error)
     }
-    setIsLoading(false)
-  }, [params.id])
+  }
 
-  const handleSubmit = async (data: CourseCreateDTO) => {
-    console.log("[v0] Updating course:", data)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    router.push(`/courses/${params.id}`)
+  const handleCancel = () => {
+    router.push(`/courses/${courseId}`)
   }
 
   if (isLoading) {
@@ -54,7 +45,7 @@ export default function EditCoursePage({ params }: EditCoursePageProps) {
     )
   }
 
-  if (!course) {
+  if (error || !course) {
     return (
       <MainLayout>
         <div className="text-center py-12">
@@ -65,6 +56,13 @@ export default function EditCoursePage({ params }: EditCoursePageProps) {
         </div>
       </MainLayout>
     )
+  }
+
+  const initialData: CoursePostDTO = {
+    name: course.name,
+    courseSlope: course.courseSlope || 113,
+    courseRating: course.courseRating || 72.0,
+    par: course.par || 72
   }
 
   return (
@@ -83,7 +81,7 @@ export default function EditCoursePage({ params }: EditCoursePageProps) {
           </div>
         </div>
 
-        <CourseForm initialData={course} onSubmit={handleSubmit} submitLabel="Update Course" />
+        <CourseForm initialData={initialData} onSubmit={handleSubmit} onCancel={handleCancel} />
       </div>
     </MainLayout>
   )

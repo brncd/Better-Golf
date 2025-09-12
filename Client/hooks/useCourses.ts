@@ -12,8 +12,8 @@ export const courseKeys = {
   lists: () => [...courseKeys.all, 'list'] as const,
   list: (params: PaginationRequest) => [...courseKeys.lists(), params] as const,
   details: () => [...courseKeys.all, 'detail'] as const,
-  detail: (id: string) => [...courseKeys.details(), id] as const,
-  holes: (courseId: string) => [...courseKeys.detail(courseId), 'holes'] as const,
+  detail: (id: number) => [...courseKeys.details(), id] as const,
+  holes: (courseId: number) => [...courseKeys.detail(courseId), 'holes'] as const,
 };
 
 // Get All Courses with Pagination
@@ -25,7 +25,7 @@ export const useCourses = (params: PaginationRequest) => {
 };
 
 // Get Single Course
-export const useCourse = (courseId: string) => {
+export const useCourse = (courseId: number) => {
   return useQuery({
     queryKey: courseKeys.detail(courseId),
     queryFn: async () => {
@@ -45,7 +45,7 @@ export const useCourse = (courseId: string) => {
 };
 
 // Get Course Holes
-export const useCourseHoles = (courseId: string) => {
+export const useCourseHoles = (courseId: number) => {
   return useQuery({
     queryKey: courseKeys.holes(courseId),
     queryFn: () => courseService.getHoles(courseId),
@@ -88,7 +88,7 @@ export const useUpdateCourse = () => {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: CoursePostDTO }) => 
+    mutationFn: ({ id, data }: { id: number; data: CoursePostDTO }) => 
       courseService.update(id, data),
     onSuccess: (_, { id }) => {
       // Invalidate specific course and courses list
@@ -118,7 +118,7 @@ export const useDeleteCourse = () => {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: (courseId: string) => courseService.delete(courseId),
+    mutationFn: (courseId: number) => courseService.delete(courseId),
     onSuccess: (_, courseId) => {
       // Remove from cache and invalidate lists
       queryClient.removeQueries({ queryKey: courseKeys.detail(courseId) });
@@ -147,7 +147,7 @@ export const useAddHole = () => {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: ({ courseId, data }: { courseId: string; data: HolePostDTO }) => 
+    mutationFn: ({ courseId, data }: { courseId: number; data: HolePostDTO }) => 
       courseService.addHole(courseId, data),
     onSuccess: (_, { courseId }) => {
       // Invalidate course holes and details
@@ -177,7 +177,7 @@ export const useRemoveHole = () => {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: ({ courseId, holeId }: { courseId: string; holeId: string }) => 
+    mutationFn: ({ courseId, holeId }: { courseId: number; holeId: number }) => 
       courseService.removeHole(courseId, holeId),
     onSuccess: (_, { courseId }) => {
       // Invalidate course holes and details

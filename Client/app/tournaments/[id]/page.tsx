@@ -25,7 +25,7 @@ import { ConfirmDialog } from "@/components/molecules/ConfirmDialog"
 
 export default function TournamentDetailPage() {
   const params = useParams()
-  const tournamentId = params.id as string
+  const tournamentId = Number(params.id)
 
   const [showUnregisterDialog, setShowUnregisterDialog] = useState(false)
   
@@ -58,10 +58,9 @@ export default function TournamentDetailPage() {
   };
 
   const confirmUnregister = () => {
-    if ((user as any)?.id) {
-      unregisterMutation.mutate({ tournamentId, playerId: (user as any).id });
-      setShowUnregisterDialog(false);
-    }
+    if (!user?.id) return;
+    unregisterMutation.mutate({ tournamentId, playerId: user.id });
+    setShowUnregisterDialog(false);
   };
 
   const canRegister = () => {
@@ -188,7 +187,7 @@ export default function TournamentDetailPage() {
                 <Users className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Players</p>
-                  <p className="text-2xl font-bold">{(tournament as any)?.count || 0}</p>
+                  <p className="text-2xl font-bold">{tournament?.count || 0}</p>
                 </div>
               </div>
             </CardContent>

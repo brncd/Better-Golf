@@ -12,7 +12,7 @@ import { Minus, Plus } from "lucide-react"
 interface HoleScorecardProps {
   hole: HoleListGetDTO
   initialScore?: number
-  onScoreChange: (holeId: string, score: number) => void
+  onScoreChange: (holeId: number, score: number) => void
   disabled?: boolean
 }
 

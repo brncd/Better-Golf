@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { PlayerPostDTO } from "@/types"
-import { mockCategories } from "@/data/mockData"
 
 interface PlayerFormProps {
   initialData?: Partial<PlayerPostDTO>
@@ -26,7 +25,6 @@ export function PlayerForm({ initialData, onSubmit, onCancel, isLoading }: Playe
     gender: initialData?.gender || "male",
     dateOfBirth: initialData?.dateOfBirth || "",
     phoneNumber: initialData?.phoneNumber || "",
-    categoryId: initialData?.categoryId || "defaultCategoryId", // Updated default value
     membershipNumber: initialData?.membershipNumber || "",
   })
 
@@ -197,23 +195,6 @@ export function PlayerForm({ initialData, onSubmit, onCancel, isLoading }: Playe
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="categoryId">Category</Label>
-              <Select value={formData.categoryId} onValueChange={(value) => updateField("categoryId", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="defaultCategoryId">No category</SelectItem> {/* Updated value prop */}
-                  {mockCategories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                      {category.description && ` - ${category.description}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
             <div className="space-y-2">
               <Label htmlFor="membershipNumber">Membership Number</Label>

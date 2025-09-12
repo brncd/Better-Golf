@@ -35,6 +35,7 @@ export interface AuthResponse {
 }
 
 export interface User {
+  id?: number;
   email: string;
   username: string;
   roles: string[];
@@ -104,11 +105,10 @@ export interface PlayerPostDTO {
 export interface TournamentListGetDTO {
   id: number;
   name: string;
-  count: number;
-  description: string;
   tournamentType: string;
   startDate: string;
   endDate: string;
+  playerCount: number;
 }
 
 export interface SingleTournamentDTO {
@@ -163,24 +163,23 @@ export interface CoursesListGetDTO {
 export interface SingleCourseDTO {
   id: number;
   name: string;
-  location: string;
-  numberOfHoles: number;
+  courseSlope: number;
+  courseRating: number;
   par: number;
-  yardage: number;
-  rating: number;
-  slope: number;
-  description: string;
-  isActive: boolean;
 }
 
 export interface CoursePostDTO {
   name: string;
-  location: string;
-  numberOfHoles: number;
+  courseSlope: number;
+  courseRating: number;
   par: number;
-  yardage: number;
-  rating: number;
-  slope: number;
+}
+
+export interface CourseCreateDTO {
+  name: string;
+  courseSlope: number;
+  courseRating: number;
+  par: number;
   description: string;
 }
 

@@ -5,24 +5,30 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { HoleScorecard } from "@/components/molecules/HoleScorecard"
-import { mockHoles, mockPlayers } from "@/data/mockData"
+import { useCourseHoles } from "@/hooks/useCourses"
+import { usePlayers } from "@/hooks/usePlayers"
+import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
+import { ErrorDisplay } from "@/components/atoms/ErrorDisplay"
 import { Save, RotateCcw } from "lucide-react"
 
 interface ScorecardProps {
-  tournamentId: string
-  courseId: string
+  tournamentId: number
+  courseId: number
   roundNumber?: number
 }
 
 export function Scorecard({ tournamentId, courseId, roundNumber = 1 }: ScorecardProps) {
-  const holes = mockHoles.filter((h) => h.courseId === courseId).sort((a, b) => a.holeNumber - b.holeNumber)
-  const players = mockPlayers.slice(0, 4) // Simulate a group of 4 players
+  const { data: holesResponse, isLoading: holesLoading, error: holesError } = useCourseHoles(courseId)
+  const { data: playersResponse, isLoading: playersLoading, error: playersError } = usePlayers()
+  
+  const holes = (holesResponse as any)?.items || []
+  const players = (playersResponse as any)?.items || []
 
   const [selectedPlayer, setSelectedPlayer] = useState<string>("")
-  const [scores, setScores] = useState<Record<string, number>>({})
+  const [scores, setScores] = useState<Record<number, number>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleScoreChange = (holeId: string, score: number) => {
+  const handleScoreChange = (holeId: number, score: number) => {
     setScores((prev) => ({ ...prev, [holeId]: score }))
   }
 
@@ -52,13 +58,40 @@ export function Scorecard({ tournamentId, courseId, roundNumber = 1 }: Scorecard
   }
 
   const getTotalScore = () => {
-    const totalStrokes = Object.values(scores).reduce((sum, score) => sum + score, 0)
-    const totalPar = holes.reduce((sum, hole) => sum + hole.par, 0)
+    const totalStrokes = Object.values(scores).reduce((sum: number, score: number) => sum + score, 0)
+    const totalPar = holes.reduce((sum: number, hole: any) => sum + hole.par, 0)
     return totalStrokes - totalPar
   }
 
   const getCompletedHoles = () => {
     return Object.keys(scores).length
+  }
+
+  if (holesLoading || playersLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
+  }
+
+  if (holesError) {
+    return <ErrorDisplay error={holesError} onRetry={() => window.location.reload()} />
+  }
+
+  if (playersError) {
+    return <ErrorDisplay error={playersError} onRetry={() => window.location.reload()} />
+  }
+
+  if (holes.length === 0) {
+    return (
+      <div className="text-center py-12 border-2 border-dashed border-muted rounded-lg">
+        <div className="text-muted-foreground">
+          <p className="text-lg font-medium mb-2">No holes found</p>
+          <p>This course doesn't have any holes configured yet.</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -77,7 +110,7 @@ export function Scorecard({ tournamentId, courseId, roundNumber = 1 }: Scorecard
                   <SelectValue placeholder="Choose a player" />
                 </SelectTrigger>
                 <SelectContent>
-                  {players.map((player) => (
+                  {players.map((player: any) => (
                     <SelectItem key={player.id} value={player.id}>
                       {player.firstName} {player.lastName} (Handicap: {player.handicap})
                     </SelectItem>
@@ -117,7 +150,7 @@ export function Scorecard({ tournamentId, courseId, roundNumber = 1 }: Scorecard
       {/* Holes Grid */}
       {selectedPlayer && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {holes.map((hole) => (
+          {holes.map((hole: any) => (
             <HoleScorecard
               key={hole.id}
               hole={hole}

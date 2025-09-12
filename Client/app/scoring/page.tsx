@@ -103,7 +103,7 @@ export default function ScoringPage() {
 
                           <div className="flex items-center gap-2 text-sm">
                             <Users className="h-4 w-4 text-muted-foreground" />
-                            <span>{tournament.count || 0} players</span>
+                            <span>{tournament.playerCount || 0} players</span>
                           </div>
 
                           <div className="flex items-center gap-2 text-sm">
