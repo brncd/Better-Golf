@@ -14,23 +14,23 @@ export const matchPlayKeys = {
 // Mock service functions (to be replaced with actual API calls)
 const matchPlayService = {
   getBracket: async (tournamentId: string): Promise<MatchPlayBracket | null> => {
-    // Mock implementation - replace with actual API call
+    // Match Play functionality is not yet implemented in the API
     return null;
   },
   
   createBracket: async (setup: BracketSetup): Promise<MatchPlayBracket> => {
-    // Mock implementation - replace with actual API call
-    throw new Error('Match Play bracket creation not yet implemented in API');
+    // Match Play functionality is not yet implemented in the API
+    return Promise.reject(new Error('Match Play bracket creation is not yet available. This feature is coming soon.'));
   },
   
   updateMatch: async (matchId: string, score: any): Promise<Match> => {
-    // Mock implementation - replace with actual API call
-    throw new Error('Match update not yet implemented in API');
+    // Match Play functionality is not yet implemented in the API
+    return Promise.reject(new Error('Match result updates are not yet available. This feature is coming soon.'));
   },
   
   advanceRound: async (bracketId: string, advancement: RoundAdvancement): Promise<MatchPlayBracket> => {
-    // Mock implementation - replace with actual API call
-    throw new Error('Round advancement not yet implemented in API');
+    // Match Play functionality is not yet implemented in the API
+    return Promise.reject(new Error('Round advancement is not yet available. This feature is coming soon.'));
   },
 };
 

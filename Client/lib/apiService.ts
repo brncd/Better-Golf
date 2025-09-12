@@ -72,33 +72,21 @@ class ApiService {
 
   async get<T>(endpoint: string): Promise<T> {
     const response = await this.client.get(endpoint);
-    if (!response.data) {
-      return {} as T;
-    }
     return response.data;
   }
 
   async post<T>(endpoint: string, body: any): Promise<T> {
     const response = await this.client.post(endpoint, body);
-    if (!response.data) {
-      return {} as T;
-    }
     return response.data;
   }
 
   async put<T>(endpoint: string, body: any): Promise<T> {
     const response = await this.client.put(endpoint, body);
-    if (!response.data) {
-      return {} as T;
-    }
     return response.data;
   }
 
   async delete<T>(endpoint: string): Promise<T> {
     const response = await this.client.delete(endpoint);
-    if (!response.data) {
-      return {} as T;
-    }
     return response.data;
   }
 }

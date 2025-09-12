@@ -2,94 +2,115 @@
 
 ## Overview
 
-The Better Golf client now includes an automated type synchronization system that generates TypeScript types directly from the API's OpenAPI/Swagger specification. This prevents type mismatches and ensures the client always uses the correct data structures.
+The Better Golf client uses a comprehensive type synchronization approach with TanStack Query integration to ensure type safety and consistency between the client and API. The application has evolved beyond the initial automated generation concept to a robust, production-ready implementation.
 
-## Components
+## Current Implementation
 
-### 1. Type Generation Script (`scripts/generate-types.js`)
+### 1. TanStack Query Integration
 
-Enhanced Node.js script that:
-- ✅ Checks API health and Swagger endpoint availability
-- ✅ Automatically installs `openapi-typescript` if needed
-- ✅ Generates raw types from OpenAPI spec
-- ✅ Creates convenient type aliases for common DTOs
-- ✅ Provides detailed error messages and troubleshooting
+✅ **IMPLEMENTED**: The application uses TanStack Query extensively for:
+- **Data Fetching**: All API calls use query hooks (`useQuery`, `useMutation`)
+- **Caching**: Intelligent response caching with automatic invalidation
+- **Error Handling**: Centralized error management with retry logic
+- **Loading States**: Built-in loading and error state management
+- **Optimistic Updates**: Real-time UI updates for better user experience
 
-**Usage:**
-```bash
-npm run generate-types
-```
+### 2. Service Layer Architecture
 
-### 2. Synchronization Script (`scripts/sync-types.sh`)
+✅ **IMPLEMENTED**: Comprehensive service layer with:
+- `tournamentService`: Tournament CRUD operations with TanStack Query
+- `playerService`: Player management and tournament history
+- `authService`: Authentication and authorization
+- `courseService`: Course and hole management
+- `categoryService`: Category management
 
-Comprehensive bash script that:
-- ✅ Validates API availability
-- ✅ Backs up existing types
-- ✅ Generates new types
-- ✅ Validates TypeScript compilation
-- ✅ Creates migration guides
+### 3. Type Safety System
 
-**Usage:**
-```bash
-npm run sync-types
-```
+✅ **IMPLEMENTED**: Full TypeScript integration with:
+- Strongly typed API responses and requests
+- Type-safe service methods with proper error handling
+- Consistent DTO interfaces across client and server
+- Runtime type validation where needed
 
-### 3. GitHub Actions Workflow (`.github/workflows/sync-types.yml`)
+## Type Definitions
 
-Automated workflow that:
-- ✅ Runs daily or on manual trigger
-- ✅ Generates types from running API
-- ✅ Creates pull requests for type updates
-- ✅ Includes verification checklist
-
-## Generated Files
-
-### `types/api-generated.ts`
-Raw TypeScript types generated directly from the OpenAPI specification.
-
-### `types/api-aliases.ts`
-Convenient type aliases for common DTOs:
+### `types/index.ts`
+✅ **IMPLEMENTED**: Centralized type definitions including:
 ```typescript
-export type TournamentPostDTO = components['schemas']['TournamentPostDTO'];
-export type SingleTournamentDTO = components['schemas']['SingleTournamentDTO'];
-// ... other aliases
-```
+// Tournament DTOs
+export interface TournamentPostDTO {
+  name: string;
+  description?: string;
+  tournamentType: string;
+  startDate: string;
+  endDate: string;
+  roundInfo?: RoundInfo;
+  handicapAllowance?: number;
+}
 
-### `types/MIGRATION_GUIDE.md`
-Step-by-step guide for migrating from manual to generated types.
+// Player DTOs
+export interface PlayerTournamentHistoryListDTO {
+  playerId: number;
+  playerName: string;
+  tournaments: PlayerTournamentHistoryDTO[];
+  totalTournaments: number;
+  completedTournaments: number;
+  wonTournaments: number;
+  top3Finishes: number;
+  averageScore: number;
+}
+```
 
 ## Usage Examples
 
-### Recommended Import Pattern
+### Current Usage Pattern
 ```typescript
+// Import from centralized types
 import type { 
   TournamentPostDTO,
   SingleTournamentDTO,
-  PlayerListGetDTO 
-} from '@/types/api-aliases';
+  PlayerTournamentHistoryListDTO 
+} from '@/types';
+
+// TanStack Query hooks
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { tournamentService } from '@/lib/services/tournamentService';
 ```
 
-### Advanced Usage
+### TanStack Query Integration Examples
 ```typescript
-import type { components } from '@/types/api-generated';
-type CustomType = components['schemas']['TournamentPostDTO'] & {
-  customField: string;
-};
+// Tournament list with caching
+const { data: tournaments, isLoading, error } = useQuery({
+  queryKey: ['tournaments'],
+  queryFn: tournamentService.getAll,
+  staleTime: 5 * 60 * 1000, // 5 minutes
+});
+
+// Player tournament history
+const { data: playerHistory } = usePlayerHistory(playerId);
+
+// Tournament creation with optimistic updates
+const createMutation = useMutation({
+  mutationFn: tournamentService.create,
+  onSuccess: () => {
+    queryClient.invalidateQueries(['tournaments']);
+  },
+});
 ```
 
-## Workflow Integration
+## Current Architecture Benefits
 
-### Development Workflow
-1. Start API server: `cd ../Api && dotnet run`
-2. Generate types: `npm run sync-types`
-3. Update imports in components
-4. Run type check: `npm run type-check`
-5. Test application
+### ✅ **Production Ready**
+- Complete TanStack Query integration across all components
+- Centralized error handling with user-friendly messages
+- Type-safe API interactions with proper validation
+- Optimistic updates for better user experience
 
-### CI/CD Integration
-- Types are automatically synced daily via GitHub Actions
-- Pull requests are created for type updates
-- Manual sync available via workflow dispatch
+### ✅ **Developer Experience**
+- Consistent service layer patterns
+- Comprehensive TypeScript coverage
+- Clear separation of concerns
+- Reusable hooks and utilities
 
 ## Benefits
 
@@ -143,9 +164,21 @@ cat types/MIGRATION_GUIDE.md
 - `sync-types`: Full synchronization with validation
 - `type-check`: Validate TypeScript compilation
 
+## Implemented Features
+
+✅ **COMPLETED**:
+- Tournament creation with dynamic round configuration
+- Player tournament history with detailed statistics  
+- Enhanced error handling with specific API messages
+- Complete TanStack Query integration
+- Type-safe API interactions
+- Centralized service layer
+- Role-based authentication and authorization
+- Real-time data synchronization with intelligent caching
+
 ## Future Enhancements
 
-- [ ] Real-time type watching during development
-- [ ] Integration with API versioning
-- [ ] Custom type transformations
-- [ ] Automated component updates for breaking changes
+- [ ] WebSocket integration for real-time updates
+- [ ] Offline support with TanStack Query persistence
+- [ ] Advanced caching strategies for large datasets
+- [ ] Automated OpenAPI type generation integration

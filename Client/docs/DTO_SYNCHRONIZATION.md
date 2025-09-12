@@ -1,10 +1,10 @@
 # DTO Synchronization Guide
 
-This document outlines the critical DTO synchronization issues that were identified and resolved between the Better Golf client and API.
+This document outlines the DTO synchronization system implemented in the Better Golf project to maintain consistency between the client TypeScript types and the .NET API DTOs.
 
-## Problem Summary
+## Current Implementation Status
 
-The client TypeScript DTOs were not synchronized with the actual .NET API DTOs, causing runtime errors, failed API calls, and data display issues.
+✅ **COMPLETED**: The Better Golf client now uses TanStack Query extensively throughout the application for all API interactions, providing excellent caching, synchronization, and error handling capabilities.
 
 ## Critical Mismatches Identified and Fixed
 
@@ -135,26 +135,30 @@ export interface RoundInfo {
 }
 ```
 
-## Automated Type Generation
+## Current Architecture
 
-### Setup
-1. **OpenAPI TypeScript Tool**: Installed `openapi-typescript` for automatic type generation
-2. **Generation Script**: Created `scripts/generate-types.js` for automated workflow
-3. **GitHub Actions**: Set up automated type synchronization workflow
+### TanStack Query Integration
+✅ **IMPLEMENTED**: The application uses TanStack Query for:
+- **Data Fetching**: All API calls use query hooks (`useQuery`, `useMutation`)
+- **Caching**: Automatic response caching with intelligent invalidation
+- **Error Handling**: Centralized error management with retry logic
+- **Loading States**: Built-in loading and error state management
+- **Optimistic Updates**: Real-time UI updates for better UX
 
-### Usage
-```bash
-# Generate types from running API
-npm run generate-types
+### Service Layer
+✅ **IMPLEMENTED**: Comprehensive service layer with:
+- `tournamentService`: Tournament CRUD operations
+- `playerService`: Player management and tournament history
+- `authService`: Authentication and authorization
+- `courseService`: Course and hole management
+- `categoryService`: Category management
 
-# Type check after generation
-npm run type-check
-```
-
-### Workflow Integration
-- **Daily automated checks** via GitHub Actions
-- **API change detection** on push to main/develop
-- **Automatic PR creation** for type updates
+### Type Safety
+✅ **IMPLEMENTED**: Full TypeScript integration with:
+- Strongly typed API responses
+- Type-safe service methods
+- Consistent DTO interfaces across client and server
+- Runtime type validation where needed
 
 ## Component Updates Required
 
@@ -204,9 +208,54 @@ npm run type-check
 - ✅ Automated synchronization prevents future drift
 - ✅ Improved developer experience with accurate IntelliSense
 
-## Next Steps
+## Implementation Examples
 
-1. ✅ Complete remaining component updates
-2. ⏳ Test all API integrations thoroughly
-3. ⏳ Deploy automated type generation workflow
-4. ⏳ Monitor for any remaining synchronization issues
+### TanStack Query Usage
+```typescript
+// Tournament management with TanStack Query
+const { data: tournaments, isLoading, error } = useQuery({
+  queryKey: ['tournaments'],
+  queryFn: tournamentService.getAll
+});
+
+// Player tournament history
+const { data: playerHistory } = usePlayerHistory(playerId);
+
+// Tournament creation with optimistic updates
+const createTournamentMutation = useMutation({
+  mutationFn: tournamentService.create,
+  onSuccess: () => {
+    queryClient.invalidateQueries(['tournaments']);
+  }
+});
+```
+
+### Error Handling
+```typescript
+// Centralized error handling with specific API messages
+const { handleError } = useErrorHandler();
+
+try {
+  await tournamentService.create(tournamentData);
+} catch (error) {
+  handleError(error); // Shows user-friendly error messages
+}
+```
+
+## Current Status
+
+✅ **COMPLETED FEATURES**:
+- Tournament creation with dynamic round configuration
+- Player tournament history with detailed statistics
+- Enhanced error handling with specific API messages
+- Complete TanStack Query integration
+- Type-safe API interactions
+- Centralized service layer
+- Role-based authentication and authorization
+
+## Future Enhancements
+
+- [ ] Real-time updates with WebSocket integration
+- [ ] Offline support with TanStack Query persistence
+- [ ] Advanced caching strategies for large datasets
+- [ ] Automated type generation from OpenAPI specs

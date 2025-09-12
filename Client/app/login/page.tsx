@@ -32,6 +32,11 @@ export default function LoginPage() {
     }
   }
 
+  const handleFillDemoCredentials = () => {
+    setEmailOrUsername("demo@bettergolf.com")
+    setPassword("Demo123!")
+  }
+
   return (
     <MainLayout>
       <div className="flex justify-center items-center py-12">
@@ -70,7 +75,7 @@ export default function LoginPage() {
                 <p className="text-sm text-muted-foreground text-center mb-2">
                   Or try the demo:
                 </p>
-                <DemoUserButton />
+                <DemoUserButton onFillDemoCredentials={handleFillDemoCredentials} />
               </div>
             </form>
           </CardContent>

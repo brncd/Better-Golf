@@ -100,8 +100,8 @@ export const useRemovePlayerFromTeeTime = () => {
 
   return useMutation({
     mutationFn: async ({ teeTimeId, playerId }: { teeTimeId: string; playerId: string }) => {
-      // This would need to be implemented in the tournament service
-      return Promise.resolve();
+      // Tee time player removal functionality is not yet implemented in the API
+      return Promise.reject(new Error('Player removal from tee times is not yet available. This feature is coming soon.'));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: teeTimeKeys.all });
