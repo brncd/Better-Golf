@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { RoleGuard } from "@/components/auth/RoleGuard"
 import type { CoursesListGetDTO } from "@/types"
 import { MapPin, Eye, Edit, Trash2 } from "lucide-react"
 
@@ -34,17 +35,19 @@ export function CourseCard({ course, onEdit, onDelete }: CourseCardProps) {
           </Link>
         </Button>
 
-        {onEdit && (
-          <Button variant="outline" size="sm" onClick={() => onEdit(course.id)}>
-            <Edit className="h-4 w-4" />
-          </Button>
-        )}
+        <RoleGuard roles={["Admin", "TournamentOrganizer"]}>
+          {onEdit && (
+            <Button variant="outline" size="sm" onClick={() => onEdit(course.id)}>
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
 
-        {onDelete && (
-          <Button variant="outline" size="sm" onClick={() => onDelete(course.id)}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
+          {onDelete && (
+            <Button variant="outline" size="sm" onClick={() => onDelete(course.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </RoleGuard>
       </CardFooter>
     </Card>
   )

@@ -22,9 +22,9 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Try to use dashboard API, fallback to individual API calls
-  const { data: dashboardStats, error: statsError } = useDashboardStats()
-  const { data: recentActivity, error: activityError } = useRecentActivity(5)
+  // Use new dashboard API endpoints
+  const { data: dashboardStats, error: statsError, isLoading: statsLoading } = useDashboardStats()
+  const { data: recentActivity, error: activityError, isLoading: activityLoading } = useRecentActivity(5)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -139,25 +139,27 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard
             title="Active Tournaments"
-            value={Array.isArray(stats.activeTournaments) ? stats.activeTournaments.length : (dashboardStats?.activeTournaments || 0)}
+            value={dashboardStats?.activeTournaments || (Array.isArray(stats.activeTournaments) ? stats.activeTournaments.length : 0)}
             icon={Trophy}
             color="primary"
-            trend={{ value: stats.monthlyTournamentGrowth || 0, label: "from last month" }}
           />
           <StatCard
             title="Total Players"
-            value={stats.totalPlayers || 0}
+            value={dashboardStats?.totalPlayers || stats.totalPlayers || 0}
             icon={Users}
             color="green"
-            trend={{ value: stats.monthlyPlayerGrowth || 0, label: "new this month" }}
           />
-          <StatCard title="Golf Courses" value={stats.totalCourses || 0} icon={MapPin} color="blue" />
+          <StatCard 
+            title="Golf Courses" 
+            value={dashboardStats?.totalCourses || stats.totalCourses || 0} 
+            icon={MapPin} 
+            color="blue" 
+          />
           <StatCard
-            title="Active Players"
-            value={stats.activePlayers || 0}
+            title="Completed Tournaments"
+            value={dashboardStats?.completedTournaments || 0}
             icon={Activity}
             color="purple"
-            trend={{ value: stats.playerParticipationRate || 0, label: "participation rate" }}
           />
         </div>
 
@@ -282,8 +284,8 @@ export default function DashboardPage() {
                 <div key={activityItem.id} className="flex items-start gap-3 p-3 border rounded-lg">
                   <div className="h-2 w-2 rounded-full bg-primary mt-2"></div>
                   <div className="flex-1">
-                    <p className="font-medium">{activityItem.action}</p>
-                    <p className="text-sm text-muted-foreground">{activityItem.details}</p>
+                    <p className="font-medium">{(activityItem as any).type || (activityItem as any).action}</p>
+                    <p className="text-sm text-muted-foreground">{(activityItem as any).description || (activityItem as any).details}</p>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {new Date(activityItem.timestamp).toLocaleString()}

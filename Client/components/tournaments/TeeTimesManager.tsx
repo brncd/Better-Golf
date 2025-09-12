@@ -43,10 +43,16 @@ export function TeeTimesManager({ tournamentId, canEdit = false }: TeeTimesManag
   const handleAssignPlayer = (playerId: string, position: number) => {
     if (!selectedTeeTime) return;
     
+    // For now, we'll use mock data since the API structure needs to be aligned
+    // This would need the actual round ID and proper tee time format
+    const mockRoundId = 1;
+    const mockTeeTime = selectedTeeTime.teeTimeSlot;
+    
     assignPlayerMutation.mutate({
-      teeTimeId: selectedTeeTime.id,
-      playerId,
-      position,
+      roundId: mockRoundId,
+      playerId: parseInt(playerId),
+      teeTime: mockTeeTime,
+      startingHole: selectedTeeTime.holeNumber,
     });
     setShowAssignDialog(false);
   };

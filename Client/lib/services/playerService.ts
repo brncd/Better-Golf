@@ -1,11 +1,11 @@
-import { apiClient } from '../apiService';
+import { apiClient } from '../apiService'
 import type { 
   PlayerListGetDTO, 
   SinglePlayerDTO, 
   PlayerPostDTO, 
-  PlayerProfileDTO,
-  PaginationRequest, 
-  PaginationResponse 
+  PaginationResponse,
+  PaginationRequest,
+  PlayerTournamentHistoryListDTO
 } from '@/types';
 
 export const playerService = {
@@ -36,4 +36,8 @@ export const playerService = {
   // Create player profile for current user
   createProfile: (player: PlayerPostDTO): Promise<SinglePlayerDTO> =>
     apiClient.post('/api/me/player-profile', player),
+
+  // Get player tournament history
+  getTournamentHistory: (id: number): Promise<PlayerTournamentHistoryListDTO> =>
+    apiClient.get(`/api/Players/${id}/tournament-history`),
 };

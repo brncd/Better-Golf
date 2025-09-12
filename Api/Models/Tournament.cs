@@ -23,9 +23,7 @@ public class Tournament
     public Tournament(TournamentPostDTO tournamentPostDTO)
     {
         Name = tournamentPostDTO.Name;
-        TournamentType = tournamentPostDTO.TournamentType;
-        StartDate = tournamentPostDTO.StartDate;
-        EndDate = tournamentPostDTO.EndDate;
+        // TournamentType and dates will be set separately in the service layer after parsing
         Description = tournamentPostDTO.Description ?? string.Empty;
         HandicapAllowance = tournamentPostDTO.HandicapAllowance ?? 1.0;
         // RoundInfo will be set separately in the service layer

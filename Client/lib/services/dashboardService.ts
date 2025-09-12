@@ -6,21 +6,19 @@ export interface DashboardStats {
   upcomingTournaments: number;
   completedTournaments: number;
   totalPlayers: number;
-  activePlayers: number;
   totalCourses: number;
-  totalCategories: number;
-  monthlyTournamentGrowth: number;
-  monthlyPlayerGrowth: number;
-  playerParticipationRate: number;
+  averagePlayersPerTournament: number;
+  totalRoundsPlayed: number;
 }
 
 export interface RecentActivity {
-  id: string;
-  action: string;
-  details: string;
+  id: number;
+  type: string;
+  description: string;
   timestamp: string;
-  entityType: 'tournament' | 'player' | 'course' | 'score';
-  entityId?: number;
+  playerName?: string;
+  tournamentName?: string;
+  relatedId?: number;
 }
 
 export const dashboardService = {
@@ -32,10 +30,7 @@ export const dashboardService = {
   getRecentActivity: (limit: number = 10): Promise<RecentActivity[]> =>
     apiClient.get(`/api/dashboard/activity?limit=${limit}`),
 
-  // Get dashboard overview (combines stats and activity)
-  getOverview: (): Promise<{
-    stats: DashboardStats;
-    recentActivity: RecentActivity[];
-  }> =>
-    apiClient.get('/api/dashboard/overview'),
+  // Get tournament specific activity
+  getTournamentActivity: (tournamentId: number): Promise<RecentActivity[]> =>
+    apiClient.get(`/api/dashboard/tournament/${tournamentId}/activity`),
 };

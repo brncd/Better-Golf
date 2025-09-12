@@ -1,7 +1,8 @@
 using Api.Data;
 using Api.Models;
 using Api.Models.DTOs.PlayerDTOs;
-using Api.Models.DTOs.TournamentDTOs; // Added
+using Api.Models.DTOs.TournamentDTOs;
+using Api.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Api.Models.Results;
 using Api.Models.Common;
@@ -121,6 +122,84 @@ namespace Api.Services
                                    .Select(t => new TournamentListGetDTO(t))
                                    .ToListAsync();
             return Result<PaginationResponse<TournamentListGetDTO>>.Success(new PaginationResponse<TournamentListGetDTO>(pagination.PageNumber, pagination.PageSize, totalCount, items));
+        }
+
+        public async Task<Result<PlayerTournamentHistoryListDTO>> GetPlayerTournamentHistoryAsync(int playerId)
+        {
+            var player = await _db.Players
+            .Include(p => p.Tournaments)
+                .ThenInclude(t => t.Rounds)
+            .FirstOrDefaultAsync(p => p.Id == playerId);
+
+            if (player == null)
+            {
+                return Result<PlayerTournamentHistoryListDTO>.Failure(new Error("PlayerNotFound", "Player not found."));
+            }
+
+            var tournamentHistory = new List<PlayerTournamentHistoryDTO>();
+            int wonTournaments = 0;
+            int top3Finishes = 0;
+            var totalScores = new List<int>();
+
+            foreach (var tournament in player.Tournaments)
+            {
+                // Get scorecards for this player in this tournament
+                var scorecards = await _db.Scorecards
+                    .Where(sc => sc.PlayerId == playerId && sc.TournamentId == tournament.Id)
+                    .ToListAsync();
+
+                var totalScore = scorecards.Sum(sc => sc.TotalStrokes);
+                var stablefordPoints = 0; // Calculate if needed
+                var roundsPlayed = scorecards.Count;
+
+                // Calculate position (simplified - would need proper leaderboard calculation)
+                var allScores = await _db.Scorecards
+                    .Where(sc => sc.TournamentId == tournament.Id)
+                    .GroupBy(sc => sc.PlayerId)
+                    .Select(g => new { PlayerId = g.Key, TotalScore = g.Sum(sc => sc.TotalStrokes) })
+                    .OrderBy(x => x.TotalScore)
+                    .ToListAsync();
+
+                var position = allScores.FindIndex(x => x.PlayerId == playerId) + 1;
+                int? finalPosition = position == 0 ? null : position;
+
+                if (position == 1) wonTournaments++;
+                if (position <= 3 && position > 0) top3Finishes++;
+
+                if (totalScore > 0) totalScores.Add(totalScore);
+
+                var historyItem = new PlayerTournamentHistoryDTO
+                {
+                    TournamentId = tournament.Id,
+                    TournamentName = tournament.Name,
+                    TournamentType = tournament.TournamentType.ToString(),
+                    StartDate = tournament.StartDate.ToDateTime(TimeOnly.MinValue),
+                    EndDate = tournament.EndDate.ToDateTime(TimeOnly.MinValue),
+                    Status = tournament.Status.ToString(),
+                    Position = finalPosition,
+                    TotalScore = totalScore > 0 ? totalScore : null,
+                    StablefordPoints = stablefordPoints > 0 ? stablefordPoints : null,
+                    RoundsPlayed = roundsPlayed,
+                    TotalRounds = tournament.Rounds?.Count ?? 0,
+                    RegistrationDate = DateTime.UtcNow // Would need actual registration date from junction table
+                };
+
+                tournamentHistory.Add(historyItem);
+            }
+
+            var result = new PlayerTournamentHistoryListDTO
+            {
+                PlayerId = player.Id,
+                PlayerName = $"{player.Name} {player.LastName}",
+                Tournaments = tournamentHistory.OrderByDescending(t => t.StartDate).ToList(),
+                TotalTournaments = player.Tournaments.Count,
+                CompletedTournaments = player.Tournaments.Count(t => t.Status == TournamentStatus.Completed),
+                WonTournaments = wonTournaments,
+                Top3Finishes = top3Finishes,
+                AverageScore = totalScores.Any() ? totalScores.Average() : 0
+            };
+
+            return Result<PlayerTournamentHistoryListDTO>.Success(result);
         }
     }
 }

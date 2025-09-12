@@ -1,0 +1,82 @@
+name: Sync API Types
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: 'API URL to sync types from'
+        required: false
+        default: 'http://localhost:5100'
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  sync-types:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: Client/package-lock.json
+        
+    - name: Install dependencies
+      run: |
+        cd Client
+        npm ci
+        
+    - name: Wait for API to be ready
+      run: |
+        API_URL="${{ github.event.inputs.api_url || 'http://localhost:5100' }}"
+        echo "Waiting for API at $API_URL to be ready..."
+        timeout 300 bash -c 'until curl -s $API_URL/health; do sleep 5; done' || {
+          echo "API not ready after 5 minutes, skipping type sync"
+          exit 0
+        }
+        
+    - name: Generate types from API
+      run: |
+        cd Client
+        API_URL="${{ github.event.inputs.api_url || 'http://localhost:5100' }}" npm run generate-types
+        
+    - name: Check for changes
+      id: changes
+      run: |
+        cd Client
+        if git diff --quiet types/; then
+          echo "changed=false" >> $GITHUB_OUTPUT
+        else
+          echo "changed=true" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Create Pull Request
+      if: steps.changes.outputs.changed == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: sync API types'
+        title: 'Auto-sync API Types'
+        body: |
+          ## 🔄 Automated API Type Synchronization
+          
+          This PR contains automatically generated TypeScript types from the Better Golf API.
+          
+          ### Changes
+          - Updated `types/api-generated.ts` with latest API schema
+          - Updated `types/api-aliases.ts` with convenient type aliases
+          
+          ### Verification
+          - [ ] Types compile without errors
+          - [ ] No breaking changes in existing type usage
+          - [ ] API endpoints match generated types
+          
+          **Generated on:** ${{ github.run_id }}
+          **API URL:** ${{ github.event.inputs.api_url || 'http://localhost:5100' }}
+        branch: auto-sync-types
+        delete-branch: true

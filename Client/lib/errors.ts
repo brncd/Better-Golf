@@ -72,40 +72,80 @@ export const handleApiError = (error: any): BetterGolfError => {
 
   const { status, data } = error.response
 
+  // Extract specific error messages from API response
+  const getSpecificMessage = (data: any, fallback: string): string => {
+    // Check for validation errors array
+    if (data?.errors && Array.isArray(data.errors)) {
+      return data.errors.join(', ')
+    }
+    
+    // Check for single error message
+    if (data?.message) {
+      return data.message
+    }
+    
+    // Check for title field (common in ASP.NET Core responses)
+    if (data?.title) {
+      return data.title
+    }
+    
+    // Check for detail field
+    if (data?.detail) {
+      return data.detail
+    }
+    
+    // Check for specific field validation errors
+    if (data?.errors && typeof data.errors === 'object') {
+      const fieldErrors = Object.entries(data.errors)
+        .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+        .join('; ')
+      if (fieldErrors) return fieldErrors
+    }
+    
+    return fallback
+  }
+
   // Handle different HTTP status codes
   switch (status) {
     case 400:
       return createError(
         ErrorType.VALIDATION,
-        data?.message || 'Invalid request data.',
+        getSpecificMessage(data, 'Invalid request data.'),
         status,
         data
       )
     case 401:
       return createError(
         ErrorType.AUTHENTICATION,
-        'Authentication required. Please log in.',
+        getSpecificMessage(data, 'Authentication required. Please log in.'),
         status,
         data
       )
     case 403:
       return createError(
         ErrorType.AUTHORIZATION,
-        'You do not have permission to perform this action.',
+        getSpecificMessage(data, 'You do not have permission to perform this action.'),
         status,
         data
       )
     case 404:
       return createError(
         ErrorType.NOT_FOUND,
-        'The requested resource was not found.',
+        getSpecificMessage(data, 'The requested resource was not found.'),
+        status,
+        data
+      )
+    case 409:
+      return createError(
+        ErrorType.VALIDATION,
+        getSpecificMessage(data, 'A conflict occurred. The resource may already exist.'),
         status,
         data
       )
     case 422:
       return createError(
         ErrorType.VALIDATION,
-        data?.message || 'Validation failed.',
+        getSpecificMessage(data, 'Validation failed.'),
         status,
         data
       )
@@ -115,14 +155,14 @@ export const handleApiError = (error: any): BetterGolfError => {
     case 504:
       return createError(
         ErrorType.SERVER,
-        'Server error. Please try again later.',
+        getSpecificMessage(data, 'Server error. Please try again later.'),
         status,
         data
       )
     default:
       return createError(
         ErrorType.UNKNOWN,
-        data?.message || 'An unexpected error occurred.',
+        getSpecificMessage(data, 'An unexpected error occurred.'),
         status,
         data
       )

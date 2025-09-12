@@ -15,7 +15,7 @@ export const teeTimeKeys = {
 export const useTeeTimes = (tournamentId: string) => {
   return useQuery({
     queryKey: teeTimeKeys.tournament(tournamentId),
-    queryFn: () => tournamentService.getTeeTimes(tournamentId),
+    queryFn: () => tournamentService.getTeeTimes(parseInt(tournamentId)),
     enabled: !!tournamentId,
   });
 };
@@ -27,7 +27,7 @@ export const useGenerateTeeTimes = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (tournamentId: string) => tournamentService.generateTeeTimes(tournamentId),
+    mutationFn: (tournamentId: string) => tournamentService.generateTeeTimes(parseInt(tournamentId)),
     onSuccess: (_, tournamentId) => {
       // Invalidate tee times for this tournament
       queryClient.invalidateQueries({ queryKey: teeTimeKeys.tournament(tournamentId) });
@@ -55,12 +55,10 @@ export const useAssignPlayerToTeeTime = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ teeTimeId, playerId, position }: TeeTimeAssignment) => {
-      // This would need to be implemented in the tournament service
-      // For now, we'll use a placeholder
-      return Promise.resolve();
+    mutationFn: async ({ roundId, playerId, teeTime, startingHole }: { roundId: number; playerId: number; teeTime: string; startingHole: number }) => {
+      return tournamentService.updateTeeTime(roundId, playerId, teeTime, startingHole);
     },
-    onMutate: async ({ teeTimeId }) => {
+    onMutate: async ({ roundId }) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: teeTimeKeys.all });
       
@@ -69,7 +67,7 @@ export const useAssignPlayerToTeeTime = () => {
       
       return { previousTeeTimes };
     },
-    onSuccess: (_, { teeTimeId }) => {
+    onSuccess: (_, { roundId }) => {
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: teeTimeKeys.all });
       

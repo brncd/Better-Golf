@@ -5,13 +5,15 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { MainLayout } from "@/components/layouts/MainLayout"
 import { Button } from "@/components/ui/button"
-import { CourseTable } from "@/components/organisms/CourseTable"
 import { CourseCard } from "@/components/molecules/CourseCard"
+import { CourseTable } from "@/components/organisms/CourseTable"
+import { ConfirmDialog } from "@/components/molecules/ConfirmDialog"
+import { RoleGuard } from "@/components/auth/RoleGuard"
+import { useCourses, useDeleteCourse } from "@/hooks/useCourses"
 import { courseService } from "@/lib/services"
 import { CoursesListGetDTO, PaginationResponse } from "@/types"
 import { Plus, Grid, List, MapPin } from "lucide-react"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
-import { ConfirmDialog } from "@/components/molecules/ConfirmDialog"
 import { useErrorHandler } from "@/hooks/useErrorHandler"
 import { useToast } from "@/hooks/use-toast"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
@@ -55,7 +57,7 @@ export default function CoursesPage() {
     
     try {
       setIsLoading(true)
-      await courseService.delete(deletingCourseId.toString())
+      await courseService.delete(deletingCourseId)
       // Refresh the courses list
       const response = await courseService.getAll({ pageNumber: 1, pageSize: 10 })
       setCourses(response.items)
@@ -136,12 +138,14 @@ export default function CoursesPage() {
                   <Grid className="h-4 w-4" />
                 </Button>
               </div>
-              <Button asChild>
-                <Link href="/courses/new">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Course
-                </Link>
-              </Button>
+              <RoleGuard roles={["Admin", "TournamentOrganizer"]}>
+                <Button asChild>
+                  <Link href="/courses/new">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Course
+                  </Link>
+                </Button>
+              </RoleGuard>
             </div>
           </div>
           {renderContent()}

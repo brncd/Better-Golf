@@ -15,10 +15,16 @@ import { TournamentType } from "@/types"
 export interface TournamentFormState {
   name: string;
   description: string;
-  tournamentType: TournamentType;
+  tournamentType: string;
   startDate: string;
   endDate: string;
   handicapAllowance: number;
+  roundInfo: {
+    startTime: string;
+    endTime: string;
+    intervalMinutes: number;
+    maxPlayersPerGroup: number;
+  };
 }
 
 interface TournamentFormProps {
@@ -38,6 +44,12 @@ export function TournamentForm({ initialData, onSubmit, onCancel, isLoading, err
     startDate: initialData?.startDate || "",
     endDate: initialData?.endDate || "",
     handicapAllowance: initialData?.handicapAllowance || 100,
+    roundInfo: initialData?.roundInfo || {
+      startTime: "08:00",
+      endTime: "16:00",
+      intervalMinutes: 10,
+      maxPlayersPerGroup: 4,
+    },
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -98,7 +110,7 @@ export function TournamentForm({ initialData, onSubmit, onCancel, isLoading, err
 
             <div className="space-y-2">
               <Label htmlFor="tournamentType">Tournament Type *</Label>
-              <Select value={formData.tournamentType} onValueChange={(value: TournamentType) => updateField("tournamentType", value)}>
+              <Select value={formData.tournamentType} onValueChange={(value: string) => updateField("tournamentType", value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select tournament type" />
                 </SelectTrigger>
@@ -154,8 +166,60 @@ export function TournamentForm({ initialData, onSubmit, onCancel, isLoading, err
               {errors.endDate && <p className="text-sm text-destructive">{errors.endDate}</p>}
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          
+      <Card>
+        <CardHeader>
+          <CardTitle>Round Configuration</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="startTime">Start Time</Label>
+              <Input
+                id="startTime"
+                type="time"
+                value={formData.roundInfo.startTime}
+                onChange={(e) => updateField("roundInfo", { ...formData.roundInfo, startTime: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endTime">End Time</Label>
+              <Input
+                id="endTime"
+                type="time"
+                value={formData.roundInfo.endTime}
+                onChange={(e) => updateField("roundInfo", { ...formData.roundInfo, endTime: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="intervalMinutes">Interval Between Groups (minutes)</Label>
+              <Input
+                id="intervalMinutes"
+                type="number"
+                value={formData.roundInfo.intervalMinutes}
+                onChange={(e) => updateField("roundInfo", { ...formData.roundInfo, intervalMinutes: parseInt(e.target.value) || 10 })}
+                placeholder="10"
+                min="5"
+                max="30"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="maxPlayersPerGroup">Max Players Per Group</Label>
+              <Input
+                id="maxPlayersPerGroup"
+                type="number"
+                value={formData.roundInfo.maxPlayersPerGroup}
+                onChange={(e) => updateField("roundInfo", { ...formData.roundInfo, maxPlayersPerGroup: parseInt(e.target.value) || 4 })}
+                placeholder="4"
+                min="1"
+                max="4"
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 

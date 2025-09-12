@@ -12,6 +12,7 @@ import { HoleForm } from "@/components/organisms/HoleForm"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
 import { ErrorDisplay } from "@/components/atoms/ErrorDisplay"
 import { useCourse, useCourseHoles, useAddHole, useRemoveHole } from "@/hooks/useCourses"
+import { RoleGuard } from "@/components/auth/RoleGuard"
 import type { HoleListGetDTO, HolePostDTO } from "@/types"
 import { ArrowLeft, Edit, MapPin, Flag, Ruler, Plus, Target } from "lucide-react"
 
@@ -113,12 +114,14 @@ export default function CourseDetailPage() {
             {course.description && <p className="text-muted-foreground max-w-2xl">{course.description}</p>}
           </div>
 
-          <Button asChild>
-            <Link href={`/courses/${course.id}/edit`}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Course
-            </Link>
-          </Button>
+          <RoleGuard roles={["Admin", "TournamentOrganizer"]}>
+            <Button asChild>
+              <Link href={`/courses/${course.id}/edit`}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Course
+              </Link>
+            </Button>
+          </RoleGuard>
         </div>
 
         {/* Course Info Cards */}

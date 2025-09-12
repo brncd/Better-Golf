@@ -26,6 +26,7 @@ using Api.Models.DTOs.RoleDTOs;
 using Api.Models.DTOs.RoundDTOs;
 using Api.Models.DTOs.ScorecardDTOs;
 using Api.Models.DTOs.AuthDTOs;
+using Api.Models.DTOs.DashboardDTOs;
 using Api.Models.Common;
 using Api.Models.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -108,6 +109,7 @@ internal class Program
         builder.Services.AddScoped<RoundService>();
         builder.Services.AddScoped<MatchService>();
         builder.Services.AddScoped<ScorecardService>(); // No change needed here, dependencies are resolved automatically
+        builder.Services.AddScoped<DashboardService>();
 
         builder.Services.AddScoped<IAuthorizationHandler, ScorecardOwnerAuthorizationHandler>(); // Register the custom authorization handler
 
@@ -136,6 +138,7 @@ internal class Program
                   .AllowAnyHeader();
               });
         });
+        
         var app = builder.Build();
 
         app.UseMiddleware<ExceptionMiddleware>();
@@ -188,40 +191,29 @@ internal class Program
         });
 
         // Seccion Players
-        app.MapGet("/api/Players", async ([FromServices] PlayerService service, [AsParameters] PaginationRequest pagination) => Results.Ok(await service.GetAllPlayersAsync(pagination)));
-        
-        app.MapGet("/api/Players/{id}", async ([FromServices] PlayerService service, int id) => {
-            var player = await service.GetPlayerByIdAsync(id);
+        app.MapGet("/api/Players", async (PlayerService playerService, [AsParameters] PaginationRequest pagination) =>
+        {
+            var result = await playerService.GetAllPlayersAsync(pagination);
+            return Results.Ok(result);
+        }).RequireAuthorization("PlayerPolicy");
+
+        app.MapGet("/api/Players/{id:int}", async (int id, PlayerService playerService) =>
+        {
+            var player = await playerService.GetPlayerByIdAsync(id);
             return player == null ? Results.NotFound() : Results.Ok(player);
-        });
+        }).RequireAuthorization("PlayerPolicy");
 
-        app.MapPost("/api/Players", [Authorize(Policy = "AdminPolicy")] async ([FromServices] PlayerService service, PlayerPostDTO playerDto) => {
-            var result = await service.CreatePlayerAsync(playerDto);
-            if (!result.IsSuccess)
-            {
-                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error?.Code switch
-                {
-                    "PlayerAlreadyExists" => Results.Conflict(result.Error?.Description ?? "Player already exists"),
-                    _ => Results.BadRequest(result.Error?.Description ?? "Bad request")
-                };
-            }
-            return Results.Created($"/Players/{result.Value?.Id}", result.Value);
-        });
+        app.MapPost("/api/Players", async (PlayerPostDTO playerDto, PlayerService playerService) =>
+        {
+            var result = await playerService.CreatePlayerAsync(playerDto);
+            return result.IsSuccess ? Results.Created($"/api/Players/{result.Value!.Id}", result.Value) : Results.BadRequest(result.Error);
+        }).RequireAuthorization("AdminPolicy");
 
-        app.MapPut("/api/Players/{id}", [Authorize(Policy = "PlayerPolicy")] async ([FromServices] PlayerService service, int id, PlayerPostDTO playerDto) => {
-            var result = await service.UpdatePlayerAsync(id, playerDto);
-            if (!result.IsSuccess)
-            {
-                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
-                return result.Error?.Code switch
-                {
-                    "PlayerNotFound" => Results.NotFound(result.Error?.Description ?? "Player not found"),
-                    _ => Results.BadRequest(result.Error?.Description ?? "Bad request")
-                };
-            }
-            return Results.NoContent();
-        });
+        app.MapPut("/api/Players/{id:int}", async (int id, PlayerPostDTO playerDto, PlayerService playerService) =>
+        {
+            var result = await playerService.UpdatePlayerAsync(id, playerDto);
+            return result.IsSuccess ? Results.Ok() : Results.BadRequest(result.Error);
+        }).RequireAuthorization("AdminPolicy");
 
         app.MapDelete("/api/Players/{id}", [Authorize(Policy = "AdminPolicy")] async ([FromServices] PlayerService service, int id) => {
             var result = await service.DeletePlayerAsync(id);
@@ -244,6 +236,20 @@ internal class Program
                 return result.Error?.Code switch
                 {
                     "PlayerNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
+                };
+            }
+            return Results.Ok(result.Value);
+        });
+
+        app.MapGet("/api/Players/{id}/tournament-history", [Authorize(Policy = "PlayerPolicy")] async ([FromServices] PlayerService service, int id) => {
+            var result = await service.GetPlayerTournamentHistoryAsync(id);
+            if (!result.IsSuccess)
+            {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
+                return result.Error?.Code switch
+                {
+                    "PlayerNotFound" => Results.NotFound(result.Error?.Description ?? "Player not found"),
                     _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
                 };
             }
@@ -964,6 +970,22 @@ internal class Program
         app.MapGet("/api/users", [Authorize(Policy = "AdminPolicy")] async ([FromServices] RoleService service) => {
             var users = await service.GetAllUsersAsync();
             return Results.Ok(users);
+        });
+
+        // Dashboard endpoints
+        app.MapGet("/api/dashboard/stats", [Authorize(Policy = "PlayerPolicy")] async ([FromServices] DashboardService service) => {
+            var stats = await service.GetDashboardStatsAsync();
+            return Results.Ok(stats);
+        });
+
+        app.MapGet("/api/dashboard/activity", [Authorize(Policy = "PlayerPolicy")] async ([FromServices] DashboardService service, int limit = 10) => {
+            var activity = await service.GetRecentActivityAsync(limit);
+            return Results.Ok(activity);
+        });
+
+        app.MapGet("/api/dashboard/tournament/{id}/activity", [Authorize(Policy = "PlayerPolicy")] async ([FromServices] DashboardService service, int id) => {
+            var activity = await service.GetTournamentActivityAsync(id);
+            return Results.Ok(activity);
         });
 
         // Seed demo data endpoint

@@ -33,14 +33,14 @@ export const useRecentActivity = (limit: number = 10) => {
   });
 };
 
-// Dashboard Overview Query (combines stats and activity)
-export const useDashboardOverview = () => {
+// Tournament Activity Query
+export const useTournamentActivity = (tournamentId: number) => {
   return useQuery({
-    queryKey: dashboardKeys.overview(),
-    queryFn: () => dashboardService.getOverview(),
-    // Refetch every 3 minutes for overview
-    refetchInterval: 3 * 60 * 1000,
-    staleTime: 1.5 * 60 * 1000, // Consider data stale after 1.5 minutes
+    queryKey: [...dashboardKeys.activity(), 'tournament', tournamentId],
+    queryFn: () => dashboardService.getTournamentActivity(tournamentId),
+    enabled: !!tournamentId,
+    refetchInterval: 2 * 60 * 1000,
+    staleTime: 1 * 60 * 1000,
     retry: 2,
   });
 };

@@ -53,30 +53,77 @@ namespace Api.Services
         {
             try
             {
+                // Parse dates from string
+                if (!DateOnly.TryParse(tournamentDto.StartDate, out var startDate))
+                {
+                    throw new ArgumentException("Invalid start date format");
+                }
+                
+                if (!DateOnly.TryParse(tournamentDto.EndDate, out var endDate))
+                {
+                    throw new ArgumentException("Invalid end date format");
+                }
+
                 // Validate dates
-                if (tournamentDto.EndDate <= tournamentDto.StartDate)
+                if (endDate <= startDate)
                 {
                     throw new ArgumentException("End date must be after start date");
                 }
                 
-                if (tournamentDto.StartDate < DateOnly.FromDateTime(DateTime.Today))
+                if (startDate < DateOnly.FromDateTime(DateTime.Today))
                 {
                     throw new ArgumentException("Start date cannot be in the past");
                 }
 
-                // Always create a new default RoundInfo for new tournaments
-                var roundInfo = new RoundInfo(
-                    interval: 10,           // Default 10 minutes between tee times
-                    firstRoundTime: 480,    // Default 8:00 AM (480 minutes from midnight)
-                    isShotgun: false        // Default no shotgun start
-                );
+                // Parse tournament type
+                if (!Enum.TryParse<TournamentType>(tournamentDto.TournamentType, out var tournamentType))
+                {
+                    throw new ArgumentException("Invalid tournament type");
+                }
+
+                // Create RoundInfo from DTO or use defaults
+                RoundInfo roundInfo;
+                if (tournamentDto.RoundInfo != null)
+                {
+                    // Parse times from string format (HH:mm)
+                    if (!TimeOnly.TryParse(tournamentDto.RoundInfo.StartTime, out var startTime))
+                    {
+                        throw new ArgumentException("Invalid start time format");
+                    }
+                    
+                    if (!TimeOnly.TryParse(tournamentDto.RoundInfo.EndTime, out var endTime))
+                    {
+                        throw new ArgumentException("Invalid end time format");
+                    }
+
+                    roundInfo = new RoundInfo(
+                        interval: tournamentDto.RoundInfo.IntervalMinutes,
+                        firstRoundTime: startTime.Hour * 60 + startTime.Minute, // Convert to minutes from midnight
+                        isShotgun: false
+                    );
+                }
+                else
+                {
+                    // Use default values
+                    roundInfo = new RoundInfo(
+                        interval: 10,           // Default 10 minutes between tee times
+                        firstRoundTime: 480,    // Default 8:00 AM (480 minutes from midnight)
+                        isShotgun: false        // Default no shotgun start
+                    );
+                }
                 
                 _db.RoundInfos.Add(roundInfo);
                 await _db.SaveChangesAsync();
 
-                var tournament = new Tournament(tournamentDto)
+                var tournament = new Tournament
                 {
-                    Status = TournamentStatus.Draft, // Set initial status to Draft
+                    Name = tournamentDto.Name,
+                    Description = tournamentDto.Description,
+                    TournamentType = tournamentType,
+                    StartDate = startDate,
+                    EndDate = endDate,
+                    HandicapAllowance = tournamentDto.HandicapAllowance ?? 1.0,
+                    Status = TournamentStatus.Draft,
                     RoundInfo = roundInfo
                 };
                 
@@ -99,15 +146,32 @@ namespace Api.Services
                 var existingTournament = await _db.Tournaments.FindAsync(id);
                 if (existingTournament == null) return Result<bool>.Failure(new Error("TournamentNotFound", "Tournament not found."));
 
-                if (tournamentDto.EndDate <= tournamentDto.StartDate)
+                // Parse dates from string
+                if (!DateOnly.TryParse(tournamentDto.StartDate, out var startDate))
+                {
+                    return Result<bool>.Failure(new Error("InvalidStartDate", "Invalid start date format"));
+                }
+                
+                if (!DateOnly.TryParse(tournamentDto.EndDate, out var endDate))
+                {
+                    return Result<bool>.Failure(new Error("InvalidEndDate", "Invalid end date format"));
+                }
+
+                if (endDate <= startDate)
                 {
                     return Result<bool>.Failure(new Error("InvalidDates", "End date must be after start date"));
                 }
 
+                // Parse tournament type
+                if (!Enum.TryParse<TournamentType>(tournamentDto.TournamentType, out var tournamentType))
+                {
+                    return Result<bool>.Failure(new Error("InvalidTournamentType", "Invalid tournament type"));
+                }
+
                 existingTournament.Name = tournamentDto.Name;
-                existingTournament.TournamentType = tournamentDto.TournamentType;
-                existingTournament.StartDate = tournamentDto.StartDate;
-                existingTournament.EndDate = tournamentDto.EndDate;
+                existingTournament.TournamentType = tournamentType;
+                existingTournament.StartDate = startDate;
+                existingTournament.EndDate = endDate;
                 existingTournament.Description = tournamentDto.Description ?? string.Empty;
                 existingTournament.HandicapAllowance = tournamentDto.HandicapAllowance ?? 1.0;
 

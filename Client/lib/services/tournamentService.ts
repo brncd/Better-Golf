@@ -83,6 +83,13 @@ export const tournamentService = {
   getTeeTimes: (id: number): Promise<any> =>
     apiClient.get(`/api/tournaments/${id}/teetimes`),
 
+  // Update tee time for player (TournamentOrganizer/Admin)
+  updateTeeTime: (roundId: number, playerId: number, teeTime: string, startingHole: number): Promise<any> =>
+    apiClient.put(`/api/rounds/${roundId}/players/${playerId}`, { 
+      teeTime, 
+      startingHole 
+    }),
+
   // Get tournament scorecards - Fixed: Tournament ID is number
   getScorecards: (id: number): Promise<any> =>
     apiClient.get(`/api/Tournaments/${id}/Scorecards`),

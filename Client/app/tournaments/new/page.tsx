@@ -6,6 +6,8 @@ import { MainLayout } from "@/components/layouts/MainLayout"
 import { TournamentForm, TournamentFormState } from "@/components/organisms/TournamentForm"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { tournamentService } from "@/lib/services"
+import { useErrorHandler } from "@/hooks/useErrorHandler"
+import { getErrorMessage } from "@/lib/errors"
 import type { TournamentPostDTO } from "@/types"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -15,6 +17,7 @@ export default function NewTournamentPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { handleError } = useErrorHandler({ context: 'Tournament Creation' })
 
   const handleSubmit = async (data: TournamentFormState) => {
     setIsLoading(true)
@@ -26,8 +29,13 @@ export default function NewTournamentPage() {
         tournamentType: data.tournamentType,
         startDate: data.startDate,
         endDate: data.endDate,
-        roundInfo: 1, // Default RoundInfo ID
-        handicapAllowance: data.handicapAllowance / 100, // Convert percentage to decimal
+        roundInfo: {
+          startTime: data.roundInfo.startTime,
+          endTime: data.roundInfo.endTime,
+          intervalMinutes: data.roundInfo.intervalMinutes,
+          maxPlayersPerGroup: data.roundInfo.maxPlayersPerGroup,
+        },
+        handicapAllowance: data.handicapAllowance ? data.handicapAllowance / 100 : undefined, // Convert percentage to decimal
       };
 
       console.log("Sending tournament data:", JSON.stringify(tournamentData, null, 2));
@@ -35,18 +43,11 @@ export default function NewTournamentPage() {
       router.push("/tournaments")
     } catch (err) {
       console.error("Failed to create tournament:", err);
-      if (err instanceof Error) {
-        // Parse specific API errors
-        if (err.message.includes('date')) {
-          setError("Please check the tournament dates");
-        } else if (err.message.includes('name')) {
-          setError("Tournament name is required");
-        } else {
-          setError(err.message);
-        }
-      } else {
-        setError("An unexpected error occurred");
-      }
+      // Use the improved error handling system
+      handleError(err);
+      
+      // Extract user-friendly error message
+      setError(getErrorMessage(err));
     } finally {
       setIsLoading(false)
     }

@@ -8,9 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { HandicapBadge } from "@/components/atoms/HandicapBadge"
 import { usePlayer } from "@/hooks/usePlayers"
+import { usePlayerHistory } from "@/hooks/usePlayerHistory"
 import { SinglePlayerDTO } from "@/types"
-import { ArrowLeft, Edit, Calendar, Trophy, Target, Award } from "lucide-react"
+import { ArrowLeft, Edit, Calendar, Trophy, Target, Award, Medal, TrendingUp } from "lucide-react"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
+import { Badge } from "@/components/ui/badge"
 
 export default function PlayerDetailPage() {
   const params = useParams()
@@ -18,6 +20,7 @@ export default function PlayerDetailPage() {
 
   // Use TanStack Query for data fetching with caching
   const { data: player, isLoading, error } = usePlayer(playerId)
+  const { data: history, isLoading: historyLoading, error: historyError } = usePlayerHistory(parseInt(playerId))
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Not provided"
@@ -171,18 +174,126 @@ export default function PlayerDetailPage() {
           </Card>
         </div>
 
-        {/* Tournament History Placeholder */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Tournament History</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-muted-foreground">
-              <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Tournament history will be displayed here once the player participates in tournaments</p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Tournament History */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Statistics Cards */}
+          <div className="lg:col-span-1 space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5" />
+                  Tournament Stats
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {historyLoading ? (
+                  <LoadingSpinner />
+                ) : history ? (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total Tournaments</span>
+                      <span className="font-bold">{history.totalTournaments}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Completed</span>
+                      <span className="font-bold">{history.completedTournaments}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Wins</span>
+                      <span className="font-bold text-yellow-600">{history.wonTournaments}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Top 3 Finishes</span>
+                      <span className="font-bold text-orange-600">{history.top3Finishes}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Average Score</span>
+                      <span className="font-bold">{history.averageScore > 0 ? history.averageScore.toFixed(1) : 'N/A'}</span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground text-sm">No tournament data available</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Tournament History List */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Tournament History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {historyLoading ? (
+                  <LoadingSpinner />
+                ) : historyError ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Error loading tournament history</p>
+                  </div>
+                ) : history && history.tournaments.length > 0 ? (
+                  <div className="space-y-4">
+                    {history.tournaments.map((tournament) => (
+                      <div key={tournament.tournamentId} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold">{tournament.tournamentName}</h4>
+                              <Badge variant="outline">{tournament.tournamentType}</Badge>
+                              {tournament.position && tournament.position <= 3 && (
+                                <Badge variant={tournament.position === 1 ? "default" : "secondary"}>
+                                  <Medal className="h-3 w-3 mr-1" />
+                                  #{tournament.position}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <span>{new Date(tournament.startDate).toLocaleDateString()}</span>
+                              <span>•</span>
+                              <span className="capitalize">{tournament.status.toLowerCase()}</span>
+                              {tournament.totalScore && (
+                                <>
+                                  <span>•</span>
+                                  <span>Score: {tournament.totalScore}</span>
+                                </>
+                              )}
+                              {tournament.stablefordPoints && (
+                                <>
+                                  <span>•</span>
+                                  <span>Points: {tournament.stablefordPoints}</span>
+                                </>
+                              )}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              Rounds: {tournament.roundsPlayed}/{tournament.totalRounds}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            {tournament.position && (
+                              <div className="text-lg font-bold">
+                                #{tournament.position}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No tournament history available</p>
+                    <p className="text-sm mt-2">This player hasn't participated in any tournaments yet</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </MainLayout>
   )

@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { RoleGuard } from '@/components/auth/RoleGuard';
 import { Edit, Trash2, Mail, Phone, Calendar, Trophy } from 'lucide-react';
 import type { PlayerListGetDTO } from '@/types';
 
@@ -81,24 +82,26 @@ export function PlayerCard({ player, onEdit, onDelete }: PlayerCardProps) {
 
         {/* Actions */}
         <div className="flex gap-2 pt-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onEdit(player)}
-            className="flex-1"
-          >
-            <Edit className="w-4 h-4 mr-2" />
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onDelete(player.id)}
-            className="flex-1"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete
-          </Button>
+          <RoleGuard roles={["Admin", "TournamentOrganizer"]}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onEdit(player)}
+              className="flex-1"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onDelete(player.id.toString())}
+              className="flex-1"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </Button>
+          </RoleGuard>
         </div>
       </CardContent>
     </Card>

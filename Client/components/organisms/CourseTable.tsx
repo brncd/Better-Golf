@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { RoleGuard } from "@/components/auth/RoleGuard"
 import type { CoursesListGetDTO } from "@/types"
 import { Eye, Edit, Trash2, Search } from "lucide-react"
 
@@ -69,17 +70,19 @@ export function CourseTable({ courses, onEdit, onDelete }: CourseTableProps) {
                         </Link>
                       </Button>
 
-                      {onEdit && (
-                        <Button variant="ghost" size="sm" onClick={() => onEdit(course.id)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <RoleGuard roles={["Admin", "TournamentOrganizer"]}>
+                        {onEdit && (
+                          <Button variant="ghost" size="sm" onClick={() => onEdit(course.id)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
 
-                      {onDelete && (
-                        <Button variant="ghost" size="sm" onClick={() => onDelete(course.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+                        {onDelete && (
+                          <Button variant="ghost" size="sm" onClick={() => onDelete(course.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </RoleGuard>
                     </div>
                   </TableCell>
                 </TableRow>

@@ -52,8 +52,8 @@ export interface PlayerListGetDTO {
   dateOfBirth: string;
   phoneNumber: string;
   categoryId?: number;
-  categoryName?: string;
   membershipNumber: string;
+  categoryName?: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -101,6 +101,32 @@ export interface PlayerPostDTO {
   membershipNumber: string;
 }
 
+export interface PlayerTournamentHistoryDTO {
+  tournamentId: number;
+  tournamentName: string;
+  tournamentType: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  position?: number;
+  totalScore?: number;
+  stablefordPoints?: number;
+  roundsPlayed: number;
+  totalRounds: number;
+  registrationDate: string;
+}
+
+export interface PlayerTournamentHistoryListDTO {
+  playerId: number;
+  playerName: string;
+  tournaments: PlayerTournamentHistoryDTO[];
+  totalTournaments: number;
+  completedTournaments: number;
+  wonTournaments: number;
+  top3Finishes: number;
+  averageScore: number;
+}
+
 // ================== Tournament DTOs ==================
 export interface TournamentListGetDTO {
   id: number;
@@ -125,17 +151,22 @@ export interface SingleTournamentDTO {
 export interface TournamentPostDTO {
   name: string;
   description?: string;           // Optional like in API
-  tournamentType: TournamentType;
+  tournamentType: string;         // API expects string enum values
   startDate: string;              // Keep string, convert in service
   endDate: string;                // Keep string, convert in service
-  roundInfo?: number;             // Optional RoundInfo ID
+  roundInfo?: {                   // Optional RoundInfo object
+    startTime: string;
+    endTime: string;
+    intervalMinutes: number;
+    maxPlayersPerGroup: number;
+  };
   handicapAllowance?: number;     // Optional decimal value
 }
 
 export enum TournamentType {
-  MedalPlay = 0,
-  Stableford = 1, 
-  MatchPlay = 2
+  MedalPlay = "MedalPlay",
+  Stableford = "Stableford", 
+  MatchPlay = "MatchPlay"
 }
 
 export interface RoundInfo {
