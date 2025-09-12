@@ -11,6 +11,7 @@ import { useTournaments, useDeleteTournament } from "@/hooks/useTournaments";
 import { TournamentListGetDTO } from "@/types";
 import { Plus, Grid, List } from "lucide-react";
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 export default function TournamentsPage() {
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
@@ -81,49 +82,51 @@ export default function TournamentsPage() {
   };
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-balance">Tournaments</h1>
-            <p className="text-muted-foreground">Manage and view all golf tournaments</p>
-          </div>
+    <ProtectedRoute>
+      <MainLayout>
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-balance">Tournaments</h1>
+              <p className="text-muted-foreground">Manage and view all golf tournaments</p>
+            </div>
 
-          <div className="flex items-center gap-2">
-            <RoleGuard roles={["TournamentOrganizer", "Admin"]}>
-              <Button asChild>
-                <Link href="/tournaments/new">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Tournament
-                </Link>
-              </Button>
-            </RoleGuard>
+            <div className="flex items-center gap-2">
+              <RoleGuard roles={["TournamentOrganizer", "Admin"]}>
+                <Button asChild>
+                  <Link href="/tournaments/new">
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Tournament
+                  </Link>
+                </Button>
+              </RoleGuard>
 
-            <div className="flex border rounded-lg">
-              <Button
-                variant={viewMode === "table" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("table")}
-                className="rounded-r-none"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("grid")}
-                className="rounded-l-none"
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
+              <div className="flex border rounded-lg">
+                <Button
+                  variant={viewMode === "table" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("table")}
+                  className="rounded-r-none"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "grid" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("grid")}
+                  className="rounded-l-none"
+                >
+                  <Grid className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Content */}
-        {renderContent()}
-      </div>
-    </MainLayout>
+          {/* Content */}
+          {renderContent()}
+        </div>
+      </MainLayout>
+    </ProtectedRoute>
   );
 }

@@ -9,73 +9,76 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Users, Shield, UserCheck, UserX, Settings, Search, Filter } from 'lucide-react';
+import { Users, Shield, UserCheck, UserX, Settings, Search, Filter, Plus } from 'lucide-react';
 import { LoadingSpinner } from '@/components/atoms/LoadingSpinner';
 import { ErrorDisplay } from '@/components/atoms/ErrorDisplay';
 import { useToast } from '@/hooks/use-toast';
-
-interface User {
-  id: string;
-  username: string;
-  email: string;
-  roles: string[];
-  isActive: boolean;
-  lastLogin?: string;
-  createdAt: string;
-}
+import { useAllUsers, useAssignRole, useRemoveRole, useCreateRole } from '@/hooks/useRoles';
+import type { UserWithRoles } from '@/lib/services/roleService';
 
 interface UserManagementProps {
   canManageUsers?: boolean;
 }
 
-export function UserManagement({ canManageUsers = false }: UserManagementProps) {
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: '1',
-      username: 'admin',
-      email: 'admin@bettergolf.com',
-      roles: ['Admin'],
-      isActive: true,
-      lastLogin: '2024-01-15T10:30:00Z',
-      createdAt: '2024-01-01T00:00:00Z',
-    },
-    {
-      id: '2',
-      username: 'organizer1',
-      email: 'organizer@bettergolf.com',
-      roles: ['TournamentOrganizer'],
-      isActive: true,
-      lastLogin: '2024-01-14T15:45:00Z',
-      createdAt: '2024-01-02T00:00:00Z',
-    },
-    {
-      id: '3',
-      username: 'player1',
-      email: 'player@bettergolf.com',
-      roles: ['Player'],
-      isActive: true,
-      lastLogin: '2024-01-13T09:15:00Z',
-      createdAt: '2024-01-03T00:00:00Z',
-    },
-  ]);
+const AVAILABLE_ROLES = ['Admin', 'TournamentOrganizer', 'Player'];
 
+export function UserManagement({ canManageUsers = true }: UserManagementProps) {
+  const { data: users = [], isLoading, error } = useAllUsers();
+  const assignRoleMutation = useAssignRole();
+  const removeRoleMutation = useRemoveRole();
+  const createRoleMutation = useCreateRole();
+  const { toast } = useToast();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showRoleDialog, setShowRoleDialog] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showCreateRoleDialog, setShowCreateRoleDialog] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [newRole, setNewRole] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [newRoleName, setNewRoleName] = useState<string>('');
 
-  const { toast } = useToast();
+  // Handle role assignment
+  const handleAssignRole = async () => {
+    if (!selectedUser || !newRole) return;
+    
+    assignRoleMutation.mutate(
+      { userId: selectedUser.id, roleName: newRole },
+      {
+        onSuccess: () => {
+          setShowRoleDialog(false);
+          setSelectedUser(null);
+          setNewRole('');
+        }
+      }
+    );
+  };
 
-  const availableRoles = ['Admin', 'TournamentOrganizer', 'Player'];
+  // Handle role removal
+  const handleRemoveRole = (user: UserWithRoles, role: string) => {
+    removeRoleMutation.mutate({ userId: user.id, roleName: role });
+  };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
+  // Handle role creation
+  const handleCreateRole = async () => {
+    if (!newRoleName.trim()) return;
+    
+    createRoleMutation.mutate(
+      newRoleName.trim(),
+      {
+        onSuccess: () => {
+          setShowCreateRoleDialog(false);
+          setNewRoleName('');
+        }
+      }
+    );
+  };
+
+  // Filter users based on search and filters
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch = user.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.roles.includes(roleFilter);
     const matchesStatus = statusFilter === 'all' || 
                          (statusFilter === 'active' && user.isActive) ||
@@ -84,186 +87,99 @@ export function UserManagement({ canManageUsers = false }: UserManagementProps) 
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'Admin': return 'bg-red-100 text-red-800';
-      case 'TournamentOrganizer': return 'bg-blue-100 text-blue-800';
-      case 'Player': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
-  const handleToggleUserStatus = async (userId: string) => {
-    if (!canManageUsers) return;
+  if (error) {
+    return (
+      <ErrorDisplay 
+        error={error instanceof Error ? error : new Error('Failed to load users')}
+        onRetry={() => window.location.reload()}
+      />
+    );
+  }
 
-    setIsLoading(true);
-    try {
-      // Mock API call - replace with actual implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setUsers(prev => prev.map(user => 
-        user.id === userId ? { ...user, isActive: !user.isActive } : user
-      ));
-
-      const user = users.find(u => u.id === userId);
-      toast({
-        title: "User Status Updated",
-        description: `${user?.username} has been ${user?.isActive ? 'deactivated' : 'activated'}.`,
-      });
-    } catch (error) {
-      toast({
-        title: "Update Failed",
-        description: "Failed to update user status. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAssignRole = async () => {
-    if (!selectedUser || !newRole || !canManageUsers) return;
-
-    setIsLoading(true);
-    try {
-      // Mock API call - replace with actual implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setUsers(prev => prev.map(user => 
-        user.id === selectedUser.id 
-          ? { ...user, roles: [...new Set([...user.roles, newRole])] }
-          : user
-      ));
-
-      toast({
-        title: "Role Assigned",
-        description: `${newRole} role has been assigned to ${selectedUser.username}.`,
-      });
-
-      setShowRoleDialog(false);
-      setSelectedUser(null);
-      setNewRole('');
-    } catch (error) {
-      toast({
-        title: "Assignment Failed",
-        description: "Failed to assign role. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRemoveRole = async (userId: string, roleToRemove: string) => {
-    if (!canManageUsers) return;
-
-    setIsLoading(true);
-    try {
-      // Mock API call - replace with actual implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setUsers(prev => prev.map(user => 
-        user.id === userId 
-          ? { ...user, roles: user.roles.filter(role => role !== roleToRemove) }
-          : user
-      ));
-
-      const user = users.find(u => u.id === userId);
-      toast({
-        title: "Role Removed",
-        description: `${roleToRemove} role has been removed from ${user?.username}.`,
-      });
-    } catch (error) {
-      toast({
-        title: "Removal Failed",
-        description: "Failed to remove role. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const getUserStats = () => {
-    const total = users.length;
-    const active = users.filter(u => u.isActive).length;
-    const admins = users.filter(u => u.roles.includes('Admin')).length;
-    const organizers = users.filter(u => u.roles.includes('TournamentOrganizer')).length;
-    
-    return { total, active, admins, organizers };
-  };
-
-  const stats = getUserStats();
+  const totalUsers = users.length;
+  const activeUsers = users.filter(u => u.isActive).length;
+  const adminUsers = users.filter(u => u.roles.includes('Admin')).length;
+  const organizerUsers = users.filter(u => u.roles.includes('TournamentOrganizer')).length;
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
+      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-500" />
-              <span className="text-sm font-medium text-muted-foreground">Total Users</span>
-            </div>
-            <p className="text-2xl font-bold mt-1">{stats.total}</p>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalUsers}</div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-green-500" />
-              <span className="text-sm font-medium text-muted-foreground">Active Users</span>
-            </div>
-            <p className="text-2xl font-bold mt-1">{stats.active}</p>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <UserCheck className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{activeUsers}</div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-red-500" />
-              <span className="text-sm font-medium text-muted-foreground">Administrators</span>
-            </div>
-            <p className="text-2xl font-bold mt-1">{stats.admins}</p>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Administrators</CardTitle>
+            <Shield className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{adminUsers}</div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Settings className="w-5 h-5 text-purple-500" />
-              <span className="text-sm font-medium text-muted-foreground">Organizers</span>
-            </div>
-            <p className="text-2xl font-bold mt-1">{stats.organizers}</p>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Organizers</CardTitle>
+            <Settings className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{organizerUsers}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* User Management Panel */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            User Management
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              User Management
+            </CardTitle>
+            {canManageUsers && (
+              <Button
+                onClick={() => setShowCreateRoleDialog(true)}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Create Role
+              </Button>
+            )}
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <CardContent className="space-y-4">
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <Label htmlFor="search">Search Users</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="search"
                   placeholder="Search by username or email..."
@@ -274,29 +190,29 @@ export function UserManagement({ canManageUsers = false }: UserManagementProps) 
               </div>
             </div>
             
-            <div>
-              <Label htmlFor="role-filter">Role</Label>
+            <div className="w-full sm:w-48">
+              <Label htmlFor="role-filter">Filter by Role</Label>
               <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
-                  {availableRoles.map(role => (
-                    <SelectItem key={role} value={role}>{role}</SelectItem>
-                  ))}
+                  <SelectItem value="Admin">Admin</SelectItem>
+                  <SelectItem value="TournamentOrganizer">Tournament Organizer</SelectItem>
+                  <SelectItem value="Player">Player</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            <div>
-              <Label htmlFor="status-filter">Status</Label>
+            <div className="w-full sm:w-48">
+              <Label htmlFor="status-filter">Filter by Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
@@ -304,38 +220,46 @@ export function UserManagement({ canManageUsers = false }: UserManagementProps) 
             </div>
           </div>
 
+          <Separator />
+
           {/* Users Table */}
-          <div className="border rounded-md">
+          <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Roles</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Last Login</TableHead>
-                  <TableHead>Created</TableHead>
-                  {canManageUsers && <TableHead>Actions</TableHead>}
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">{user.username}</div>
-                        <div className="text-sm text-muted-foreground">{user.email}</div>
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <div className="font-medium">{user.userName}</div>
+                          <div className="text-sm text-muted-foreground">ID: {user.id}</div>
+                        </div>
                       </div>
                     </TableCell>
+                    <TableCell>{user.email}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {user.roles.map((role) => (
-                          <Badge key={role} className={getRoleBadgeColor(role)}>
+                          <Badge 
+                            key={role} 
+                            variant={role === 'Admin' ? 'destructive' : role === 'TournamentOrganizer' ? 'default' : 'secondary'}
+                            className="text-xs"
+                          >
                             {role}
-                            {canManageUsers && user.roles.length > 1 && (
+                            {canManageUsers && (
                               <button
-                                onClick={() => handleRemoveRole(user.id, role)}
-                                className="ml-1 hover:bg-black/10 rounded-full p-0.5"
-                                disabled={isLoading}
+                                onClick={() => handleRemoveRole(user, role)}
+                                className="ml-1 hover:text-red-600"
+                                title="Remove role"
                               >
                                 ×
                               </button>
@@ -345,40 +269,25 @@ export function UserManagement({ canManageUsers = false }: UserManagementProps) 
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={user.isActive ? "default" : "secondary"}>
-                          {user.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
-                        {canManageUsers && (
-                          <Switch
-                            checked={user.isActive}
-                            onCheckedChange={() => handleToggleUserStatus(user.id)}
-                            disabled={isLoading}
-                          />
-                        )}
-                      </div>
+                      <Badge variant={user.isActive ? 'default' : 'secondary'}>
+                        {user.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
-                      {user.lastLogin ? formatDate(user.lastLogin) : 'Never'}
-                    </TableCell>
-                    <TableCell>
-                      {formatDate(user.createdAt)}
-                    </TableCell>
-                    {canManageUsers && (
-                      <TableCell>
+                      {canManageUsers && (
                         <Button
-                          size="sm"
                           variant="outline"
+                          size="sm"
                           onClick={() => {
                             setSelectedUser(user);
                             setShowRoleDialog(true);
                           }}
-                          disabled={isLoading}
                         >
-                          Manage Roles
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add Role
                         </Button>
-                      </TableCell>
-                    )}
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -397,68 +306,71 @@ export function UserManagement({ canManageUsers = false }: UserManagementProps) 
       <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Manage User Roles</DialogTitle>
+            <DialogTitle>Assign Role to {selectedUser?.userName}</DialogTitle>
           </DialogHeader>
-          {selectedUser && (
-            <div className="space-y-4">
-              <div className="p-3 bg-muted rounded-md">
-                <div className="font-medium">{selectedUser.username}</div>
-                <div className="text-sm text-muted-foreground">{selectedUser.email}</div>
-              </div>
-
-              <div>
-                <Label>Current Roles</Label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {selectedUser.roles.map((role) => (
-                    <Badge key={role} className={getRoleBadgeColor(role)}>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="role-select">Select Role</Label>
+              <Select value={newRole} onValueChange={setNewRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a role..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {AVAILABLE_ROLES.filter(role => !selectedUser?.roles.includes(role)).map((role) => (
+                    <SelectItem key={role} value={role}>
                       {role}
-                    </Badge>
+                    </SelectItem>
                   ))}
-                </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <Label htmlFor="new-role">Assign New Role</Label>
-                <Select value={newRole} onValueChange={setNewRole}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a role to assign" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableRoles
-                      .filter(role => !selectedUser.roles.includes(role))
-                      .map(role => (
-                        <SelectItem key={role} value={role}>{role}</SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setShowRoleDialog(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleAssignRole}
-                  disabled={!newRole || isLoading}
-                >
-                  {isLoading ? 'Assigning...' : 'Assign Role'}
-                </Button>
-              </div>
+                </SelectContent>
+              </Select>
             </div>
-          )}
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowRoleDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleAssignRole}
+                disabled={!newRole || assignRoleMutation.isPending}
+              >
+                {assignRoleMutation.isPending ? 'Assigning...' : 'Assign Role'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {isLoading && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded-lg shadow-lg flex items-center gap-2">
-            <LoadingSpinner size="sm" />
-            <span>Updating user...</span>
+      {/* Role Creation Dialog */}
+      <Dialog open={showCreateRoleDialog} onOpenChange={setShowCreateRoleDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Role</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="role-name">Role Name</Label>
+              <Input
+                id="role-name"
+                placeholder="Enter role name..."
+                value={newRoleName}
+                onChange={(e) => setNewRoleName(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowCreateRoleDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateRole}
+                disabled={!newRoleName.trim() || createRoleMutation.isPending}
+              >
+                {createRoleMutation.isPending ? 'Creating...' : 'Create Role'}
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

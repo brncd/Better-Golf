@@ -13,35 +13,27 @@ export const playerService = {
   getAll: (pagination?: PaginationRequest): Promise<PaginationResponse<PlayerListGetDTO>> =>
     apiClient.get(`/api/Players?pageNumber=${pagination?.pageNumber || 1}&pageSize=${pagination?.pageSize || 10}`),
 
-  // Get player by ID
-  getById: (id: string): Promise<SinglePlayerDTO> =>
+  // Get player by ID - Fixed: API uses int IDs, not string
+  getById: (id: number): Promise<SinglePlayerDTO> =>
     apiClient.get(`/api/Players/${id}`),
 
   // Create new player (Admin only)
   create: (player: PlayerPostDTO): Promise<SinglePlayerDTO> =>
     apiClient.post('/api/Players', player),
 
-  // Update player (Player/Admin)
-  update: (id: string, player: PlayerPostDTO): Promise<void> =>
+  // Update player (Player/Admin) - Fixed: API uses int IDs, not string
+  update: (id: number, player: PlayerPostDTO): Promise<void> =>
     apiClient.put(`/api/Players/${id}`, player),
 
-  // Delete player (Admin only)
-  delete: (id: string): Promise<void> =>
+  // Delete player (Admin only) - Fixed: API uses int IDs, not string
+  delete: (id: number): Promise<void> =>
     apiClient.delete(`/api/Players/${id}`),
 
-  // Get player tournaments
-  getTournaments: (id: string, pagination?: PaginationRequest): Promise<PaginationResponse<any>> =>
+  // Get player tournaments - Fixed: API uses int IDs, not string
+  getTournaments: (id: number, pagination?: PaginationRequest): Promise<PaginationResponse<any>> =>
     apiClient.get(`/api/Players/${id}/Tournaments?pageNumber=${pagination?.pageNumber || 1}&pageSize=${pagination?.pageSize || 10}`),
 
   // Create player profile for current user
   createProfile: (player: PlayerPostDTO): Promise<SinglePlayerDTO> =>
     apiClient.post('/api/me/player-profile', player),
-
-  // Get current user's player profile
-  getMyProfile: (): Promise<PlayerProfileDTO> =>
-    apiClient.get('/api/me/player-profile'),
-
-  // Update current user's player profile
-  updateMyProfile: (profile: Partial<PlayerProfileDTO>): Promise<PlayerProfileDTO> =>
-    apiClient.put('/api/me/player-profile', profile),
 };

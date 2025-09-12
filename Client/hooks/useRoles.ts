@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userService } from '@/lib/services';
+import { roleService } from '@/lib/services/roleService';
 import { useErrorHandler } from './useErrorHandler';
 import { useToast } from './use-toast';
-import type { RoleAssignmentDTO, User } from '@/types';
+import type { RoleAssignmentDTO, UserWithRoles } from '@/lib/services/roleService';
 
 // Query Keys
 export const roleKeys = {
@@ -12,126 +12,95 @@ export const roleKeys = {
   user: (id: string) => [...roleKeys.users(), id] as const,
 };
 
-// Role Assignments Query
-export const useRoleAssignments = () => {
-  const { handleError } = useErrorHandler({ context: 'useRoleAssignments' });
-  
-  return useQuery({
-    queryKey: roleKeys.assignments(),
-    queryFn: () => userService.getRoleAssignments(),
-    onError: (error) => handleError(error, 'Failed to fetch role assignments'),
-  });
-};
-
 // All Users Query (Admin)
 export const useAllUsers = () => {
-  const { handleError } = useErrorHandler({ context: 'useAllUsers' });
-  
   return useQuery({
     queryKey: roleKeys.users(),
-    queryFn: () => userService.getAllUsers(),
-    onError: (error) => handleError(error, 'Failed to fetch users'),
+    queryFn: () => roleService.getAllUsers(),
   });
 };
 
-// Single User Query
-export const useUser = (id: string) => {
-  const { handleError } = useErrorHandler({ context: 'useUser' });
-  
+// User Roles Query
+export const useUserRoles = (userId: string) => {
   return useQuery({
-    queryKey: roleKeys.user(id),
-    queryFn: () => userService.getUserById(id),
-    enabled: !!id,
-    onError: (error) => handleError(error, `Failed to fetch user ${id}`),
+    queryKey: roleKeys.user(userId),
+    queryFn: () => roleService.getUserRoles(userId),
+    enabled: !!userId,
   });
 };
 
-// Update User Role Mutation
-export const useUpdateUserRole = () => {
+// Assign Role Mutation
+export const useAssignRole = () => {
   const queryClient = useQueryClient();
-  const { handleError } = useErrorHandler({ context: 'useUpdateUserRole' });
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: string }) =>
-      userService.updateUserRole(userId, role),
-    onSuccess: (_, { userId, role }) => {
-      // Invalidate role assignments to refetch updated data
-      queryClient.invalidateQueries({ queryKey: roleKeys.assignments() });
-      
-      // Update user in cache if it exists
+    mutationFn: ({ userId, roleName }: { userId: string; roleName: string }) =>
+      roleService.assignRole(userId, { roleName }),
+    onSuccess: (_, { userId, roleName }) => {
+      queryClient.invalidateQueries({ queryKey: roleKeys.users() });
       queryClient.invalidateQueries({ queryKey: roleKeys.user(userId) });
       
       toast({
-        title: "Role Updated",
-        description: `User role has been successfully updated to ${role}`,
+        title: "Role Assigned",
+        description: `Role ${roleName} has been assigned successfully`,
       });
     },
-    onError: (error, { userId }) => {
-      handleError(error, `Failed to update role for user ${userId}`);
+    onError: () => {
       toast({
         title: "Error",
-        description: "Failed to update user role. Please try again.",
+        description: "Failed to assign role. Please try again.",
         variant: "destructive",
       });
     },
   });
 };
 
-// Deactivate User Mutation
-export const useDeactivateUser = () => {
+// Remove Role Mutation
+export const useRemoveRole = () => {
   const queryClient = useQueryClient();
-  const { handleError } = useErrorHandler({ context: 'useDeactivateUser' });
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: (userId: string) => userService.deactivateUser(userId),
-    onSuccess: (_, userId) => {
-      // Invalidate queries to refetch updated data
-      queryClient.invalidateQueries({ queryKey: roleKeys.assignments() });
-      queryClient.invalidateQueries({ queryKey: roleKeys.users() });
-      queryClient.invalidateQueries({ queryKey: roleKeys.user(userId) });
+    mutationFn: ({ userId, roleName }: { userId: string; roleName: string }) => 
+      roleService.removeRole(userId, roleName),
+    onSuccess: (_, { roleName }) => {
+      queryClient.invalidateQueries({ queryKey: roleKeys.all });
       
       toast({
-        title: "User Deactivated",
-        description: "User has been deactivated successfully.",
+        title: "Role Removed",
+        description: `Role ${roleName} has been removed successfully`,
       });
     },
-    onError: (error) => {
-      handleError(error, 'Failed to deactivate user');
+    onError: () => {
       toast({
         title: "Error",
-        description: "Failed to deactivate user. Please try again.",
+        description: "Failed to remove role. Please try again.",
         variant: "destructive",
       });
     },
   });
 };
 
-// Activate User Mutation
-export const useActivateUser = () => {
+// Create Role Mutation
+export const useCreateRole = () => {
   const queryClient = useQueryClient();
-  const { handleError } = useErrorHandler({ context: 'useActivateUser' });
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: (userId: string) => userService.activateUser(userId),
-    onSuccess: (_, userId) => {
-      // Invalidate queries to refetch updated data
-      queryClient.invalidateQueries({ queryKey: roleKeys.assignments() });
-      queryClient.invalidateQueries({ queryKey: roleKeys.users() });
-      queryClient.invalidateQueries({ queryKey: roleKeys.user(userId) });
+    mutationFn: (roleName: string) => roleService.createRole(roleName),
+    onSuccess: (_, roleName) => {
+      queryClient.invalidateQueries({ queryKey: roleKeys.all });
       
       toast({
-        title: "User Activated",
-        description: "User has been activated successfully.",
+        title: "Role Created",
+        description: `Role ${roleName} has been created successfully`,
       });
     },
-    onError: (error) => {
-      handleError(error, 'Failed to activate user');
+    onError: () => {
       toast({
         title: "Error",
-        description: "Failed to activate user. Please try again.",
+        description: "Failed to create role. Please try again.",
         variant: "destructive",
       });
     },

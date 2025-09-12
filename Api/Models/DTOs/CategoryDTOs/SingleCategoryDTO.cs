@@ -2,7 +2,7 @@ namespace Api.Models.DTOs.CategoryDTOs;
 
 public class SingleCategoryDTO
 {
-    public string Id { get; set; } = null!;
+    public int Id { get; set; }
     public string Name { get; set; } = null!;
     public string Description { get; set; } = null!;
     public double? HandicapMin { get; set; }
@@ -13,7 +13,7 @@ public class SingleCategoryDTO
     
     public SingleCategoryDTO(Category category)
     {
-        Id = category.Id.ToString();
+        Id = category.Id;
         Name = category.Name;
         Description = category.Description ?? "";
         HandicapMin = category.HandicapMin;

@@ -31,22 +31,21 @@ export const useTournaments = (params?: PaginationRequest) => {
 };
 
 // Single Tournament Query
-export const useTournament = (id: string) => {
+export const useTournament = (id: number) => {
   return useQuery({
-    queryKey: tournamentKeys.detail(id),
+    queryKey: tournamentKeys.detail(id.toString()),
     queryFn: () => tournamentService.getById(id),
     enabled: !!id,
   });
 };
 
 // Tournament Rankings Query
-export const useTournamentRankings = (id: string) => {
+export const useTournamentRankings = (id: number) => {
   return useQuery({
-    queryKey: tournamentKeys.rankings(id),
+    queryKey: tournamentKeys.rankings(id.toString()),
     queryFn: async () => {
       try {
-        // For now, return empty array since getRankings doesn't exist in service
-        return [];
+        return await tournamentService.calculateResults(id);
       } catch (error) {
         console.error('Failed to fetch tournament rankings:', error);
         return [];
@@ -57,9 +56,9 @@ export const useTournamentRankings = (id: string) => {
 };
 
 // Tournament Players Query
-export const useTournamentPlayers = (id: string) => {
+export const useTournamentPlayers = (id: number) => {
   return useQuery({
-    queryKey: tournamentKeys.players(id),
+    queryKey: tournamentKeys.players(id.toString()),
     queryFn: () => tournamentService.getPlayers(id),
     enabled: !!id,
   });
@@ -100,12 +99,12 @@ export const useUpdateTournament = () => {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: TournamentPostDTO }) => 
+    mutationFn: ({ id, data }: { id: number; data: TournamentPostDTO }) => 
       tournamentService.update(id, data),
     onSuccess: (updatedTournament, { id }) => {
       // Update the specific tournament in cache
       queryClient.setQueryData(
-        tournamentKeys.detail(id),
+        tournamentKeys.detail(id.toString()),
         updatedTournament
       );
       
@@ -135,10 +134,10 @@ export const useDeleteTournament = () => {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: (id: string) => tournamentService.delete(id),
+    mutationFn: (id: number) => tournamentService.delete(id),
     onSuccess: (_, id) => {
       // Remove from cache
-      queryClient.removeQueries({ queryKey: tournamentKeys.detail(id) });
+      queryClient.removeQueries({ queryKey: tournamentKeys.detail(id.toString()) });
       
       // Invalidate lists
       queryClient.invalidateQueries({ queryKey: tournamentKeys.lists() });
@@ -166,13 +165,13 @@ export const useRegisterForTournament = () => {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: (tournamentId: string) => tournamentService.register(tournamentId),
+    mutationFn: (tournamentId: number) => tournamentService.register(tournamentId),
     onMutate: async (tournamentId) => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: tournamentKeys.players(tournamentId) });
+      await queryClient.cancelQueries({ queryKey: tournamentKeys.players(tournamentId.toString()) });
       
       // Snapshot the previous value
-      const previousPlayers = queryClient.getQueryData(tournamentKeys.players(tournamentId));
+      const previousPlayers = queryClient.getQueryData(tournamentKeys.players(tournamentId.toString()));
       
       // Optimistically update to show user as registered
       // Note: This is a simplified optimistic update - in a real scenario we'd add the current user to the players list
@@ -181,8 +180,8 @@ export const useRegisterForTournament = () => {
     },
     onSuccess: (_, tournamentId) => {
       // Invalidate tournament details and players to get fresh data
-      queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournamentId) });
-      queryClient.invalidateQueries({ queryKey: tournamentKeys.players(tournamentId) });
+      queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournamentId.toString()) });
+      queryClient.invalidateQueries({ queryKey: tournamentKeys.players(tournamentId.toString()) });
       
       toast({
         title: "Registration Successful",
@@ -192,7 +191,7 @@ export const useRegisterForTournament = () => {
     onError: (error, tournamentId, context) => {
       // Rollback optimistic update
       if (context?.previousPlayers) {
-        queryClient.setQueryData(tournamentKeys.players(tournamentId), context.previousPlayers);
+        queryClient.setQueryData(tournamentKeys.players(tournamentId.toString()), context.previousPlayers);
       }
       
       handleError(error, 'Failed to register for tournament');
@@ -204,7 +203,7 @@ export const useRegisterForTournament = () => {
     },
     onSettled: (_, __, tournamentId) => {
       // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: tournamentKeys.players(tournamentId) });
+      queryClient.invalidateQueries({ queryKey: tournamentKeys.players(tournamentId.toString()) });
     },
   });
 };
@@ -216,12 +215,12 @@ export const useUnregisterFromTournament = () => {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: ({ tournamentId, playerId }: { tournamentId: string; playerId: string }) => 
+    mutationFn: ({ tournamentId, playerId }: { tournamentId: number; playerId: number }) => 
       tournamentService.unregisterPlayer(tournamentId, playerId),
     onSuccess: (_, { tournamentId }) => {
       // Invalidate tournament details and players
-      queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournamentId) });
-      queryClient.invalidateQueries({ queryKey: tournamentKeys.players(tournamentId) });
+      queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournamentId.toString()) });
+      queryClient.invalidateQueries({ queryKey: tournamentKeys.players(tournamentId.toString()) });
       
       toast({
         title: "Unregistration Successful",

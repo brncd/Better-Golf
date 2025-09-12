@@ -101,7 +101,7 @@ export default function DashboardPage() {
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-balance">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome to Golf Tournament Pro management system</p>
+          <p className="text-muted-foreground">Welcome to Better Golf management system</p>
         </div>
 
         {/* Stats Grid */}

@@ -2,7 +2,7 @@ namespace Api.Models.DTOs.PlayerDTOs;
 
 public class PlayerListGetDTO
 {
-    public string Id { get; set; } = null!;
+    public int Id { get; set; }
     public string FirstName { get; set; } = null!;
     public string LastName { get; set; } = null!;
     public string Email { get; set; } = null!;
@@ -10,7 +10,7 @@ public class PlayerListGetDTO
     public string Gender { get; set; } = null!;
     public string DateOfBirth { get; set; } = null!;
     public string PhoneNumber { get; set; } = null!;
-    public string? CategoryId { get; set; }
+    public int? CategoryId { get; set; }
     public string? CategoryName { get; set; }
     public string MembershipNumber { get; set; } = null!;
     public bool IsActive { get; set; }
@@ -18,7 +18,7 @@ public class PlayerListGetDTO
     
     public PlayerListGetDTO(Player player)
     {
-        Id = player.Id.ToString();
+        Id = player.Id;
         FirstName = player.Name;
         LastName = player.LastName;
         Email = player.Email ?? "";

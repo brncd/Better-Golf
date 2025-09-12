@@ -28,8 +28,19 @@ export const useCourses = (params: PaginationRequest) => {
 export const useCourse = (courseId: string) => {
   return useQuery({
     queryKey: courseKeys.detail(courseId),
-    queryFn: () => courseService.getById(courseId),
+    queryFn: async () => {
+      console.log('Fetching course with ID:', courseId);
+      try {
+        const result = await courseService.getById(courseId);
+        console.log('Course API response:', result);
+        return result;
+      } catch (error) {
+        console.error('Course API error details:', error);
+        throw error;
+      }
+    },
     enabled: !!courseId,
+    retry: false, // Disable retry to see the actual error
   });
 };
 

@@ -14,6 +14,7 @@ import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
 import { ConfirmDialog } from "@/components/molecules/ConfirmDialog"
 import { useErrorHandler } from "@/hooks/useErrorHandler"
 import { useToast } from "@/hooks/use-toast"
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 
 export default function CoursesPage() {
   const router = useRouter()
@@ -113,45 +114,46 @@ export default function CoursesPage() {
   }
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Golf Courses</h1>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center border rounded-lg p-1">
-              <Button
-                variant={viewMode === "table" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("table")}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("grid")}
-              >
-                <Grid className="h-4 w-4" />
+    <ProtectedRoute>
+      <MainLayout>
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold">Golf Courses</h1>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center border rounded-lg p-1">
+                <Button
+                  variant={viewMode === "table" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("table")}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "grid" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("grid")}
+                >
+                  <Grid className="h-4 w-4" />
+                </Button>
+              </div>
+              <Button asChild>
+                <Link href="/courses/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Course
+                </Link>
               </Button>
             </div>
-            <Button asChild>
-              <Link href="/courses/new">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Course
-              </Link>
-            </Button>
           </div>
+          {renderContent()}
         </div>
-        {renderContent()}
-      </div>
-      <ConfirmDialog
-        open={deletingCourseId !== null}
-        onOpenChange={(open) => !open && setDeletingCourseId(null)}
-        title="Delete Course"
-        description="Are you sure you want to delete this course? This action cannot be undone."
-        onConfirm={confirmDelete}
-      />
-    </MainLayout>
+        <ConfirmDialog
+          open={deletingCourseId !== null}
+          onOpenChange={(open) => !open && setDeletingCourseId(null)}
+          title="Delete Course"
+          description="Are you sure you want to delete this course? This action cannot be undone."
+          onConfirm={confirmDelete}
+        />
+      </MainLayout>
+    </ProtectedRoute>
   )
 }
-

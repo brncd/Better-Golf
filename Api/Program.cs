@@ -1,6 +1,7 @@
 using System.Security.Claims; // Added
 using Api.Data;
 using Api.Models;
+using Api;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Api.Models.DTOs.CategoryDTOs;
@@ -30,6 +31,7 @@ using Api.Models.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Api.Models.Enums; // Added for TournamentStatus
 using Api.Middleware;
+using Microsoft.AspNetCore.Http.Json;
 
 internal class Program
 {
@@ -78,7 +80,20 @@ internal class Program
             };
         });
 
-        builder.Services.AddAuthorization();        // Register services
+        builder.Services.AddAuthorization();
+        
+        // Configure JSON serialization for DateOnly
+        builder.Services.ConfigureHttpJsonOptions(options =>
+        {
+            options.SerializerOptions.Converters.Add(new DateOnlyJsonConverter());
+        });
+        
+        builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
+        {
+            options.SerializerOptions.Converters.Add(new DateOnlyJsonConverter());
+        });
+        
+        // Register services
         builder.Services.AddScoped<PlayerService>();
         builder.Services.AddScoped<CourseService>();
         builder.Services.AddScoped<TournamentService>();
@@ -105,6 +120,7 @@ internal class Program
             // More granular policies for resource-based authorization will be added later
         });
 
+        
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(c =>
         {
@@ -115,7 +131,7 @@ internal class Program
             options.AddPolicy(name: "TodoPasa",
               builder =>
               {
-                  builder.WithOrigins("http://localhost:3000") // Changed from "http://localhost:5001"
+                  builder.WithOrigins("http://localhost:3001") // Fixed: Changed from 3000 to 3001
                   .AllowAnyMethod()
                   .AllowAnyHeader();
               });
@@ -134,6 +150,8 @@ internal class Program
 
         app.UseAuthentication(); // Added
         app.UseAuthorization();  // Added
+        
+        // Map controllers
         
         // Custom Auth endpoints
         app.MapPost("/api/auth/login", async ([FromServices] AuthService authService, LoginRequestDTO request) =>
@@ -941,6 +959,11 @@ internal class Program
                 };
             }
             return Results.NoContent();
+        });
+
+        app.MapGet("/api/users", [Authorize(Policy = "AdminPolicy")] async ([FromServices] RoleService service) => {
+            var users = await service.GetAllUsersAsync();
+            return Results.Ok(users);
         });
 
         // Seed demo data endpoint

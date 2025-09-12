@@ -91,5 +91,28 @@ namespace Api.Services
             var roles = await _userManager.GetRolesAsync(user);
             return roles.ToList();
         }
+
+        public async Task<List<object>> GetAllUsersAsync()
+        {
+            var users = _userManager.Users.ToList();
+            var userList = new List<object>();
+
+            foreach (var user in users)
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+                userList.Add(new
+                {
+                    Id = user.Id,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    Roles = roles.ToList(),
+                    IsActive = !user.LockoutEnd.HasValue || user.LockoutEnd <= DateTimeOffset.UtcNow,
+                    LastLogin = user.LockoutEnd, // This would need proper tracking in a real app
+                    CreatedAt = DateTime.UtcNow // This would come from user creation timestamp
+                });
+            }
+
+            return userList;
+        }
     }
 }

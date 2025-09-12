@@ -17,6 +17,7 @@ import { PlayerCard } from "@/components/players/PlayerCard"
 import { usePlayers, useDeletePlayer } from "@/hooks/usePlayers"
 import { PlayerListGetDTO } from "@/types"
 import { Plus, Edit, Trash2, Users, Grid, List } from "lucide-react"
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 
 export default function PlayersPage() {
   const router = useRouter()
@@ -93,55 +94,56 @@ export default function PlayersPage() {
   }
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-balance">Players</h1>
-            <p className="text-muted-foreground">Manage player registrations and information</p>
-          </div>
-          <div className="flex gap-2">
-            <RoleGuard roles={['Admin', 'TournamentOrganizer']}>
-              <PlayerImportExport onImportComplete={(count) => {
-                // Refresh data after import
-                window.location.reload();
-              }} />
-              <Button asChild>
-                <Link href="/players/create">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Player
-                </Link>
-              </Button>
-            </RoleGuard>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-card rounded-lg p-4 border">
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              <span className="text-sm font-medium text-muted-foreground">Total Players</span>
+    <ProtectedRoute>
+      <MainLayout>
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-balance">Players</h1>
+              <p className="text-muted-foreground">Manage player registrations and information</p>
             </div>
-            <p className="text-2xl font-bold mt-1">{players.length}</p>
+            <div className="flex gap-2">
+              <RoleGuard roles={['Admin', 'TournamentOrganizer']}>
+                <PlayerImportExport onImportComplete={(count) => {
+                  // Refresh data after import
+                  window.location.reload();
+                }} />
+                <Button asChild>
+                  <Link href="/players/create">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Player
+                  </Link>
+                </Button>
+              </RoleGuard>
+            </div>
           </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-card rounded-lg p-4 border">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <span className="text-sm font-medium text-muted-foreground">Total Players</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">{players.length}</p>
+            </div>
+          </div>
+
+          {/* Content */}
+          {renderContent()}
+
+          {/* Confirm Delete Dialog */}
+          <ConfirmDialog
+            open={deletingPlayerId !== null}
+            onOpenChange={(isOpen) => !isOpen && setDeletingPlayerId(null)}
+            title="Delete Player"
+            description="Are you sure you want to delete this player? This action cannot be undone."
+            onConfirm={confirmDelete}
+            variant="destructive"
+          />
         </div>
-
-        {/* Content */}
-        {renderContent()}
-
-        {/* Confirm Delete Dialog */}
-        <ConfirmDialog
-          open={deletingPlayerId !== null}
-          onOpenChange={(isOpen) => !isOpen && setDeletingPlayerId(null)}
-          title="Delete Player"
-          description="Are you sure you want to delete this player? This action cannot be undone."
-          onConfirm={confirmDelete}
-          variant="destructive"
-        />
-      </div>
-    </MainLayout>
+      </MainLayout>
+    </ProtectedRoute>
   )
 }
-

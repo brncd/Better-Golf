@@ -42,7 +42,7 @@ export interface User {
 
 // ================== Player DTOs ==================
 export interface PlayerListGetDTO {
-  id: string;
+  id: number;
   firstName: string;
   lastName: string;
   email: string;
@@ -50,7 +50,7 @@ export interface PlayerListGetDTO {
   gender: string;
   dateOfBirth: string;
   phoneNumber: string;
-  categoryId?: string;
+  categoryId?: number;
   categoryName?: string;
   membershipNumber: string;
   isActive: boolean;
@@ -58,7 +58,7 @@ export interface PlayerListGetDTO {
 }
 
 export interface PlayerProfileDTO {
-  id?: string;
+  id?: number;
   firstName: string;
   lastName: string;
   email: string;
@@ -67,14 +67,14 @@ export interface PlayerProfileDTO {
   dateOfBirth: string;
   phoneNumber: string;
   membershipNumber: string;
-  categoryId?: string;
+  categoryId?: number;
   categoryName?: string;
   isActive: boolean;
   createdAt: string;
 }
 
 export interface SinglePlayerDTO {
-  id: string;
+  id: number;
   firstName: string;
   lastName: string;
   email: string;
@@ -82,7 +82,7 @@ export interface SinglePlayerDTO {
   gender: string;
   dateOfBirth: string;
   phoneNumber: string;
-  categoryId?: string;
+  categoryId?: number;
   categoryName?: string;
   membershipNumber: string;
   isActive: boolean;
@@ -124,18 +124,18 @@ export interface SingleTournamentDTO {
 
 export interface TournamentPostDTO {
   name: string;
-  description: string;
+  description?: string;           // Optional like in API
   tournamentType: TournamentType;
-  startDate: string;
-  endDate: string;
-  roundInfo: RoundInfo;
-  handicapAllowance?: number;
+  startDate: string;              // Keep string, convert in service
+  endDate: string;                // Keep string, convert in service
+  roundInfo?: number;             // Optional RoundInfo ID
+  handicapAllowance?: number;     // Optional decimal value
 }
 
 export enum TournamentType {
-  MedalPlay = "MedalPlay",
-  Stableford = "Stableford", 
-  MatchPlay = "MatchPlay"
+  MedalPlay = 0,
+  Stableford = 1, 
+  MatchPlay = 2
 }
 
 export interface RoundInfo {
@@ -146,7 +146,7 @@ export interface RoundInfo {
 }
 
 export interface TournamentRankingDTO {
-  playerId: string;
+  playerId: number;
   playerName: string;
   totalScore: number;
   scoreToPar: number;
@@ -161,7 +161,7 @@ export interface CoursesListGetDTO {
 }
 
 export interface SingleCourseDTO {
-  id: string;
+  id: number;
   name: string;
   location: string;
   numberOfHoles: number;
@@ -186,8 +186,8 @@ export interface CoursePostDTO {
 
 // ================== Hole DTOs ==================
 export interface HoleListGetDTO {
-  id: string;
-  courseId: string;
+  id: number;
+  courseId: number;
   holeNumber: number;
   par: number;
   yardage: number;
@@ -205,7 +205,7 @@ export interface HolePostDTO {
 
 // ================== Category DTOs ==================
 export interface Category {
-  id: string;
+  id: number;
   name: string;
   description: string;
   handicapMin?: number;
@@ -216,7 +216,7 @@ export interface Category {
 }
 
 export interface CategoryListGetDTO {
-  id: string;
+  id: number;
   name: string;
   description: string;
   handicapMin?: number;
@@ -227,7 +227,7 @@ export interface CategoryListGetDTO {
 }
 
 export interface SingleCategoryDTO {
-  id: string;
+  id: number;
   name: string;
   description: string;
   handicapMin?: number;
@@ -249,33 +249,33 @@ export interface CategoryPostDTO {
 
 // ================== Round & Tee Time DTOs ==================
 export interface TeeTimeDTO {
-  id?: string;
+  id?: number;
   teeTime?: string;
   startingHole?: number;
   players?: TeeTimePlayerDTO[];
 }
 
 export interface TeeTimePlayerDTO {
-  id: string;
+  id: number;
   name: string;
   email: string;
   handicap?: number;
 }
 
 export interface RoundDTO {
-  id: string;
-  tournamentId: string;
+  id: number;
+  tournamentId: number;
   roundNumber: number;
   date: string;
 }
 
 // Enhanced Tee Time Management Types
 export interface TeeTime {
-  id: string;
-  tournamentId: string;
+  id: number;
+  tournamentId: number;
   roundNumber: number;
   teeTimeSlot: string; // ISO datetime string
-  courseId: string;
+  courseId: number;
   courseName: string;
   holeNumber: number;
   players: TeeTimePlayer[];
@@ -286,8 +286,8 @@ export interface TeeTime {
 }
 
 export interface TeeTimePlayer {
-  id: string;
-  playerId: string;
+  id: number;
+  playerId: number;
   playerName: string;
   handicap?: number;
   category?: string;
@@ -301,14 +301,14 @@ export interface TeeTimeSlot {
 }
 
 export interface TeeTimeGeneration {
-  tournamentId: string;
+  tournamentId: number;
   roundNumber: number;
   startDate: string;
   startTime: string;
   endTime: string;
   interval: number; // minutes between groups
   maxPlayersPerGroup: number;
-  courseIds: string[];
+  courseIds: number[];
 }
 
 export interface TeeTimeSchedule {
@@ -322,15 +322,15 @@ export interface TeeTimeRound {
 }
 
 export interface TeeTimeAssignment {
-  teeTimeId: string;
-  playerId: string;
+  teeTimeId: number;
+  playerId: number;
   position: number;
 }
 
 // ================== Match Play DTOs ==================
 export interface MatchPlayBracket {
-  id: string;
-  tournamentId: string;
+  id: number;
+  tournamentId: number;
   name: string;
   totalRounds: number;
   currentRound: number;
@@ -341,8 +341,8 @@ export interface MatchPlayBracket {
 }
 
 export interface Match {
-  id: string;
-  bracketId: string;
+  id: number;
+  bracketId: number;
   roundNumber: number;
   matchNumber: number;
   player1?: MatchPlayer;
@@ -352,12 +352,12 @@ export interface Match {
   scheduledTime?: string;
   completedAt?: string;
   score?: MatchScore;
-  nextMatchId?: string; // For advancement
+  nextMatchId?: number; // For advancement
 }
 
 export interface MatchPlayer {
-  id: string;
-  playerId: string;
+  id: number;
+  playerId: number;
   playerName: string;
   handicap?: number;
   seed?: number;
@@ -379,9 +379,9 @@ export interface HoleScore {
 }
 
 export interface BracketSetup {
-  tournamentId: string;
+  tournamentId: number;
   name: string;
-  players: string[]; // Player IDs
+  players: number[]; // Player IDs
   seedingMethod: 'Random' | 'Handicap' | 'Manual';
   byeHandling: 'Random' | 'LowestSeed';
 }
@@ -389,14 +389,14 @@ export interface BracketSetup {
 export interface RoundAdvancement {
   roundNumber: number;
   matches: {
-    matchId: string;
-    winnerId: string;
+    matchId: number;
+    winnerId: number;
   }[];
 }
 
 // ================== Role DTOs ==================
 export interface RoleAssignmentDTO {
-  userId: string;
+  userId: number;
   userName: string;
   email: string;
   role: string;
@@ -404,11 +404,19 @@ export interface RoleAssignmentDTO {
   assignedBy: string;
 }
 
+export interface UserWithRoles {
+  id: number;
+  userName: string;
+  email: string;
+  roles: string[];
+  isActive: boolean;
+  createdAt: string;
+}
+
 // ================== Scorecard DTOs ==================
 export interface ScorecardDTO {
   id: number;
   playerId: number;
-  playerName: string;
   courseId: number;
   roundNumber: number;
   playingHandicap: number;
@@ -417,8 +425,8 @@ export interface ScorecardDTO {
 }
 
 export interface ScorecardResultDTO {
-  id: string;
-  scorecardId: string;
+  id: number;
+  scorecardId: number;
   holeId: number;
   strokes: number;
   score: number;
@@ -440,4 +448,3 @@ export interface CourseDetailGetDTO {
   description: string;
   holes: HoleDTO[];
 }
-

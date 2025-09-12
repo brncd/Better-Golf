@@ -119,7 +119,7 @@ namespace Api.Services
             var category = await _db.Categories.Include(c => c.Players).FirstOrDefaultAsync(c => c.Id == categoryId);
             if (category == null) return Result<bool>.Failure(new Error("CategoryNotFound", "Category not found."));
 
-            var player = category.Players.FirstOrDefault(p => p.Id == playerId);
+            var player = category.Players?.FirstOrDefault(p => p.Id == playerId);
             if (player == null) return Result<bool>.Failure(new Error("PlayerNotFound", "Player not found in category."));
 
             category.Players.Remove(player);

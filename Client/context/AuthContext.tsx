@@ -33,21 +33,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       const storedToken = localStorage.getItem('authToken');
       if (storedToken) {
-        setToken(storedToken);
         try {
           const payload = JSON.parse(atob(storedToken.split('.')[1]));
-          const roles = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role || [];
-          const email = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || payload.email || '';
-          const username = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || payload.unique_name || payload.name || '';
-          
-          setUser({ 
-            email: email, 
-            username: username,
-            roles: Array.isArray(roles) ? roles : [roles] 
-          });
+
+          // Check token expiration
+          if (payload.exp * 1000 < Date.now()) {
+            logger.warn('Auth: Expired token found in storage.');
+            localStorage.removeItem('authToken');
+            setToken(null);
+            setUser(null);
+          } else {
+            setToken(storedToken);
+            const roles = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role || [];
+            const email = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || payload.email || '';
+            const username = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || payload.unique_name || payload.name || '';
+            
+            setUser({ 
+              email: email, 
+              username: username,
+              roles: Array.isArray(roles) ? roles : [roles] 
+            });
+          }
         } catch (e) {
           console.error("Failed to decode token", e);
           localStorage.removeItem('authToken');
+          setToken(null);
+          setUser(null);
         }
       }
     }

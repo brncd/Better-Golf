@@ -83,7 +83,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                 <Trophy className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="text-lg font-semibold text-sidebar-foreground">Golf Tournament Pro</span>
+              <span className="text-lg font-semibold text-sidebar-foreground">Better Golf</span>
             </div>
           </div>
           <nav className="flex flex-1 flex-col">
@@ -114,7 +114,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                     <Trophy className="h-5 w-5 text-primary-foreground" />
                   </div>
-                  <span className="text-lg font-semibold text-sidebar-foreground">Golf Tournament Pro</span>
+                  <span className="text-lg font-semibold text-sidebar-foreground">Better Golf</span>
                 </div>
               </div>
               <nav className="flex flex-1 flex-col px-6 pb-4">
@@ -134,7 +134,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Trophy className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-lg font-semibold text-sidebar-foreground">Golf Tournament Pro</span>
+          <span className="text-lg font-semibold text-sidebar-foreground">Better Golf</span>
         </div>
       </div>
 

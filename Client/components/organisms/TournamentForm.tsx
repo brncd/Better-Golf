@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,67 +8,50 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { courseService } from "@/lib/services"
-import type { TournamentPostDTO, CoursesListGetDTO } from "@/types"
+import type { RoundInfo } from "@/types"
+import { TournamentType } from "@/types"
+
+// This interface represents the form's state, not the final DTO
+export interface TournamentFormState {
+  name: string;
+  description: string;
+  tournamentType: TournamentType;
+  startDate: string;
+  endDate: string;
+  handicapAllowance: number;
+}
 
 interface TournamentFormProps {
-  initialData?: Partial<TournamentPostDTO>
-  onSubmit: (data: TournamentPostDTO) => void
+  // Let the form accept a partial state for initialization
+  initialData?: Partial<TournamentFormState>
+  onSubmit: (data: TournamentFormState) => void
   onCancel: () => void
   isLoading?: boolean
   error?: string | null
 }
 
 export function TournamentForm({ initialData, onSubmit, onCancel, isLoading, error }: TournamentFormProps) {
-  const [courses, setCourses] = useState<CoursesListGetDTO[]>([]);
-  const [formData, setFormData] = useState<TournamentPostDTO>({
+  const [formData, setFormData] = useState<TournamentFormState>({
     name: initialData?.name || "",
     description: initialData?.description || "",
-    type: initialData?.type || "StrokePlay",
+    tournamentType: initialData?.tournamentType || TournamentType.MedalPlay,
     startDate: initialData?.startDate || "",
     endDate: initialData?.endDate || "",
-    courseId: initialData?.courseId || "",
-    maxPlayers: initialData?.maxPlayers || 0,
     handicapAllowance: initialData?.handicapAllowance || 100,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const response = await courseService.getAll({ pageNumber: 1, pageSize: 100 });
-        setCourses(response.items);
-      } catch (error) {
-        console.error("Failed to fetch courses:", error);
-      }
-    };
-    fetchCourses();
-  }, []);
+  
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
-
-    if (!formData.name.trim()) {
-      newErrors.name = "Tournament name is required"
-    }
-
-    if (!formData.startDate) {
-      newErrors.startDate = "Start date is required"
-    }
-
-    if (!formData.endDate) {
-      newErrors.endDate = "End date is required"
-    }
-
+    if (!formData.name.trim()) newErrors.name = "Tournament name is required"
+    if (!formData.startDate) newErrors.startDate = "Start date is required"
+    if (!formData.endDate) newErrors.endDate = "End date is required"
     if (formData.startDate && formData.endDate && formData.startDate > formData.endDate) {
       newErrors.endDate = "End date must be after start date"
     }
-
-    if (!formData.courseId) {
-      newErrors.courseId = "Course selection is required"
-    }
-
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -77,11 +59,12 @@ export function TournamentForm({ initialData, onSubmit, onCancel, isLoading, err
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (validateForm()) {
-      onSubmit(formData)
+      // Pass the raw form state up to the parent page component
+      onSubmit(formData);
     }
   }
 
-  const updateField = (field: keyof TournamentPostDTO, value: any) => {
+  const updateField = (field: keyof TournamentFormState, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }))
@@ -114,15 +97,15 @@ export function TournamentForm({ initialData, onSubmit, onCancel, isLoading, err
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="type">Tournament Type *</Label>
-              <Select value={formData.type} onValueChange={(value) => updateField("type", value)}>
+              <Label htmlFor="tournamentType">Tournament Type *</Label>
+              <Select value={formData.tournamentType} onValueChange={(value: TournamentType) => updateField("tournamentType", value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select tournament type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="StrokePlay">Stroke Play</SelectItem>
-                  <SelectItem value="MatchPlay">Match Play</SelectItem>
-                  <SelectItem value="Stableford">Stableford</SelectItem>
+                  <SelectItem value={TournamentType.MedalPlay}>Stroke Play</SelectItem>
+                  <SelectItem value={TournamentType.MatchPlay}>Match Play</SelectItem>
+                  <SelectItem value={TournamentType.Stableford}>Stableford</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -172,22 +155,7 @@ export function TournamentForm({ initialData, onSubmit, onCancel, isLoading, err
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="courseId">Course *</Label>
-            <Select value={formData.courseId} onValueChange={(value) => updateField("courseId", value)}>
-              <SelectTrigger className={errors.courseId ? "border-destructive" : ""}>
-                <SelectValue placeholder="Select a course" />
-              </SelectTrigger>
-              <SelectContent>
-                {courses.map((course) => (
-                  <SelectItem key={course.id} value={course.id.toString()}>
-                    {course.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.courseId && <p className="text-sm text-destructive">{errors.courseId}</p>}
-          </div>
+          
         </CardContent>
       </Card>
 
@@ -197,20 +165,6 @@ export function TournamentForm({ initialData, onSubmit, onCancel, isLoading, err
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="maxPlayers">Maximum Players</Label>
-              <Input
-                id="maxPlayers"
-                type="number"
-                value={formData.maxPlayers || ""}
-                onChange={(e) =>
-                  updateField("maxPlayers", e.target.value ? Number.parseInt(e.target.value) : 0)
-                }
-                placeholder="Enter max players"
-                min="1"
-              />
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="handicapAllowance">Handicap Allowance (%)</Label>
               <Input

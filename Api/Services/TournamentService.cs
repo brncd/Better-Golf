@@ -51,33 +51,75 @@ namespace Api.Services
 
         public async Task<SingleTournamentDTO> CreateTournamentAsync(TournamentPostDTO tournamentDto)
         {
-            var tournament = new Tournament(tournamentDto)
+            try
             {
-                Status = TournamentStatus.Draft // Set initial status to Draft
-            };
-            
-            _db.Tournaments.Add(tournament);
-            await _db.SaveChangesAsync();
-            _logger.LogInformation($"Tournament {tournament.Id} created.");
-            return new SingleTournamentDTO(tournament);
+                // Validate dates
+                if (tournamentDto.EndDate <= tournamentDto.StartDate)
+                {
+                    throw new ArgumentException("End date must be after start date");
+                }
+                
+                if (tournamentDto.StartDate < DateOnly.FromDateTime(DateTime.Today))
+                {
+                    throw new ArgumentException("Start date cannot be in the past");
+                }
+
+                // Always create a new default RoundInfo for new tournaments
+                var roundInfo = new RoundInfo(
+                    interval: 10,           // Default 10 minutes between tee times
+                    firstRoundTime: 480,    // Default 8:00 AM (480 minutes from midnight)
+                    isShotgun: false        // Default no shotgun start
+                );
+                
+                _db.RoundInfos.Add(roundInfo);
+                await _db.SaveChangesAsync();
+
+                var tournament = new Tournament(tournamentDto)
+                {
+                    Status = TournamentStatus.Draft, // Set initial status to Draft
+                    RoundInfo = roundInfo
+                };
+                
+                _db.Tournaments.Add(tournament);
+                await _db.SaveChangesAsync();
+                _logger.LogInformation($"Tournament {tournament.Id} '{tournament.Name}' created successfully.");
+                return new SingleTournamentDTO(tournament);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error creating tournament: {ex.Message}");
+                throw;
+            }
         }
 
         public async Task<Result<bool>> UpdateTournamentAsync(int id, TournamentPostDTO tournamentDto)
         {
-            var tournament = await _db.Tournaments.FindAsync(id);
-            if (tournament == null) return Result<bool>.Failure(new Error("TournamentNotFound", "Tournament not found."));
+            try
+            {
+                var existingTournament = await _db.Tournaments.FindAsync(id);
+                if (existingTournament == null) return Result<bool>.Failure(new Error("TournamentNotFound", "Tournament not found."));
 
-            tournament.Name = tournamentDto.Name;
-            tournament.Description = tournamentDto.Description;
-            tournament.TournamentType = tournamentDto.TournamentType;
-            tournament.StartDate = tournamentDto.StartDate;
-            tournament.EndDate = tournamentDto.EndDate;
-            tournament.RoundInfo = tournamentDto.RoundInfo;
-            tournament.HandicapAllowance = tournamentDto.HandicapAllowance ?? 1.0;
+                if (tournamentDto.EndDate <= tournamentDto.StartDate)
+                {
+                    return Result<bool>.Failure(new Error("InvalidDates", "End date must be after start date"));
+                }
 
-            await _db.SaveChangesAsync();
-            _logger.LogInformation($"Tournament {id} updated.");
-            return Result<bool>.Success(true);
+                existingTournament.Name = tournamentDto.Name;
+                existingTournament.TournamentType = tournamentDto.TournamentType;
+                existingTournament.StartDate = tournamentDto.StartDate;
+                existingTournament.EndDate = tournamentDto.EndDate;
+                existingTournament.Description = tournamentDto.Description ?? string.Empty;
+                existingTournament.HandicapAllowance = tournamentDto.HandicapAllowance ?? 1.0;
+
+                await _db.SaveChangesAsync();
+                _logger.LogInformation($"Tournament {id} updated.");
+                return Result<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error updating tournament {id}: {ex.Message}");
+                return Result<bool>.Failure(new Error("UpdateFailed", "Failed to update tournament"));
+            }
         }
 
         public async Task<Result<bool>> SetTournamentStatusAsync(int id, TournamentStatus newStatus)
@@ -218,7 +260,7 @@ namespace Api.Services
                     if (!assignResult.IsSuccess)
                     {
                         await transaction.RollbackAsync();
-                        return Result<SinglePlayerDTO>.Failure(assignResult.Error);
+                        return Result<SinglePlayerDTO>.Failure(assignResult.Error ?? new Error("UnknownError", "An unknown error occurred during scorecard assignment."));
                     }
                 }
 

@@ -4,3 +4,4 @@ export { tournamentService } from './tournamentService';
 export { courseService } from './courseService';
 export { categoryService } from './categoryService';
 export { userService } from './userService';
+export { roundInfoService } from './roundInfoService';
