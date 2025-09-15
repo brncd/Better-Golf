@@ -20,7 +20,7 @@ import { GolfHoleIcon } from "@/components/icons/GolfHoleIcon"
 import { useAuth } from "@/context/AuthContext"
 import type { User as AuthUser } from "@/types"
 import { NavLink } from "./NavLink"
-import { ClientOnly } from "@/components/ClientOnly"
+import { ClientOnly } from "@/components/atoms/ClientOnly"
 import { UserNav } from "./UserNav"
 
 const navigation = [
@@ -35,16 +35,14 @@ const adminNavigation = { name: "Admin", href: "/admin", icon: Settings };
 
 interface MainLayoutProps {
   children: React.ReactNode;
-  user: AuthUser | null;
 }
 
-export function MainLayout({ children, user }: MainLayoutProps) {
+export function MainLayout({ children }: MainLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const { logout } = useAuth()
+  const { user, isAuthenticated, hasRole } = useAuth()
   const router = useRouter()
 
-  const isAuthenticated = !!user;
-  const isAdmin = user?.roles?.includes('Admin') ?? false;
+  const isAdmin = hasRole('Admin');
 
   const NavItems = ({ mobile = false }: { mobile?: boolean }) => (
     <>
@@ -59,17 +57,19 @@ export function MainLayout({ children, user }: MainLayoutProps) {
           {item.name}
         </NavLink>
       ))}
-      {isAdmin && (
-        <NavLink
-          key={adminNavigation.name}
-          href={adminNavigation.href}
-          icon={adminNavigation.icon}
-          onClick={() => mobile && setIsMobileMenuOpen(false)}
-          className={mobile ? "text-base py-3" : ""}
-        >
-          {adminNavigation.name}
-        </NavLink>
-      )}
+      <ClientOnly>
+        {isAdmin && (
+          <NavLink
+            key={adminNavigation.name}
+            href={adminNavigation.href}
+            icon={adminNavigation.icon}
+            onClick={() => mobile && setIsMobileMenuOpen(false)}
+            className={mobile ? "text-base py-3" : ""}
+          >
+            {adminNavigation.name}
+          </NavLink>
+        )}
+      </ClientOnly>
     </>
   )
 

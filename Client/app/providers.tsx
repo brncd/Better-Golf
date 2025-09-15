@@ -7,14 +7,13 @@ import type { User } from "@/types"
 
 interface ProvidersProps {
   children: React.ReactNode
-  initialUser?: User | null
 }
 
-export function Providers({ children, initialUser }: ProvidersProps) {
+export function Providers({ children }: ProvidersProps) {
   return (
     <ErrorBoundary>
       <QueryProvider>
-        <AuthProvider initialUser={initialUser}>
+        <AuthProvider>
           {children}
         </AuthProvider>
       </QueryProvider>

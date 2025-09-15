@@ -2,12 +2,14 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { User } from '@/types';
+import { User, LoginRequest, RegisterRequest, AuthResponse } from '@/types';
+import { authService } from '@/lib/authService';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (credentials: { emailOrUsername: string; password: string }) => Promise<any>;
+  login: (credentials: LoginRequest) => Promise<AuthResponse>;
+  register: (userData: RegisterRequest) => Promise<AuthResponse>;
   logout: () => void;
   loading: boolean;
   hasRole: (role: string) => boolean;
@@ -18,84 +20,77 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
   children: React.ReactNode;
-  initialUser?: User | null;
 }
 
-export function AuthProvider({ children, initialUser = null }: AuthProviderProps) {
+export function AuthProvider({ children }: AuthProviderProps) {
   const queryClient = useQueryClient();
-  const [user, setUser] = useState<User | null>(initialUser);
-  const [loading, setLoading] = useState(initialUser === null);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Only fetch user data if we don't have initial user data from server
+  // Initialize user from stored JWT token
   useEffect(() => {
-    if (initialUser === null) {
-      fetch('/api/auth/me', {
-        credentials: 'include',
-      })
-        .then(async (response) => {
-          if (response.ok) {
-            const data = await response.json();
-            setUser(data.user);
-          } else {
-            setUser(null);
-          }
-        })
-        .catch(() => {
+    const initializeAuth = () => {
+      if (authService.isAuthenticated()) {
+        const userData = authService.getUserFromToken();
+        if (userData) {
+          setUser(userData);
+        } else {
+          // Invalid token, clear it
+          authService.logout();
           setUser(null);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+        }
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    };
+
+    // Only run on client side
+    if (typeof window !== 'undefined') {
+      initializeAuth();
     } else {
-      // We have initial user data from server, no need to fetch
       setLoading(false);
     }
-  }, [initialUser]);
+  }, []);
 
   // Login mutation
   const loginMutation = useMutation({
-    mutationFn: async (credentials: { emailOrUsername: string; password: string }) => {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Login failed');
-      }
-
-      return response.json();
+    mutationFn: async (credentials: LoginRequest) => {
+      const response = await authService.login(credentials);
+      return response;
     },
-    onSuccess: async () => {
-      // Fetch updated user data
-      const response = await fetch('/api/auth/me', {
-        credentials: 'include',
+    onSuccess: (response) => {
+      // Set user data from response
+      setUser({
+        email: response.email,
+        username: response.username,
+        roles: response.roles
       });
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-      }
     },
   });
 
-  // Logout mutation
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
+  // Register mutation
+  const registerMutation = useMutation({
+    mutationFn: async (userData: RegisterRequest) => {
+      const response = await authService.register(userData);
+      return response;
+    },
+    onSuccess: (response) => {
+      // Set user data from response
+      setUser({
+        email: response.email,
+        username: response.username,
+        roles: response.roles
       });
     },
-    onSuccess: () => {
-      setUser(null);
-      queryClient.clear();
-    },
   });
+
+  // Logout function
+  const logout = () => {
+    authService.logout();
+    setUser(null);
+    queryClient.clear();
+  };
 
   const hasRole = (role: string): boolean => {
     return user?.roles?.includes(role) ?? false;
@@ -109,7 +104,8 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
     user,
     isAuthenticated: !!user,
     login: loginMutation.mutateAsync,
-    logout: () => logoutMutation.mutate(),
+    register: registerMutation.mutateAsync,
+    logout,
     loading,
     hasRole,
     isAdmin,

@@ -1,14 +1,27 @@
-import { redirect } from 'next/navigation';
-import { getSession } from '@/lib/session';
+"use client"
 
-export default async function HomePage() {
-  const session = await getSession();
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { LoadingSpinner } from '@/components/atoms/LoadingSpinner';
 
-  if (session) {
-    redirect('/dashboard');
-  } else {
-    redirect('/login');
-  }
+export default function HomePage() {
+  const { isAuthenticated, loading } = useAuth();
+  const router = useRouter();
 
-  return null;
+  useEffect(() => {
+    if (!loading) {
+      if (isAuthenticated) {
+        router.push('/dashboard');
+      } else {
+        router.push('/login');
+      }
+    }
+  }, [isAuthenticated, loading, router]);
+
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <LoadingSpinner size="lg" />
+    </div>
+  );
 }

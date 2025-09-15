@@ -14,12 +14,17 @@ class ApiService {
       headers: {
         "Content-Type": "application/json",
       },
-      withCredentials: true, // Include cookies in requests
     })
 
-    // Request interceptor for logging
+    // Request interceptor for logging and auth
     this.client.interceptors.request.use(
       (config) => {
+        // Add JWT token to Authorization header
+        const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`
+        }
+        
         logger.apiRequest(
           config.method?.toUpperCase() || 'UNKNOWN',
           config.url || 'unknown',
@@ -51,7 +56,9 @@ class ApiService {
         if (error.response?.status === 401) {
           // Handle unauthorized access (only on client side)
           if (typeof window !== 'undefined') {
-            logger.authFailure('Session expired or invalid', error)
+            logger.authFailure('Token expired or invalid', error)
+            // Clear invalid token
+            localStorage.removeItem('authToken')
             navigationService.redirectToLogin()
           }
         }

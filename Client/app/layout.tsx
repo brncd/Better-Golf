@@ -4,7 +4,6 @@ import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { config, validateConfig } from "@/lib/config"
-import { getSession } from "@/lib/auth-server"
 import { Providers } from "./providers"
 import "./globals.css"
 
@@ -29,17 +28,15 @@ export const metadata: Metadata = {
   },
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const initialUser = await getSession();
-
   return (
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Providers initialUser={initialUser}>
+        <Providers>
           {children}
         </Providers>
         <Analytics />

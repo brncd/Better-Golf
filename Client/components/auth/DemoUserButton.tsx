@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { authClient } from "@/lib/authService"
+import { authService } from "@/lib/authService"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
 import { Users, Trophy, Target, Calendar } from "lucide-react"
 import { AuthResponse } from "@/types"
@@ -33,13 +33,14 @@ export function DemoUserButton({ className }: DemoUserButtonProps) {
         password: "Demo123!"
       })
 
-      // Seed demo data using cookies for authentication
+      // Seed demo data using Authorization header
+      const token = authService.getStoredToken()
       const response = await fetch(`${config.api.baseUrl}/api/seed-demo-data`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include' // Include cookies
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       })
 
       // Redirect to dashboard regardless of seeding result
@@ -47,7 +48,7 @@ export function DemoUserButton({ className }: DemoUserButtonProps) {
     } catch (err) {
       // If login fails, try to register first
       try {
-        await authClient.register({
+        await authService.register({
           username: "demo",
           email: "demo@bettergolf.com",
           password: "Demo123!"
@@ -59,13 +60,14 @@ export function DemoUserButton({ className }: DemoUserButtonProps) {
           password: "Demo123!"
         })
 
-        // Seed demo data using cookies for authentication
+        // Seed demo data using Authorization header
+        const token = authService.getStoredToken()
         const response = await fetch(`${config.api.baseUrl}/api/seed-demo-data`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include' // Include cookies
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
         })
 
         router.push('/dashboard')
