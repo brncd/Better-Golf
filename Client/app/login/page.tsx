@@ -2,15 +2,16 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { MainLayout } from "@/components/layouts/MainLayout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/context/AuthContext"
 import { DemoUserButton } from "@/components/DemoUserButton"
+import Link from "next/link"
+import { GolfHoleIcon } from "@/components/icons/GolfHoleIcon"
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [emailOrUsername, setEmailOrUsername] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -19,12 +20,11 @@ export default function LoginPage() {
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     setIsLoading(true)
     setError(null)
     try {
       await login({ emailOrUsername, password })
-      router.push("/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred")
     } finally {
@@ -38,49 +38,76 @@ export default function LoginPage() {
   }
 
   return (
-    <MainLayout>
-      <div className="flex justify-center items-center py-12">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-2xl text-center">Login</CardTitle>
-          </CardHeader>
-          <CardContent>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50 p-4" suppressHydrationWarning>
+      <div className="w-full max-w-md space-y-8" suppressHydrationWarning>
+        <div className="text-center">
+          <div className="flex justify-center mb-4">
+            <GolfHoleIcon className="h-12 w-12 text-green-600" />
+          </div>
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900">Better Golf</h2>
+          <p className="mt-2 text-sm text-gray-600">Sign in to your account</p>
+        </div>
+
+        <Card className="p-6" suppressHydrationWarning>
+          <CardContent className="space-y-4" suppressHydrationWarning>
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                {error}
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="emailOrUsername">Email or Username</Label>
                 <Input
                   id="emailOrUsername"
                   type="text"
-                  placeholder="email@example.com or username"
-                  required
                   value={emailOrUsername}
                   onChange={(e) => setEmailOrUsername(e.target.value)}
+                  required
+                  autoComplete="username"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  required 
+                <Input
+                  id="password"
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
                 />
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Login"}
+              <Button type="submit" className="w-full" disabled={isLoading} suppressHydrationWarning>
+                {isLoading ? "Signing in..." : "Sign In"}
               </Button>
-              <div className="mt-4 pt-4 border-t">
-                <p className="text-sm text-muted-foreground text-center mb-2">
-                  Or try the demo:
-                </p>
-                <DemoUserButton onFillDemoCredentials={handleFillDemoCredentials} />
-              </div>
             </form>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or</span>
+              </div>
+            </div>
+
+            <DemoUserButton onFillDemoCredentials={handleFillDemoCredentials} />
+
+            <div className="text-center text-sm">
+              <span className="text-gray-600">Don't have an account? </span>
+              <Link href="/register" className="font-medium text-green-600 hover:text-green-500">
+                Sign up
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>
-    </MainLayout>
+    </div>
   )
+}
+
+export default function LoginPage() {
+  return <LoginPageContent />
 }

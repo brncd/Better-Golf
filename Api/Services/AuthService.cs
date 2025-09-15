@@ -34,6 +34,13 @@ namespace Api.Services
                 return null;
 
             var roles = await _userManager.GetRolesAsync(user);
+
+            // If user has no roles, assign Player role by default to fix existing accounts
+            if (roles.Count == 0)
+            {
+                await _userManager.AddToRoleAsync(user, "Player");
+                roles.Add("Player");
+            }
             var token = GenerateJwtToken(user, roles);
 
             return new LoginResponseDTO

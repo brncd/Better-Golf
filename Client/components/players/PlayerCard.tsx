@@ -11,7 +11,7 @@ import type { PlayerListGetDTO } from '@/types';
 interface PlayerCardProps {
   player: PlayerListGetDTO;
   onEdit: (player: PlayerListGetDTO) => void;
-  onDelete: (playerId: string) => void;
+  onDelete: (playerId: number) => void;
 }
 
 export function PlayerCard({ player, onEdit, onDelete }: PlayerCardProps) {
@@ -95,7 +95,7 @@ export function PlayerCard({ player, onEdit, onDelete }: PlayerCardProps) {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => onDelete(player.id.toString())}
+              onClick={() => onDelete(player.id)}
               className="flex-1"
             >
               <Trash2 className="w-4 h-4 mr-2" />

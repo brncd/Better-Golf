@@ -37,7 +37,11 @@ export const tournamentService = {
 
   // Set tournament status (TournamentOrganizer/Admin) - Fixed: Tournament ID is number
   setStatus: (id: number, status: string): Promise<void> =>
-    apiClient.put(`/api/Tournaments/${id}/status`, status),
+    apiClient.put(`/api/Tournaments/${id}/status`, { status }),
+
+  // Generate scorecards for all registered players when tournament starts
+  generateScorecards: (id: number): Promise<void> =>
+    apiClient.post(`/api/Tournaments/${id}/generate-scorecards`, {}),
 
   // Register current user to tournament (Player) - Fixed: Tournament ID is number
   register: (tournamentId: number): Promise<any> =>
@@ -102,7 +106,15 @@ export const tournamentService = {
   getCompleted: (): Promise<TournamentListGetDTO[]> =>
     apiClient.get('/api/Tournaments/Completed'),
 
-  // Calculate tournament results (TournamentOrganizer/Admin) - Fixed: Tournament ID is number
+  // Get tournament rankings
+  getRankings: (id: number): Promise<TournamentRankingDTO[]> =>
+    apiClient.get(`/api/Tournaments/${id}/rankings`),
+
+  // Calculate tournament results (TournamentOrganizer/Admin)
   calculateResults: (id: number): Promise<TournamentRankingDTO[]> =>
     apiClient.post(`/api/Tournaments/${id}/CalculateResults`, {}),
+
+  // Get tournament rounds
+  getRounds: (id: number): Promise<any> =>
+    apiClient.get(`/api/tournaments/${id}/rounds`),
 };

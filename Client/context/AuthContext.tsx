@@ -1,134 +1,122 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authClient } from '@/lib/authService';
-import { logger } from '@/lib/logger';
-import { useErrorHandler } from '@/hooks/useErrorHandler';
-import type { User, AuthResponse, LoginRequest } from '@/types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { User } from '@/types';
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
-  login: (credentials: LoginRequest) => Promise<{ user: User; token: string }>;
-  logout: () => void;
   isAuthenticated: boolean;
+  login: (credentials: { emailOrUsername: string; password: string }) => Promise<any>;
+  logout: () => void;
   loading: boolean;
-  error: string | null;
   hasRole: (role: string) => boolean;
   isAdmin: () => boolean;
-  isTournamentOrganizer: () => boolean;
-  isPlayer: () => boolean;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface AuthProviderProps {
+  children: React.ReactNode;
+  initialUser?: User | null;
+}
 
+export function AuthProvider({ children, initialUser = null }: AuthProviderProps) {
+  const queryClient = useQueryClient();
+  const [user, setUser] = useState<User | null>(initialUser);
+  const [loading, setLoading] = useState(initialUser === null);
+
+  // Only fetch user data if we don't have initial user data from server
   useEffect(() => {
-    // Only run on client side
-    if (typeof window !== 'undefined') {
-      const storedToken = localStorage.getItem('authToken');
-      if (storedToken) {
-        try {
-          const payload = JSON.parse(atob(storedToken.split('.')[1]));
-
-          // Check token expiration
-          if (payload.exp * 1000 < Date.now()) {
-            logger.warn('Auth: Expired token found in storage.');
-            localStorage.removeItem('authToken');
-            setToken(null);
-            setUser(null);
+    if (initialUser === null) {
+      fetch('/api/auth/me', {
+        credentials: 'include',
+      })
+        .then(async (response) => {
+          if (response.ok) {
+            const data = await response.json();
+            setUser(data.user);
           } else {
-            setToken(storedToken);
-            const roles = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role || [];
-            const email = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || payload.email || '';
-            const username = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || payload.unique_name || payload.name || '';
-            
-            setUser({ 
-              email: email, 
-              username: username,
-              roles: Array.isArray(roles) ? roles : [roles] 
-            });
+            setUser(null);
           }
-        } catch (e) {
-          console.error("Failed to decode token", e);
-          localStorage.removeItem('authToken');
-          setToken(null);
+        })
+        .catch(() => {
           setUser(null);
-        }
-      }
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      // We have initial user data from server, no need to fetch
+      setLoading(false);
     }
-    setIsLoading(false);
-  }, []);
+  }, [initialUser]);
 
-  const login = async (credentials: LoginRequest): Promise<{ user: User; token: string }> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await authClient.login<AuthResponse>(credentials);
-      const newToken = response.token;
-      
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('authToken', newToken);
-      }
-      setToken(newToken);
-      
-      const userData = { 
-        email: response.email, 
-        username: response.username,
-        roles: response.roles || [] 
-      };
-      
-      setUser(userData);
-      
-      // Return user data and token directly
-      return { user: userData, token: newToken };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Login failed';
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Login mutation
+  const loginMutation = useMutation({
+    mutationFn: async (credentials: { emailOrUsername: string; password: string }) => {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentials),
+        credentials: 'include',
+      });
 
-  const logout = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('authToken');
-    }
-    setUser(null);
-    setToken(null);
-    setError(null);
-    logger.authSuccess('User logged out');
-  };
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Login failed');
+      }
+
+      return response.json();
+    },
+    onSuccess: async () => {
+      // Fetch updated user data
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+      }
+    },
+  });
+
+  // Logout mutation
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    },
+    onSuccess: () => {
+      setUser(null);
+      queryClient.clear();
+    },
+  });
 
   const hasRole = (role: string): boolean => {
-    if (!user || !user.roles) return false;
-    return Array.isArray(user.roles) ? user.roles.includes(role) : user.roles === role;
+    return user?.roles?.includes(role) ?? false;
   };
 
-  const isAdmin = (): boolean => hasRole('Admin');
-  const isTournamentOrganizer = (): boolean => hasRole('TournamentOrganizer');
-  const isPlayer = (): boolean => hasRole('Player');
+  const isAdmin = (): boolean => {
+    return hasRole('Admin');
+  };
+
+  const value: AuthContextType = {
+    user,
+    isAuthenticated: !!user,
+    login: loginMutation.mutateAsync,
+    logout: () => logoutMutation.mutate(),
+    loading,
+    hasRole,
+    isAdmin,
+  };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      token, 
-      login, 
-      logout, 
-      isAuthenticated: !!user,
-      loading: isLoading, 
-      error,
-      hasRole,
-      isAdmin,
-      isTournamentOrganizer,
-      isPlayer
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

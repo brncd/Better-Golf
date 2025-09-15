@@ -122,8 +122,8 @@ namespace Api.Services
             var player = category.Players?.FirstOrDefault(p => p.Id == playerId);
             if (player == null) return Result<bool>.Failure(new Error("PlayerNotFound", "Player not found in category."));
 
-            category.Players.Remove(player);
-            category.Count = category.Players.Count;
+            category.Players?.Remove(player);
+            category.Count = category.Players?.Count ?? 0;
             await _db.SaveChangesAsync();
             _logger.LogInformation($"Player {playerId} removed from category {categoryId}.");
             return Result<bool>.Success(true);

@@ -99,6 +99,8 @@ namespace Api.Services
                     roundInfo = new RoundInfo(
                         interval: tournamentDto.RoundInfo.IntervalMinutes,
                         firstRoundTime: startTime.Hour * 60 + startTime.Minute, // Convert to minutes from midnight
+                        endTime: endTime.Hour * 60 + endTime.Minute,
+                        maxPlayersPerGroup: tournamentDto.RoundInfo.MaxPlayersPerGroup,
                         isShotgun: false
                     );
                 }
@@ -108,6 +110,8 @@ namespace Api.Services
                     roundInfo = new RoundInfo(
                         interval: 10,           // Default 10 minutes between tee times
                         firstRoundTime: 480,    // Default 8:00 AM (480 minutes from midnight)
+                        endTime: 960,           // Default 4:00 PM (960 minutes from midnight)
+                        maxPlayersPerGroup: 4,  // Default 4 players per group
                         isShotgun: false        // Default no shotgun start
                     );
                 }
@@ -118,7 +122,7 @@ namespace Api.Services
                 var tournament = new Tournament
                 {
                     Name = tournamentDto.Name,
-                    Description = tournamentDto.Description,
+                    Description = tournamentDto.Description ?? string.Empty,
                     TournamentType = tournamentType,
                     StartDate = startDate,
                     EndDate = endDate,
@@ -174,6 +178,20 @@ namespace Api.Services
                 existingTournament.EndDate = endDate;
                 existingTournament.Description = tournamentDto.Description ?? string.Empty;
                 existingTournament.HandicapAllowance = tournamentDto.HandicapAllowance ?? 1.0;
+
+                if (tournamentDto.RoundInfo != null && existingTournament.RoundInfo != null)
+                {
+                    if (TimeOnly.TryParse(tournamentDto.RoundInfo.StartTime, out var startTime))
+                    {
+                        existingTournament.RoundInfo.FirstRoundTime = startTime.Hour * 60 + startTime.Minute;
+                    }
+                    if (TimeOnly.TryParse(tournamentDto.RoundInfo.EndTime, out var endTime))
+                    {
+                        existingTournament.RoundInfo.EndTime = endTime.Hour * 60 + endTime.Minute;
+                    }
+                    existingTournament.RoundInfo.Interval = tournamentDto.RoundInfo.IntervalMinutes;
+                    existingTournament.RoundInfo.MaxPlayersPerGroup = tournamentDto.RoundInfo.MaxPlayersPerGroup;
+                }
 
                 await _db.SaveChangesAsync();
                 _logger.LogInformation($"Tournament {id} updated.");
@@ -318,7 +336,7 @@ namespace Api.Services
 
                 // Assign Scorecard for each category the player was assigned to
                 var defaultCourse = await _courseService.GetDefaultCourse();
-                foreach (var category in tournament.Categories.Where(c => c.Players.Any(p => p.Id == player.Id)))
+                foreach (var category in tournament.Categories.Where(c => c.Players != null && c.Players.Any(p => p.Id == player.Id)))
                 {
                     var assignResult = AssignScorecardToPlayer(player, category, defaultCourse, tournament);
                     if (!assignResult.IsSuccess)
@@ -477,6 +495,89 @@ namespace Api.Services
         public async Task<List<TournamentRankingDTO>> CalculateTournamentResultsAsync(int tournamentId)
         {
             return await _resultService.GenerateTournamentRankingAsync(tournamentId);
+        }
+
+        public async Task<Result<bool>> GenerateScorecardsForTournamentAsync(int tournamentId)
+        {
+            using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                var tournament = await _db.Tournaments
+                    .Include(t => t.Categories)
+                        .ThenInclude(c => c.Players)
+                    .Include(t => t.Categories)
+                        .ThenInclude(c => c.OpenCourse!)
+                            .ThenInclude(c => c.Holes)
+                    .Include(t => t.Categories)
+                        .ThenInclude(c => c.LadiesCourse!)
+                            .ThenInclude(c => c.Holes)
+                    .Include(t => t.Scorecards)
+                    .FirstOrDefaultAsync(t => t.Id == tournamentId);
+
+                if (tournament == null)
+                {
+                    return Result<bool>.Failure(new Error("TournamentNotFound", "Tournament not found."));
+                }
+
+                if (tournament.Status != TournamentStatus.OpenRegistration)
+                {
+                    return Result<bool>.Failure(new Error("InvalidTournamentStatus", "Scorecards can only be generated for tournaments in OpenRegistration status."));
+                }
+
+                // Get all registered players for this tournament
+                var registeredPlayers = tournament.Categories
+                    .Where(c => c.Players != null)
+                    .SelectMany(c => c.Players!)
+                    .Distinct()
+                    .ToList();
+
+                if (!registeredPlayers.Any())
+                {
+                    return Result<bool>.Failure(new Error("NoPlayersRegistered", "No players are registered for this tournament."));
+                }
+
+                var defaultCourse = await _courseService.GetDefaultCourse();
+                if (defaultCourse == null)
+                {
+                    return Result<bool>.Failure(new Error("DefaultCourseNotFound", "Default course not found."));
+                }
+
+                // Generate scorecards for each registered player
+                foreach (var player in registeredPlayers)
+                {
+                    // Skip if player already has a scorecard for this tournament
+                    if (tournament.Scorecards.Any(s => s.PlayerId == player.Id))
+                    {
+                        _logger.LogInformation($"Player {player.Id} already has a scorecard for tournament {tournamentId}");
+                        continue;
+                    }
+
+                    // Find the categories this player is registered in for this tournament
+                    var playerCategories = tournament.Categories.Where(c => c.Players != null && c.Players.Any(p => p.Id == player.Id));
+
+                    foreach (var category in playerCategories)
+                    {
+                        var assignResult = AssignScorecardToPlayer(player, category, defaultCourse, tournament);
+                        if (!assignResult.IsSuccess)
+                        {
+                            await transaction.RollbackAsync();
+                            return Result<bool>.Failure(assignResult.Error ?? new Error("UnknownError", "An unknown error occurred during scorecard assignment."));
+                        }
+                    }
+                }
+
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                _logger.LogInformation($"Successfully generated scorecards for {registeredPlayers.Count} players in tournament {tournamentId}");
+                return Result<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, $"Error generating scorecards for tournament {tournamentId}");
+                return Result<bool>.Failure(new Error("ScorecardGenerationFailed", "Failed to generate scorecards for tournament."));
+            }
         }
     }
 }

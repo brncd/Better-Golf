@@ -4,6 +4,13 @@
 
 The Better Golf client uses a comprehensive type synchronization approach with TanStack Query integration to ensure type safety and consistency between the client and API. The application has evolved beyond the initial automated generation concept to a robust, production-ready implementation.
 
+### Dashboard Integration Status
+✅ **REAL API INTEGRATION**: Dashboard now uses actual API endpoints instead of placeholder data:
+- Removed `Math.random()` fallbacks and placeholder calculations
+- Integrated with `/api/dashboard/stats` and `/api/dashboard/activity` endpoints
+- Proper fallback handling when API endpoints are unavailable
+- Consistent data presentation across all dashboard components
+
 ## Current Implementation
 
 ### 1. TanStack Query Integration
@@ -175,6 +182,11 @@ cat types/MIGRATION_GUIDE.md
 - Centralized service layer
 - Role-based authentication and authorization
 - Real-time data synchronization with intelligent caching
+- Dashboard with real API integration (no more placeholder data)
+
+⚠️ **PLACEHOLDER FUNCTIONALITY** (UI ready, API pending):
+- Match Play tournament brackets (components and hooks ready)
+- Tee Times detailed management (components and hooks ready)
 
 ## Future Enhancements
 

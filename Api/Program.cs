@@ -135,7 +135,8 @@ internal class Program
               {
                   builder.WithOrigins("http://localhost:3001") // Fixed: Changed from 3000 to 3001
                   .AllowAnyMethod()
-                  .AllowAnyHeader();
+                  .AllowAnyHeader()
+                  .AllowCredentials();
               });
         });
         
@@ -316,6 +317,25 @@ internal class Program
             return Results.NoContent();
         });
 
+        // New endpoint for generating scorecards for all tournament players
+        app.MapPost("/api/Tournaments/{id}/generate-scorecards", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] TournamentService service, int id) => {
+            var result = await service.GenerateScorecardsForTournamentAsync(id);
+            if (!result.IsSuccess)
+            {
+                if (result.Error == null) return Results.BadRequest("An unexpected error occurred.");
+                return result.Error.Code switch
+                {
+                    "TournamentNotFound" => Results.NotFound(result.Error.Description ?? "Tournament not found"),
+                    "InvalidTournamentStatus" => Results.BadRequest(result.Error.Description ?? "Invalid tournament status"),
+                    "NoPlayersRegistered" => Results.BadRequest(result.Error.Description ?? "No players registered"),
+                    "DefaultCourseNotFound" => Results.BadRequest(result.Error.Description ?? "Default course not found"),
+                    "ScorecardGenerationFailed" => Results.Problem(result.Error.Description ?? "Scorecard generation failed", statusCode: 500),
+                    _ => Results.BadRequest(result.Error.Description ?? "Bad request")
+                };
+            }
+            return Results.Ok(new { message = "Scorecards generated successfully" });
+        });
+
         app.MapDelete("/api/Tournaments/{id}", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] TournamentService service, int id) => {
             var result = await service.DeleteTournamentAsync(id);
             if (!result.IsSuccess)
@@ -440,6 +460,19 @@ internal class Program
             return Results.NoContent();
         });
 
+        app.MapGet("/api/tournaments/{id}/rounds", [Authorize(Policy = "PlayerPolicy")] async ([FromServices] RoundService service, int id) => {
+            var result = await service.GetTournamentRoundsAsync(id);
+            if (!result.IsSuccess)
+            {
+                return result.Error?.Code switch
+                {
+                    "TournamentNotFound" => Results.NotFound(result.Error?.Description ?? "Error occurred"),
+                    _ => Results.BadRequest(result.Error?.Description ?? "Error occurred")
+                };
+            }
+            return Results.Ok(result.Value);
+        });
+
         app.MapPost("/api/tournaments/{id}/rounds", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] RoundService service, int id) => {
             var result = await service.CreateRoundsForTournament(id);
             if (!result.IsSuccess)
@@ -500,6 +533,11 @@ internal class Program
 
         app.MapGet("/api/Tournaments/Active", async ([FromServices] TournamentService service) => Results.Ok(await service.GetActiveTournamentsAsync()));
         app.MapGet("/api/Tournaments/Completed", async ([FromServices] TournamentService service) => Results.Ok(await service.GetCompletedTournamentsAsync()));
+
+        app.MapGet("/api/Tournaments/{id}/rankings", [Authorize(Policy = "PlayerPolicy")] async ([FromServices] ResultService service, int id) => {
+            var rankings = await service.GetTournamentRankingAsync(id);
+            return Results.Ok(rankings);
+        });
 
         app.MapPost("/api/Tournaments/{id}/CalculateResults", [Authorize(Policy = "TournamentOrganizerPolicy")] async ([FromServices] TournamentService service, int id) => {
             var rankings = await service.CalculateTournamentResultsAsync(id);

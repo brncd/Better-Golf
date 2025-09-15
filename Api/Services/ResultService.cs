@@ -90,21 +90,26 @@ namespace Api.Services
 
         public async Task<List<TournamentRankingDTO>> GetTournamentRankingAsync(int tournamentId)
         {
-            return await _db.TournamentRankings.Where(ranking => ranking.TournamentId == tournamentId)
-                .OrderBy(r => r.Position)
-                .ThenBy(r => r.TotalStrokes)
-                .Select(r => new TournamentRankingDTO 
+            return await _db.TournamentRankings
+                .Where(ranking => ranking.TournamentId == tournamentId)
+                .Join(_db.Players, 
+                      ranking => ranking.PlayerId, 
+                      player => player.Id, 
+                      (ranking, player) => new { ranking, player })
+                .OrderBy(x => x.ranking.Position)
+                .ThenBy(x => x.ranking.TotalStrokes)
+                .Select(x => new TournamentRankingDTO
                 {
-                    PlayerId = r.PlayerId,
-                    PlayerName = "", // Will be populated by join if needed
-                    Position = r.Position,
-                    TotalStrokes = r.TotalStrokes,
-                    RoundsPlayed = 0, // Calculate if needed
-                    AverageStrokes = 0, // Calculate if needed
-                    Handicap = 0, // Get from player if needed
-                    StrokesBehindPrevious = 0,
-                    PercentileRank = 0,
-                    Quartile = 0
+                    PlayerId = x.ranking.PlayerId,
+                    PlayerName = x.player.Name + " " + x.player.LastName,
+                    Position = x.ranking.Position,
+                    TotalStrokes = x.ranking.TotalStrokes,
+                    RoundsPlayed = 0, // Placeholder
+                    AverageStrokes = 0, // Placeholder
+                    Handicap = (decimal)x.player.HandicapIndex, 
+                    StrokesBehindPrevious = 0, // Placeholder
+                    PercentileRank = 0, // Placeholder
+                    Quartile = 0 // Placeholder
                 })
                 .ToListAsync();
         }

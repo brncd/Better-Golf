@@ -1,5 +1,6 @@
 using Microsoft.Identity.Client;
 using Api.Models;
+using Api.Models.DTOs.RoundDTOs;
 
 namespace Api.Models.DTOs.TournamentDTOs;
 
@@ -13,6 +14,7 @@ public class SingleTournamentDTO
     public DateOnly StartDate { get; set; }
     public DateOnly EndDate { get; set; }
     public RoundInfo RoundInfo { get; set; } = null!;
+    public List<RoundDTO> Rounds { get; set; } = new();
 
     public SingleTournamentDTO(Tournament tournament)
     {
@@ -24,5 +26,9 @@ public class SingleTournamentDTO
         EndDate = tournament.EndDate;
         Description = tournament.Description;
         RoundInfo = tournament.RoundInfo;
+        if (tournament.Rounds != null)
+        {
+            Rounds = tournament.Rounds.Select(r => new RoundDTO(r)).ToList();
+        }
     }
 }

@@ -8,7 +8,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { RoundInfo } from "@/types"
+import { useCourses } from "@/hooks/useCourses"
+import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
+import type { RoundInfo, CoursesListGetDTO } from "@/types";
 import { TournamentType } from "@/types"
 
 // This interface represents the form's state, not the final DTO
@@ -16,6 +18,7 @@ export interface TournamentFormState {
   name: string;
   description: string;
   tournamentType: string;
+  courseId: number | null;
   startDate: string;
   endDate: string;
   handicapAllowance: number;
@@ -37,10 +40,14 @@ interface TournamentFormProps {
 }
 
 export function TournamentForm({ initialData, onSubmit, onCancel, isLoading, error }: TournamentFormProps) {
+  const { data: coursesResponse, isLoading: coursesLoading } = useCourses({ pageNumber: 1, pageSize: 100 })
+  const courses: CoursesListGetDTO[] = coursesResponse?.items || [];
+
   const [formData, setFormData] = useState<TournamentFormState>({
     name: initialData?.name || "",
     description: initialData?.description || "",
     tournamentType: initialData?.tournamentType || TournamentType.MedalPlay,
+    courseId: initialData?.courseId || null,
     startDate: initialData?.startDate || "",
     endDate: initialData?.endDate || "",
     handicapAllowance: initialData?.handicapAllowance || 100,
@@ -59,6 +66,7 @@ export function TournamentForm({ initialData, onSubmit, onCancel, isLoading, err
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
     if (!formData.name.trim()) newErrors.name = "Tournament name is required"
+    if (!formData.courseId) newErrors.courseId = "Course selection is required"
     if (!formData.startDate) newErrors.startDate = "Start date is required"
     if (!formData.endDate) newErrors.endDate = "End date is required"
     if (formData.startDate && formData.endDate && formData.startDate > formData.endDate) {
@@ -141,6 +149,33 @@ export function TournamentForm({ initialData, onSubmit, onCancel, isLoading, err
           <CardTitle>Schedule & Venue</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="courseId">Golf Course *</Label>
+            {coursesLoading ? (
+              <div className="flex items-center space-x-2">
+                <LoadingSpinner size="sm" />
+                <span className="text-sm text-muted-foreground">Loading courses...</span>
+              </div>
+            ) : (
+              <Select 
+                value={formData.courseId?.toString() || ""} 
+                onValueChange={(value) => updateField("courseId", value ? parseInt(value) : null)}
+              >
+                <SelectTrigger className={errors.courseId ? "border-destructive" : ""}>
+                  <SelectValue placeholder="Select a golf course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map((course: any) => (
+                    <SelectItem key={course.id} value={course.id.toString()}>
+                      {course.name} ({course.holes?.length || 18} holes)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {errors.courseId && <p className="text-sm text-destructive">{errors.courseId}</p>}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="startDate">Start Date *</Label>

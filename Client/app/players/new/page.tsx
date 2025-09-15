@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { MainLayout } from "@/components/layouts/MainLayout"
 import { PlayerForm } from "@/components/organisms/PlayerForm"
-import type { PLayerPostDTO } from "@/types"
+import type { PlayerPostDTO } from "@/types"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -13,7 +13,7 @@ export default function NewPlayerPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (data: PLayerPostDTO) => {
+  const handleSubmit = async (data: PlayerPostDTO) => {
     setIsLoading(true)
     try {
       const { playerService } = await import("@/lib/services")
@@ -45,8 +45,8 @@ export default function NewPlayerPage() {
         </div>
 
         <div>
-          <h1 className="text-3xl font-bold text-balance">Register New Player</h1>
-          <p className="text-muted-foreground">Add a new player to the golf club system</p>
+          <h1 className="text-3xl font-bold text-balance">Add New Player</h1>
+          <p className="text-muted-foreground">Register a new player in the system</p>
         </div>
 
         {/* Form */}

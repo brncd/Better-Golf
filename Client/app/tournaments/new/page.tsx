@@ -4,7 +4,6 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { MainLayout } from "@/components/layouts/MainLayout"
 import { TournamentForm, TournamentFormState } from "@/components/organisms/TournamentForm"
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { tournamentService } from "@/lib/services"
 import { useErrorHandler } from "@/hooks/useErrorHandler"
 import { getErrorMessage } from "@/lib/errors"
@@ -27,6 +26,7 @@ export default function NewTournamentPage() {
         name: data.name,
         description: data.description || "",
         tournamentType: data.tournamentType,
+        courseId: data.courseId!,
         startDate: data.startDate,
         endDate: data.endDate,
         roundInfo: {
@@ -58,28 +58,26 @@ export default function NewTournamentPage() {
   }
 
   return (
-    <ProtectedRoute requiredRole="TournamentOrganizer">
-      <MainLayout>
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/tournaments">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Tournaments
-              </Link>
-            </Button>
-          </div>
-
-          <div>
-            <h1 className="text-3xl font-bold text-balance">Create New Tournament</h1>
-            <p className="text-muted-foreground">Set up a new golf tournament with all the details</p>
-          </div>
-
-          {/* Form */}
-          <TournamentForm onSubmit={handleSubmit} onCancel={handleCancel} isLoading={isLoading} error={error} />
+    <MainLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/tournaments">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Tournaments
+            </Link>
+          </Button>
         </div>
-      </MainLayout>
-    </ProtectedRoute>
+
+        <div>
+          <h1 className="text-3xl font-bold text-balance">Create Tournament</h1>
+          <p className="text-muted-foreground">Set up a new golf tournament</p>
+        </div>
+
+        {/* Form */}
+        <TournamentForm onSubmit={handleSubmit} onCancel={handleCancel} isLoading={isLoading} error={error} />
+      </div>
+    </MainLayout>
   )
 }

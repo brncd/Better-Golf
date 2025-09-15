@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { tournamentService } from '@/lib/services/tournamentService';
+import { teeTimeService } from '@/lib/services/teeTimeService';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
 import { useToast } from '@/hooks/use-toast';
-import type { TeeTime, TeeTimeGeneration, TeeTimeAssignment } from '@/types/teeTime';
+import type { TeeTimeDTO, TeeTimeUpdateDTO } from '@/types';
 
 // Query Keys
 export const teeTimeKeys = {
@@ -12,10 +12,10 @@ export const teeTimeKeys = {
 };
 
 // Get tee times for a tournament
-export const useTeeTimes = (tournamentId: string) => {
-  return useQuery({
-    queryKey: teeTimeKeys.tournament(tournamentId),
-    queryFn: () => tournamentService.getTeeTimes(parseInt(tournamentId)),
+export const useTeeTimes = (tournamentId: number) => {
+  return useQuery<TeeTimeDTO[], Error>({
+    queryKey: teeTimeKeys.tournament(tournamentId.toString()),
+    queryFn: () => teeTimeService.getTeeTimes(tournamentId),
     enabled: !!tournamentId,
   });
 };
@@ -26,12 +26,10 @@ export const useGenerateTeeTimes = () => {
   const { handleError } = useErrorHandler({ context: 'useGenerateTeeTimes' });
   const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: (tournamentId: string) => tournamentService.generateTeeTimes(parseInt(tournamentId)),
+  return useMutation<TeeTimeDTO[], Error, number>({
+    mutationFn: (tournamentId: number) => teeTimeService.generateTeeTimes(tournamentId),
     onSuccess: (_, tournamentId) => {
-      // Invalidate tee times for this tournament
-      queryClient.invalidateQueries({ queryKey: teeTimeKeys.tournament(tournamentId) });
-      
+      queryClient.invalidateQueries({ queryKey: teeTimeKeys.tournament(tournamentId.toString()) });
       toast({
         title: "Tee Times Generated",
         description: "Tee times have been successfully generated for the tournament.",
@@ -48,44 +46,51 @@ export const useGenerateTeeTimes = () => {
   });
 };
 
+// Update player tee time mutation
+export const useUpdateTeeTime = () => {
+  const queryClient = useQueryClient();
+  const { handleError } = useErrorHandler({ context: 'useUpdateTeeTime' });
+  const { toast } = useToast();
+
+  return useMutation<TeeTimeDTO, Error, { tournamentId: number; roundId: number; playerId: number; update: TeeTimeUpdateDTO }>({
+    mutationFn: ({ roundId, playerId, update }) => 
+      teeTimeService.updateTeeTime(roundId, playerId, update),
+    onSuccess: (_, { tournamentId }) => {
+      queryClient.invalidateQueries({ queryKey: teeTimeKeys.tournament(tournamentId.toString()) });
+      toast({ title: "Success", description: "Tee time updated successfully." });
+    },
+    onError: (error) => {
+      handleError(error, 'Failed to update tee time');
+      toast({
+        title: "Update Failed",
+        description: "Could not update the tee time. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
 // Assign player to tee time mutation
 export const useAssignPlayerToTeeTime = () => {
   const queryClient = useQueryClient();
   const { handleError } = useErrorHandler({ context: 'useAssignPlayerToTeeTime' });
   const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: async ({ roundId, playerId, teeTime, startingHole }: { roundId: number; playerId: number; teeTime: string; startingHole: number }) => {
-      return tournamentService.updateTeeTime(roundId, playerId, teeTime, startingHole);
-    },
-    onMutate: async ({ roundId }) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: teeTimeKeys.all });
-      
-      // Snapshot the previous value
-      const previousTeeTimes = queryClient.getQueryData(teeTimeKeys.all);
-      
-      return { previousTeeTimes };
-    },
-    onSuccess: (_, { roundId }) => {
-      // Invalidate relevant queries
+  return useMutation<TeeTimeDTO, Error, { teeTimeId: number; playerId: number }>({ 
+    mutationFn: ({ teeTimeId, playerId }) =>
+      teeTimeService.assignPlayerToTeeTime(teeTimeId, playerId),
+    onSuccess: (data, { teeTimeId }) => {
       queryClient.invalidateQueries({ queryKey: teeTimeKeys.all });
-      
       toast({
         title: "Player Assigned",
-        description: "Player has been successfully assigned to the tee time.",
+        description: "Player has been assigned to the tee time.",
       });
     },
-    onError: (error, _, context) => {
-      // Rollback optimistic update
-      if (context?.previousTeeTimes) {
-        queryClient.setQueryData(teeTimeKeys.all, context.previousTeeTimes);
-      }
-      
+    onError: (error) => {
       handleError(error, 'Failed to assign player to tee time');
       toast({
         title: "Assignment Failed",
-        description: "Failed to assign player to tee time. Please try again.",
+        description: "Failed to assign player. Please try again.",
         variant: "destructive",
       });
     },
@@ -98,14 +103,11 @@ export const useRemovePlayerFromTeeTime = () => {
   const { handleError } = useErrorHandler({ context: 'useRemovePlayerFromTeeTime' });
   const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: async ({ teeTimeId, playerId }: { teeTimeId: string; playerId: string }) => {
-      // Tee time player removal functionality is not yet implemented in the API
-      return Promise.reject(new Error('Player removal from tee times is not yet available. This feature is coming soon.'));
-    },
+  return useMutation<void, Error, { teeTimeId: number; playerId: number }>({ 
+    mutationFn: ({ teeTimeId, playerId }) =>
+      teeTimeService.removePlayerFromTeeTime(teeTimeId, playerId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: teeTimeKeys.all });
-      
       toast({
         title: "Player Removed",
         description: "Player has been removed from the tee time.",
@@ -115,7 +117,7 @@ export const useRemovePlayerFromTeeTime = () => {
       handleError(error, 'Failed to remove player from tee time');
       toast({
         title: "Removal Failed",
-        description: "Failed to remove player from tee time. Please try again.",
+        description: "Failed to remove player. Please try again.",
         variant: "destructive",
       });
     },

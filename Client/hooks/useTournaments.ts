@@ -20,6 +20,7 @@ export const tournamentKeys = {
   detail: (id: string) => [...tournamentKeys.details(), id] as const,
   rankings: (id: string) => [...tournamentKeys.detail(id), 'rankings'] as const,
   players: (id: string) => [...tournamentKeys.detail(id), 'players'] as const,
+  rounds: (id: string) => [...tournamentKeys.detail(id), 'rounds'] as const,
 };
 
 // Tournaments List Query
@@ -43,15 +44,32 @@ export const useTournament = (id: number) => {
 export const useTournamentRankings = (id: number) => {
   return useQuery({
     queryKey: tournamentKeys.rankings(id.toString()),
-    queryFn: async () => {
-      try {
-        return await tournamentService.calculateResults(id);
-      } catch (error) {
-        console.error('Failed to fetch tournament rankings:', error);
-        return [];
-      }
-    },
+    queryFn: () => tournamentService.getRankings(id),
     enabled: !!id,
+  });
+};
+
+// Calculate Results Mutation
+export const useCalculateResults = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (tournamentId: number) => tournamentService.calculateResults(tournamentId),
+    onSuccess: (_, tournamentId) => {
+      queryClient.invalidateQueries({ queryKey: tournamentKeys.rankings(tournamentId.toString()) });
+      toast({
+        title: "Success",
+        description: "Tournament results have been calculated.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to calculate tournament results.",
+        variant: "destructive",
+      });
+    },
   });
 };
 
@@ -60,6 +78,15 @@ export const useTournamentPlayers = (id: number) => {
   return useQuery({
     queryKey: tournamentKeys.players(id.toString()),
     queryFn: () => tournamentService.getPlayers(id),
+    enabled: !!id,
+  });
+};
+
+// Tournament Rounds Query
+export const useTournamentRounds = (id: number) => {
+  return useQuery({
+    queryKey: tournamentKeys.rounds(id.toString()),
+    queryFn: () => tournamentService.getRounds(id),
     enabled: !!id,
   });
 };
@@ -232,6 +259,110 @@ export const useUnregisterFromTournament = () => {
       toast({
         title: "Unregistration Failed",
         description: "Failed to unregister from tournament. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+// Add Player to Tournament Mutation (for organizers)
+export const useAddPlayerToTournament = () => {
+  const queryClient = useQueryClient();
+  const { handleError } = useErrorHandler({ context: 'useAddPlayerToTournament' });
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: ({ tournamentId, playerId }: { tournamentId: number; playerId: number }) => 
+      tournamentService.addPlayer(tournamentId, playerId),
+    onSuccess: (_, { tournamentId }) => {
+      // Invalidate tournament details and players
+      queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournamentId.toString()) });
+      queryClient.invalidateQueries({ queryKey: tournamentKeys.players(tournamentId.toString()) });
+      
+      toast({
+        title: "Player Added",
+        description: "Player has been successfully added to the tournament.",
+      });
+    },
+    onError: (error) => {
+      handleError(error, 'Failed to add player to tournament');
+      toast({
+        title: "Add Player Failed",
+        description: "Failed to add player to tournament. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+// Remove Player from Tournament Mutation (for organizers)
+export const useRemovePlayerFromTournament = () => {
+  const queryClient = useQueryClient();
+  const { handleError } = useErrorHandler({ context: 'useRemovePlayerFromTournament' });
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: ({ tournamentId, playerId }: { tournamentId: number; playerId: number }) => 
+      tournamentService.removePlayer(tournamentId, playerId),
+    onSuccess: (_, { tournamentId }) => {
+      // Invalidate tournament details and players
+      queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournamentId.toString()) });
+      queryClient.invalidateQueries({ queryKey: tournamentKeys.players(tournamentId.toString()) });
+      
+      toast({
+        title: "Player Removed",
+        description: "Player has been successfully removed from the tournament.",
+      });
+    },
+    onError: (error) => {
+      handleError(error, 'Failed to remove player from tournament');
+      toast({
+        title: "Remove Player Failed",
+        description: "Failed to remove player from tournament. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+// Set Tournament Status Mutation (for organizers/admins)
+export const useSetTournamentStatus = () => {
+  const queryClient = useQueryClient();
+  const { handleError } = useErrorHandler({ context: 'useSetTournamentStatus' });
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: ({ tournamentId, status }: { tournamentId: number; status: string }) => 
+      tournamentService.setStatus(tournamentId, status),
+    onSuccess: (_, { tournamentId, status }) => {
+      // Invalidate tournament details to get fresh data
+      queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournamentId.toString()) });
+      
+      // Also invalidate lists to ensure consistency
+      queryClient.invalidateQueries({ queryKey: tournamentKeys.lists() });
+      
+      // If status changed to InProgress, also invalidate players to reflect scorecard generation
+      if (status === 'InProgress') {
+        queryClient.invalidateQueries({ queryKey: tournamentKeys.players(tournamentId.toString()) });
+      }
+      
+      const statusMessages = {
+        'OpenRegistration': 'Tournament registration is now open',
+        'InProgress': 'Tournament has started and scorecards have been generated',
+        'Completed': 'Tournament has been completed and scorecards are locked',
+        'Archived': 'Tournament has been archived'
+      };
+      
+      toast({
+        title: "Tournament Status Updated",
+        description: statusMessages[status as keyof typeof statusMessages] || `Tournament status changed to ${status}`,
+      });
+    },
+    onError: (error) => {
+      handleError(error, 'Failed to update tournament status');
+      toast({
+        title: "Status Update Failed",
+        description: "Failed to update tournament status. Please try again.",
         variant: "destructive",
       });
     },

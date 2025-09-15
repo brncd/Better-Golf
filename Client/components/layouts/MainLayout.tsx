@@ -1,11 +1,8 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
-import { ClientOnly } from "@/components/ClientOnly"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -19,8 +16,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Trophy, Users, MapPin, BarChart3, Settings, Menu, LogOut, User, Target, Shield } from "lucide-react"
+import { GolfHoleIcon } from "@/components/icons/GolfHoleIcon"
 import { useAuth } from "@/context/AuthContext"
-import { useRouter } from "next/navigation"
+import type { User as AuthUser } from "@/types"
+import { NavLink } from "./NavLink"
+import { ClientOnly } from "@/components/ClientOnly"
+import { UserNav } from "./UserNav"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
@@ -28,48 +29,47 @@ const navigation = [
   { name: "Players", href: "/players", icon: Users },
   { name: "Courses", href: "/courses", icon: MapPin },
   { name: "Scoring", href: "/scoring", icon: Target },
-  { name: "Admin", href: "/admin", icon: Settings },
 ]
 
+const adminNavigation = { name: "Admin", href: "/admin", icon: Settings };
+
 interface MainLayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
+  user: AuthUser | null;
 }
 
-export function MainLayout({ children }: MainLayoutProps) {
-  const pathname = usePathname()
+export function MainLayout({ children, user }: MainLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const { user, logout, isAuthenticated, isAdmin } = useAuth()
+  const { logout } = useAuth()
   const router = useRouter()
+
+  const isAuthenticated = !!user;
+  const isAdmin = user?.roles?.includes('Admin') ?? false;
 
   const NavItems = ({ mobile = false }: { mobile?: boolean }) => (
     <>
-      {navigation.map((item) => {
-        // Hide Admin panel for non-admin users
-        if (item.name === "Admin" && !isAdmin()) {
-          return null;
-        }
-        
-        const isActive = pathname.startsWith(item.href)
-        const Icon = item.icon
-
-        return (
-          <Link
-            key={item.name}
-            href={item.href}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              isActive
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-              mobile && "text-base py-3",
-            )}
-            onClick={() => mobile && setIsMobileMenuOpen(false)}
-          >
-            <Icon className="h-4 w-4" />
-            {item.name}
-          </Link>
-        )
-      })}
+      {navigation.map((item) => (
+        <NavLink
+          key={item.name}
+          href={item.href}
+          icon={item.icon}
+          onClick={() => mobile && setIsMobileMenuOpen(false)}
+          className={mobile ? "text-base py-3" : ""}
+        >
+          {item.name}
+        </NavLink>
+      ))}
+      {isAdmin && (
+        <NavLink
+          key={adminNavigation.name}
+          href={adminNavigation.href}
+          icon={adminNavigation.icon}
+          onClick={() => mobile && setIsMobileMenuOpen(false)}
+          className={mobile ? "text-base py-3" : ""}
+        >
+          {adminNavigation.name}
+        </NavLink>
+      )}
     </>
   )
 
@@ -80,9 +80,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-sidebar px-6 pb-4">
           <div className="flex h-16 shrink-0 items-center">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <Trophy className="h-5 w-5 text-primary-foreground" />
-              </div>
+              <GolfHoleIcon size={32} className="rounded-lg" />
               <span className="text-lg font-semibold text-sidebar-foreground">Better Golf</span>
             </div>
           </div>
@@ -111,9 +109,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             <div className="flex h-full flex-col bg-sidebar">
               <div className="flex h-16 shrink-0 items-center px-6">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                    <Trophy className="h-5 w-5 text-primary-foreground" />
-                  </div>
+                  <GolfHoleIcon size={32} className="rounded-lg" />
                   <span className="text-lg font-semibold text-sidebar-foreground">Better Golf</span>
                 </div>
               </div>
@@ -131,9 +127,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         </Sheet>
 
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Trophy className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <GolfHoleIcon size={32} className="rounded-lg" />
           <span className="text-lg font-semibold text-sidebar-foreground">Better Golf</span>
         </div>
       </div>
@@ -145,70 +139,8 @@ export function MainLayout({ children }: MainLayoutProps) {
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
             <div className="flex flex-1"></div>
             <div className="flex items-center gap-x-4 lg:gap-x-6">
-              {/* User Menu */}
               <ClientOnly>
-                {isAuthenticated ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src="/golf-professional.jpg" alt="User" />
-                          <AvatarFallback>
-                            {user?.email?.charAt(0).toUpperCase() || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="end">
-                      <DropdownMenuLabel className="font-normal">
-                        <div className="flex flex-col space-y-1">
-                          <p className="text-sm font-medium leading-none">
-                            {user?.email || 'User'}
-                        </p>
-                        <p className="text-xs leading-none text-muted-foreground">
-                          {user?.roles?.join(', ') || 'No roles'}
-                        </p>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => router.push('/dashboard')}>
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      <span>Dashboard</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => router.push('/profile')}>
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => router.push('/settings')}>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </DropdownMenuItem>
-                    {user?.roles?.includes('Admin') && (
-                      <DropdownMenuItem onClick={() => router.push('/admin')}>
-                        <Shield className="mr-2 h-4 w-4" />
-                        <span>Admin Panel</span>
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => {
-                      logout()
-                      router.push('/login')
-                    }}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Log out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                ) : (
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" onClick={() => router.push('/login')}>
-                    Login
-                  </Button>
-                  <Button onClick={() => router.push('/register')}>
-                    Register
-                  </Button>
-                </div>
-              )}
+                <UserNav />
               </ClientOnly>
             </div>
           </div>

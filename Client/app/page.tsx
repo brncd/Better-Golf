@@ -1,26 +1,14 @@
-"use client"
+import { redirect } from 'next/navigation';
+import { getSession } from '@/lib/session';
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/context/AuthContext"
+export default async function HomePage() {
+  const session = await getSession();
 
-export default function HomePage() {
-  const router = useRouter()
-  const { isAuthenticated, loading } = useAuth()
+  if (session) {
+    redirect('/dashboard');
+  } else {
+    redirect('/login');
+  }
 
-  useEffect(() => {
-    if (!loading) {
-      if (isAuthenticated) {
-        router.push("/dashboard")
-      } else {
-        router.push("/login")
-      }
-    }
-  }, [isAuthenticated, loading, router])
-
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-    </div>
-  )
+  return null;
 }

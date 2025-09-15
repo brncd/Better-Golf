@@ -17,10 +17,11 @@ export const courseKeys = {
 };
 
 // Get All Courses with Pagination
-export const useCourses = (params: PaginationRequest) => {
+export const useCourses = (params: PaginationRequest, options?: { initialData?: PaginationResponse<CoursesListGetDTO> }) => {
   return useQuery({
     queryKey: courseKeys.list(params),
     queryFn: () => courseService.getAll(params),
+    initialData: options?.initialData,
   });
 };
 

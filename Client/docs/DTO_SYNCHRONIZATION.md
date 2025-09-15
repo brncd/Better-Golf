@@ -6,6 +6,18 @@ This document outlines the DTO synchronization system implemented in the Better 
 
 ✅ **COMPLETED**: The Better Golf client now uses TanStack Query extensively throughout the application for all API interactions, providing excellent caching, synchronization, and error handling capabilities.
 
+### Dashboard Integration Status
+✅ **API ENDPOINTS AVAILABLE**: The API provides dedicated dashboard endpoints:
+- `/api/dashboard/stats` - Comprehensive dashboard statistics
+- `/api/dashboard/activity` - Recent system activity
+- `/api/dashboard/tournament/{id}/activity` - Tournament-specific activity
+
+✅ **CLIENT INTEGRATION**: Dashboard now properly integrates with real API data:
+- Uses `useDashboardStats()` and `useRecentActivity()` hooks
+- Falls back to calculated statistics when API is unavailable
+- Eliminates random placeholder data (Math.random() removed)
+- Provides consistent data presentation
+
 ## Critical Mismatches Identified and Fixed
 
 ### 1. TournamentPostDTO

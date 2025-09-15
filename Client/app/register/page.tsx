@@ -2,12 +2,13 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { MainLayout } from "@/components/layouts/MainLayout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { authClient } from "@/lib/authService"
+import Link from "next/link"
+import { GolfHoleIcon } from "@/components/icons/GolfHoleIcon"
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("")
@@ -36,8 +37,19 @@ export default function RegisterPage() {
   }
 
   return (
-    <MainLayout>
-      <div className="flex justify-center items-center py-12">
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* Simple header for public pages */}
+      <header className="border-b">
+        <div className="container flex h-16 items-center px-4">
+          <Link href="/" className="flex items-center gap-2 font-semibold">
+            <GolfHoleIcon size={32} className="rounded-lg" />
+            <span>Better Golf</span>
+          </Link>
+        </div>
+      </header>
+
+      {/* Main content */}
+      <main className="flex-1 flex items-center justify-center py-12">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-2xl text-center">Register</CardTitle>
@@ -82,7 +94,7 @@ export default function RegisterPage() {
             </form>
           </CardContent>
         </Card>
-      </div>
-    </MainLayout>
+      </main>
+    </div>
   )
 }

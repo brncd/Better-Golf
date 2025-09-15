@@ -1,6 +1,5 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { MainLayout } from "@/components/layouts/MainLayout"
 import { PlayerForm } from "@/components/organisms/PlayerForm"
@@ -8,7 +7,8 @@ import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import type { PLayerPostDTO, SinglePlayerDTO } from "@/types"
+import { usePlayer, useUpdatePlayer } from "@/hooks/usePlayers"
+import type { PlayerPostDTO, SinglePlayerDTO } from "@/types"
 
 interface EditPlayerPageProps {
   params: { id: string }
@@ -16,42 +16,30 @@ interface EditPlayerPageProps {
 
 export default function EditPlayerPage({ params }: EditPlayerPageProps) {
   const router = useRouter()
-  const [player, setPlayer] = useState<PLayerPostDTO | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const playerId = parseInt(params.id)
+  
+  // Use TanStack Query to fetch player data
+  const { data: playerData, isLoading, error } = usePlayer(params.id)
+  const updatePlayerMutation = useUpdatePlayer()
 
-  useEffect(() => {
-    const fetchPlayer = async () => {
-      try {
-        setIsLoading(true)
-        const { playerService } = await import("@/lib/services")
-        const playerData = await playerService.getById(params.id)
-        
-        // Convert SinglePlayerDTO to PLayerPostDTO for form
-        setPlayer({
-          firstName: playerData.firstName,
-          lastName: playerData.lastName,
-          email: playerData.email,
-          handicap: playerData.handicap,
-          gender: playerData.gender,
-          dateOfBirth: playerData.dateOfBirth,
-          phoneNumber: playerData.phoneNumber,
-          membershipNumber: playerData.membershipNumber,
-        })
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load player")
-      } finally {
-        setIsLoading(false)
-      }
-    }
+  // Convert SinglePlayerDTO to PlayerPostDTO for form
+  const player: PlayerPostDTO | null = playerData ? {
+    firstName: (playerData as SinglePlayerDTO).firstName,
+    lastName: (playerData as SinglePlayerDTO).lastName,
+    email: (playerData as SinglePlayerDTO).email,
+    handicap: (playerData as SinglePlayerDTO).handicap,
+    gender: (playerData as SinglePlayerDTO).gender,
+    dateOfBirth: (playerData as SinglePlayerDTO).dateOfBirth,
+    phoneNumber: (playerData as SinglePlayerDTO).phoneNumber,
+    membershipNumber: (playerData as SinglePlayerDTO).membershipNumber,
+  } : null
 
-    fetchPlayer()
-  }, [params.id])
-
-  const handleSubmit = async (data: PLayerPostDTO) => {
+  const handleSubmit = async (data: PlayerPostDTO) => {
     try {
-      const { playerService } = await import("@/lib/services")
-      await playerService.update(params.id, data)
+      await updatePlayerMutation.mutateAsync({
+        id: params.id,
+        player: data
+      })
       router.push(`/players/${params.id}`)
     } catch (error) {
       console.error("Error updating player:", error)
@@ -74,7 +62,7 @@ export default function EditPlayerPage({ params }: EditPlayerPageProps) {
       <MainLayout>
         <div className="text-center py-12 text-red-500">
           <h1 className="text-2xl font-bold mb-4">Error Loading Player</h1>
-          <p className="mb-4">{error}</p>
+          <p className="mb-4">{error instanceof Error ? error.message : 'Failed to load player'}</p>
           <Button asChild>
             <Link href="/players">Back to Players</Link>
           </Button>

@@ -1,70 +1,57 @@
-import { TournamentListGetDTO, ScorecardDTO, ScorecardResultDTO } from '@/types';
 import { apiClient } from '../apiService';
-
-export interface ScorecardWithResults extends ScorecardDTO {
-  results: ScorecardResultDTO[];
-}
+import type { 
+  TournamentListGetDTO, 
+  ScorecardDTO, 
+  ScorecardListGetDTO,
+  SingleScorecardDTO,
+  ScorecardPostDTO,
+  ScorecardResultPostDTO,
+  PaginationRequest,
+  PaginationResponse
+} from '@/types';
 
 export const scoringService = {
   // Get active tournaments for scoring
-  async getActiveTournaments(): Promise<TournamentListGetDTO[]> {
-    const response = await apiClient.get('/api/Tournaments/Active') as any;
-    return response.data;
-  },
+  getActiveTournaments: (): Promise<TournamentListGetDTO[]> =>
+    apiClient.get('/api/Tournaments/Active'),
 
-  // Get tournament scorecards for scoring
-  async getTournamentScorecards(tournamentId: string): Promise<ScorecardDTO[]> {
-    const response = await apiClient.get(`/api/Tournaments/${tournamentId}/Scorecards`) as any;
-    return response.data;
-  },
+  // Get tournament scorecards with pagination
+  getTournamentScorecards: (tournamentId: number, pagination?: PaginationRequest): Promise<PaginationResponse<ScorecardListGetDTO>> =>
+    apiClient.get(`/api/Scorecards/Tournament/${tournamentId}?pageNumber=${pagination?.pageNumber || 1}&pageSize=${pagination?.pageSize || 50}`),
 
-  // Get specific scorecard with results
-  async getScorecardWithResults(scorecardId: string): Promise<ScorecardWithResults> {
-    const response = await apiClient.get(`/api/Scorecards/${scorecardId}`) as any;
-    return response.data;
-  },
+  // Get scorecard by ID with full details
+  getScorecard: (scorecardId: number): Promise<SingleScorecardDTO> =>
+    apiClient.get(`/api/Scorecards/${scorecardId}`),
 
-  // Update scorecard result for a specific hole
-  async updateScorecardResult(
-    scorecardId: string, 
-    holeId: string, 
-    strokes: number,
-    roundNumber: number = 1
-  ): Promise<void> {
-    await apiClient.put(`/api/ScorecardResults/${scorecardId}/${holeId}`, {
-      strokes,
-      roundNumber
-    });
-  },
+  // Create new scorecard
+  createScorecard: (scorecard: ScorecardPostDTO): Promise<SingleScorecardDTO> =>
+    apiClient.post('/api/Scorecards', scorecard),
 
-  // Get scorecard result for specific hole
-  async getScorecardResult(scorecardId: string, holeId: string): Promise<ScorecardResultDTO | null> {
-    try {
-      const response = await apiClient.get(`/api/ScorecardResults/${scorecardId}/${holeId}`);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        return null;
-      }
-      throw error;
-    }
-  },
+  // Update scorecard
+  updateScorecard: (scorecardId: number, scorecard: ScorecardPostDTO): Promise<void> =>
+    apiClient.put(`/api/Scorecards/${scorecardId}`, scorecard),
 
   // Lock scorecard (prevent further edits)
-  async lockScorecard(scorecardId: string): Promise<void> {
-    await apiClient.put(`/api/Scorecards/${scorecardId}/lock`);
-  },
+  lockScorecard: (scorecardId: number): Promise<void> =>
+    apiClient.put(`/api/Scorecards/${scorecardId}/lock`, {}),
 
-  // Get tournament rankings/leaderboard
-  async getTournamentRankings(tournamentId: string): Promise<any[]> {
-    try {
-      const response = await apiClient.get(`/api/Tournaments/${tournamentId}/rankings`);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        return [];
-      }
-      throw error;
-    }
-  }
+  // Delete scorecard
+  deleteScorecard: (scorecardId: number): Promise<void> =>
+    apiClient.delete(`/api/Scorecards/${scorecardId}`),
+
+  // Update individual hole score
+  updateHoleScore: (scorecardId: number, holeId: number, strokes: number, roundNumber: number = 1): Promise<void> =>
+    apiClient.put(`/api/ScorecardResults/${scorecardId}/${holeId}`, { 
+      strokes, 
+      holeId, 
+      roundNumber 
+    }),
+
+  // Get scorecard result for specific hole
+  getHoleScore: (scorecardId: number, holeId: number): Promise<{ strokes: number }> =>
+    apiClient.get(`/api/ScorecardResults/${scorecardId}/${holeId}`),
+
+  // Legacy method for backward compatibility
+  getTournamentScorecardsLegacy: (tournamentId: string): Promise<ScorecardDTO[]> =>
+    apiClient.get(`/api/Tournaments/${tournamentId}/Scorecards`),
 };

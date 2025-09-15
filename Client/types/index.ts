@@ -131,7 +131,9 @@ export interface PlayerTournamentHistoryListDTO {
 export interface TournamentListGetDTO {
   id: number;
   name: string;
+  description: string;
   tournamentType: string;
+  status: TournamentStatus;
   startDate: string;
   endDate: string;
   playerCount: number;
@@ -143,15 +145,20 @@ export interface SingleTournamentDTO {
   count: number;
   description: string;
   tournamentType: string;
+  status: TournamentStatus; // Use the specific status type
+  courseId: number;
   startDate: string;
   endDate: string;
+  handicapAllowance?: number;
   roundInfo: RoundInfo;
+  rounds: RoundDTO[];
 }
 
 export interface TournamentPostDTO {
   name: string;
   description?: string;           // Optional like in API
   tournamentType: string;         // API expects string enum values
+  courseId: number;               // Required course selection
   startDate: string;              // Keep string, convert in service
   endDate: string;                // Keep string, convert in service
   roundInfo?: {                   // Optional RoundInfo object
@@ -169,10 +176,14 @@ export enum TournamentType {
   MatchPlay = "MatchPlay"
 }
 
+export type TournamentStatus = "Draft" | "OpenRegistration" | "InProgress" | "Completed" | "Archived";
+
 export interface RoundInfo {
   id: number;
   interval: number;
   firstRoundTime: number;
+  endTime: number;
+  maxPlayersPerGroup: number;
   isShotgun: boolean;
 }
 
@@ -444,22 +455,76 @@ export interface UserWithRoles {
 }
 
 // ================== Scorecard DTOs ==================
-export interface ScorecardDTO {
+export interface ScorecardListGetDTO {
   id: number;
   playerId: number;
-  courseId: number;
+  playerName: string;
+  tournamentId: number;
   roundNumber: number;
   playingHandicap: number;
   totalStrokes: number;
   isLocked: boolean;
 }
 
-export interface ScorecardResultDTO {
+export interface SingleScorecardDTO {
   id: number;
-  scorecardId: number;
-  holeId: number;
+  playingHandicap: number;
+  totalStrokes: number;
+  playerId: number;
+  tournamentId: number;
+  scorecardResults: SingleScorecardResultDTO[];
+}
+
+export interface ScorecardPostDTO {
+  playingHandicap: number;
+  playerId: number;
+  tournamentId: number;
+  scorecardResults: ScorecardResultPostDTO[];
+}
+
+export interface SingleScorecardResultDTO {
+  id: number;
   strokes: number;
-  score: number;
+  roundNumber: number;
+  holeNumber: number;
+}
+
+export interface ScorecardResultPostDTO {
+  strokes: number;
+  holeId: number;
+  roundNumber: number;
+}
+
+// ================== Tee Time DTOs ==================
+export interface TeeTimeDTO {
+  roundNumber: number;
+  date: string; // DateOnly from API
+  player: PlayerListGetDTO;
+  teeTime?: string; // TimeSpan from API as string (HH:mm:ss)
+  startingHole?: number;
+}
+
+export interface TeeTimeUpdateDTO {
+  teeTime?: string; // TimeSpan as string
+  startingHole?: number;
+}
+
+export interface TeeTimeGroup {
+  teeTime: string;
+  startingHole: number;
+  players: PlayerListGetDTO[];
+}
+
+// Legacy interface for backward compatibility
+export interface ScorecardDTO {
+  id: number;
+  playerId: number;
+  playerName: string;
+  tournamentId: number;
+  roundNumber: number;
+  playingHandicap: number;
+  totalStrokes: number;
+  isLocked: boolean;
 }
 
 // ================== Course Detail DTOs ==================

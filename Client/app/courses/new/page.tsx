@@ -45,8 +45,8 @@ export default function NewCoursePage() {
         </div>
 
         <div>
-          <h1 className="text-3xl font-bold text-balance">Create New Course</h1>
-          <p className="text-muted-foreground">Add a new golf course to the system</p>
+          <h1 className="text-3xl font-bold text-balance">Add New Course</h1>
+          <p className="text-muted-foreground">Create a new golf course</p>
         </div>
 
         {/* Form */}

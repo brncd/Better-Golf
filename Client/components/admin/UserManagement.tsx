@@ -3,19 +3,19 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Separator } from '@/components/ui/separator';
-import { Users, Shield, UserCheck, UserX, Settings, Search, Filter, Plus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingSpinner } from '@/components/atoms/LoadingSpinner';
 import { ErrorDisplay } from '@/components/atoms/ErrorDisplay';
-import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
 import { useAllUsers, useAssignRole, useRemoveRole, useCreateRole } from '@/hooks/useRoles';
-import type { UserWithRoles } from '@/lib/services/roleService';
+import { useToast } from '@/hooks/use-toast';
+import { UserWithRoles } from '@/lib/services/roleService';
+import { Users, UserPlus, Shield, Plus, X } from 'lucide-react';
 
 interface UserManagementProps {
   canManageUsers?: boolean;
@@ -24,12 +24,11 @@ interface UserManagementProps {
 const AVAILABLE_ROLES = ['Admin', 'TournamentOrganizer', 'Player'];
 
 export function UserManagement({ canManageUsers = true }: UserManagementProps) {
-  const { data: users = [], isLoading, error } = useAllUsers();
+  // TanStack Query hooks
+  const { data: users = [], isLoading, error, refetch } = useAllUsers();
   const assignRoleMutation = useAssignRole();
   const removeRoleMutation = useRemoveRole();
   const createRoleMutation = useCreateRole();
-  const { toast } = useToast();
-  
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -43,36 +42,24 @@ export function UserManagement({ canManageUsers = true }: UserManagementProps) {
   const handleAssignRole = async () => {
     if (!selectedUser || !newRole) return;
     
-    assignRoleMutation.mutate(
-      { userId: selectedUser.id, roleName: newRole },
-      {
-        onSuccess: () => {
-          setShowRoleDialog(false);
-          setSelectedUser(null);
-          setNewRole('');
-        }
-      }
-    );
+    await assignRoleMutation.mutateAsync({ userId: selectedUser.id, roleName: newRole });
+    setShowRoleDialog(false);
+    setSelectedUser(null);
+    setNewRole('');
   };
 
   // Handle role removal
-  const handleRemoveRole = (user: UserWithRoles, role: string) => {
-    removeRoleMutation.mutate({ userId: user.id, roleName: role });
+  const handleRemoveRole = async (user: UserWithRoles, role: string) => {
+    await removeRoleMutation.mutateAsync({ userId: user.id, roleName: role });
   };
 
   // Handle role creation
   const handleCreateRole = async () => {
     if (!newRoleName.trim()) return;
     
-    createRoleMutation.mutate(
-      newRoleName.trim(),
-      {
-        onSuccess: () => {
-          setShowCreateRoleDialog(false);
-          setNewRoleName('');
-        }
-      }
-    );
+    await createRoleMutation.mutateAsync(newRoleName);
+    setShowCreateRoleDialog(false);
+    setNewRoleName('');
   };
 
   // Filter users based on search and filters
@@ -87,27 +74,34 @@ export function UserManagement({ canManageUsers = true }: UserManagementProps) {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <ErrorDisplay 
-        error={error instanceof Error ? error : new Error('Failed to load users')}
-        onRetry={() => window.location.reload()}
-      />
-    );
-  }
-
+  // Loading and error states
+  const isAnyLoading = isLoading || assignRoleMutation.isPending || removeRoleMutation.isPending || createRoleMutation.isPending;
+  
+  // Statistics
   const totalUsers = users.length;
-  const activeUsers = users.filter(u => u.isActive).length;
-  const adminUsers = users.filter(u => u.roles.includes('Admin')).length;
-  const organizerUsers = users.filter(u => u.roles.includes('TournamentOrganizer')).length;
+  const activeUsers = users.filter(user => user.isActive).length;
+  const adminUsers = users.filter(user => user.roles.includes('Admin')).length;
+  const organizerUsers = users.filter(user => user.roles.includes('TournamentOrganizer')).length;
+
+  if (!canManageUsers) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center text-muted-foreground">
+            You don't have permission to manage users.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+  
+  if (error) {
+    return <ErrorDisplay error={error} onRetry={refetch} />;
+  }
 
   return (
     <div className="space-y-6">
@@ -126,7 +120,7 @@ export function UserManagement({ canManageUsers = true }: UserManagementProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-            <UserCheck className="h-4 w-4 text-green-600" />
+            <UserPlus className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{activeUsers}</div>
@@ -146,7 +140,7 @@ export function UserManagement({ canManageUsers = true }: UserManagementProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Organizers</CardTitle>
-            <Settings className="h-4 w-4 text-blue-600" />
+            <Plus className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{organizerUsers}</div>
@@ -165,6 +159,7 @@ export function UserManagement({ canManageUsers = true }: UserManagementProps) {
             {canManageUsers && (
               <Button
                 onClick={() => setShowCreateRoleDialog(true)}
+                disabled={isAnyLoading}
                 className="flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
@@ -179,7 +174,7 @@ export function UserManagement({ canManageUsers = true }: UserManagementProps) {
             <div className="flex-1">
               <Label htmlFor="search">Search Users</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="search"
                   placeholder="Search by username or email..."
@@ -258,6 +253,7 @@ export function UserManagement({ canManageUsers = true }: UserManagementProps) {
                             {canManageUsers && (
                               <button
                                 onClick={() => handleRemoveRole(user, role)}
+                                disabled={isAnyLoading}
                                 className="ml-1 hover:text-red-600"
                                 title="Remove role"
                               >
@@ -282,6 +278,7 @@ export function UserManagement({ canManageUsers = true }: UserManagementProps) {
                             setSelectedUser(user);
                             setShowRoleDialog(true);
                           }}
+                          disabled={isAnyLoading}
                         >
                           <Plus className="h-4 w-4 mr-1" />
                           Add Role
@@ -330,8 +327,8 @@ export function UserManagement({ canManageUsers = true }: UserManagementProps) {
                 Cancel
               </Button>
               <Button 
-                onClick={handleAssignRole}
-                disabled={!newRole || assignRoleMutation.isPending}
+                onClick={handleAssignRole} 
+                disabled={!selectedUser || !newRole || isAnyLoading}
               >
                 {assignRoleMutation.isPending ? 'Assigning...' : 'Assign Role'}
               </Button>
@@ -362,8 +359,8 @@ export function UserManagement({ canManageUsers = true }: UserManagementProps) {
                 Cancel
               </Button>
               <Button 
-                onClick={handleCreateRole}
-                disabled={!newRoleName.trim() || createRoleMutation.isPending}
+                onClick={handleCreateRole} 
+                disabled={!newRoleName.trim() || isAnyLoading}
               >
                 {createRoleMutation.isPending ? 'Creating...' : 'Create Role'}
               </Button>

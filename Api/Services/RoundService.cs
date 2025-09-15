@@ -137,6 +137,15 @@ namespace Api.Services
             return Result<List<TeeTimeDTO>>.Success(teeTimes);
         }
 
+        public async Task<Result<List<RoundDTO>>> GetTournamentRoundsAsync(int tournamentId)
+        {
+            var tournament = await _db.Tournaments.Include(t => t.Rounds).FirstOrDefaultAsync(t => t.Id == tournamentId);
+            if (tournament == null) return Result<List<RoundDTO>>.Failure(new Error("TournamentNotFound", "Tournament not found."));
+
+            var rounds = tournament.Rounds.OrderBy(r => r.RoundNumber).Select(r => new RoundDTO(r)).ToList();
+            return Result<List<RoundDTO>>.Success(rounds);
+        }
+
         public async Task<Result<TeeTimeDTO>> UpdateTeeTime(int roundId, int playerId, TimeSpan newTeeTime, int newStartingHole)
         {
             var playerRound = await _db.PlayerRounds

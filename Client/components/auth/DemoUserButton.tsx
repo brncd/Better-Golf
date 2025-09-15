@@ -20,26 +20,26 @@ export function DemoUserButton({ className }: DemoUserButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
-  const { login, token } = useAuth()
+  const { login } = useAuth()
 
   const handleDemoLogin = async () => {
     setIsLoading(true)
     setError(null)
 
     try {
-      // Use AuthContext login method - now returns user data and token directly
-      const { token: authToken } = await login({
+      // Use AuthContext login method - now uses cookies
+      await login({
         emailOrUsername: "demo@bettergolf.com",
         password: "Demo123!"
       })
 
-      // Use the returned token directly
+      // Seed demo data using cookies for authentication
       const response = await fetch(`${config.api.baseUrl}/api/seed-demo-data`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include' // Include cookies
       })
 
       // Redirect to dashboard regardless of seeding result
@@ -54,18 +54,18 @@ export function DemoUserButton({ className }: DemoUserButtonProps) {
         })
 
         // Then login using AuthContext
-        const { token: authToken } = await login({
+        await login({
           emailOrUsername: "demo@bettergolf.com",
           password: "Demo123!"
         })
 
-        // Use the returned token directly
+        // Seed demo data using cookies for authentication
         const response = await fetch(`${config.api.baseUrl}/api/seed-demo-data`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json'
-          }
+          },
+          credentials: 'include' // Include cookies
         })
 
         router.push('/dashboard')

@@ -1,53 +1,154 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { HoleScorecard } from "@/components/molecules/HoleScorecard"
 import { useCourseHoles } from "@/hooks/useCourses"
 import { usePlayers } from "@/hooks/usePlayers"
+import { useScorecard, useCreateScorecard, useUpdateScorecard, useUpdateHoleScore } from "@/hooks/useScorecards"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
 import { ErrorDisplay } from "@/components/atoms/ErrorDisplay"
+import { useToast } from "@/hooks/use-toast"
 import { Save, RotateCcw } from "lucide-react"
+import type { ScorecardPostDTO, ScorecardResultPostDTO } from "@/types"
 
 interface ScorecardProps {
   tournamentId: number
   courseId: number
   roundNumber?: number
+  existingScorecardId?: number // For editing existing scorecard
 }
 
-export function Scorecard({ tournamentId, courseId, roundNumber = 1 }: ScorecardProps) {
+export function Scorecard({ tournamentId, courseId, roundNumber = 1, existingScorecardId }: ScorecardProps) {
+  const { toast } = useToast()
   const { data: holesResponse, isLoading: holesLoading, error: holesError } = useCourseHoles(courseId)
   const { data: playersResponse, isLoading: playersLoading, error: playersError } = usePlayers()
+  const { data: existingScorecard, isLoading: scorecardLoading } = useScorecard(existingScorecardId || 0)
+  
+  const createScorecardMutation = useCreateScorecard()
+  const updateScorecardMutation = useUpdateScorecard()
+  const updateHoleScoreMutation = useUpdateHoleScore()
   
   const holes = (holesResponse as any)?.items || []
   const players = (playersResponse as any)?.items || []
 
   const [selectedPlayer, setSelectedPlayer] = useState<string>("")
   const [scores, setScores] = useState<Record<number, number>>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [playingHandicap, setPlayingHandicap] = useState<number>(0)
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
 
-  const handleScoreChange = (holeId: number, score: number) => {
+  // Load existing scorecard data if editing
+  useEffect(() => {
+    if (existingScorecard) {
+      setSelectedPlayer(existingScorecard.playerId.toString())
+      setPlayingHandicap(existingScorecard.playingHandicap)
+      
+      // Convert scorecard results to scores map
+      const scoresMap: Record<number, number> = {}
+      existingScorecard.scorecardResults.forEach(result => {
+        // Find hole by hole number to get hole ID
+        const hole = holes.find((h: any) => h.holeNumber === result.holeNumber)
+        if (hole) {
+          scoresMap[hole.id] = result.strokes
+        }
+      })
+      setScores(scoresMap)
+    }
+  }, [existingScorecard, holes])
+
+  // Update playing handicap when player changes
+  useEffect(() => {
+    if (selectedPlayer) {
+      const player = players.find((p: any) => p.id.toString() === selectedPlayer)
+      if (player) {
+        setPlayingHandicap(player.handicap || 0)
+      }
+    }
+  }, [selectedPlayer, players])
+
+  const handleScoreChange = async (holeId: number, score: number) => {
     setScores((prev) => ({ ...prev, [holeId]: score }))
+    
+    // If editing existing scorecard, update individual hole score immediately
+    if (existingScorecardId) {
+      try {
+        await updateHoleScoreMutation.mutateAsync({
+          scorecardId: existingScorecardId,
+          holeId,
+          strokes: score,
+          roundNumber
+        })
+      } catch (error) {
+        toast({
+          title: "Error updating score",
+          description: "Failed to save score for this hole. Please try again.",
+          variant: "destructive",
+        })
+      }
+    }
   }
 
   const handleSubmit = async () => {
-    if (!selectedPlayer) return
+    if (!selectedPlayer) {
+      toast({
+        title: "Player required",
+        description: "Please select a player before submitting scores.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (Object.keys(scores).length === 0) {
+      toast({
+        title: "No scores entered",
+        description: "Please enter at least one score before submitting.",
+        variant: "destructive",
+      })
+      return
+    }
 
     setIsSubmitting(true)
     try {
-      // In real app, this would submit scores to API
-      console.log("Submitting scores:", { tournamentId, playerId: selectedPlayer, roundNumber, scores })
+      // Convert scores to scorecard results format
+      const scorecardResults: ScorecardResultPostDTO[] = Object.entries(scores).map(([holeId, strokes]) => ({
+        holeId: parseInt(holeId),
+        strokes,
+        roundNumber
+      }))
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const scorecardData: ScorecardPostDTO = {
+        playerId: parseInt(selectedPlayer),
+        tournamentId,
+        playingHandicap,
+        scorecardResults
+      }
 
-      // Reset form
-      setScores({})
-      alert("Scores submitted successfully!")
+      if (existingScorecardId) {
+        // Update existing scorecard
+        await updateScorecardMutation.mutateAsync({
+          scorecardId: existingScorecardId,
+          scorecard: scorecardData
+        })
+        toast({
+          title: "Scorecard updated",
+          description: "Scores have been successfully updated.",
+        })
+      } else {
+        // Create new scorecard
+        await createScorecardMutation.mutateAsync(scorecardData)
+        toast({
+          title: "Scorecard created",
+          description: "Scores have been successfully submitted.",
+        })
+        // Reset form for new entry
+        setScores({})
+        setSelectedPlayer("")
+      }
     } catch (error) {
-      console.error("Error submitting scores:", error)
+      // Error handling is done by the mutation hooks
+      console.error("Error submitting scorecard:", error)
     } finally {
       setIsSubmitting(false)
     }

@@ -10,7 +10,7 @@ import type { PlayerListGetDTO } from '@/types';
 interface PlayerTableProps {
   players: PlayerListGetDTO[];
   onEdit: (player: PlayerListGetDTO) => void;
-  onDelete: (playerId: string) => void;
+  onDelete: (playerId: number) => void;
 }
 
 export function PlayerTable({ players, onEdit, onDelete }: PlayerTableProps) {

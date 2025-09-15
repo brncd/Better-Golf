@@ -3,11 +3,9 @@ import type { Metadata } from "next"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
-import { Suspense } from "react"
-import { AuthProvider } from "@/context/AuthContext"
-import { QueryProvider } from "@/providers/QueryProvider"
-import { ErrorBoundary } from "@/components/atoms/ErrorBoundary"
 import { config, validateConfig } from "@/lib/config"
+import { getSession } from "@/lib/auth-server"
+import { Providers } from "./providers"
 import "./globals.css"
 
 // Validate configuration on app startup
@@ -24,23 +22,26 @@ export const metadata: Metadata = {
   description:
     "Professional golf tournament management system for organizing tournaments, managing players, and tracking scores",
   generator: "v0.app",
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const initialUser = await getSession();
+
   return (
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <ErrorBoundary>
-          <QueryProvider>
-            <AuthProvider>
-              <Suspense fallback={null}>{children}</Suspense>
-            </AuthProvider>
-          </QueryProvider>
-        </ErrorBoundary>
+        <Providers initialUser={initialUser}>
+          {children}
+        </Providers>
         <Analytics />
       </body>
     </html>
