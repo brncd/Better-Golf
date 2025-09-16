@@ -12,6 +12,7 @@ import { SinglePlayerDTO } from "@/types"
 import { ArrowLeft, Edit, Calendar, Trophy, Target, Award, Medal, TrendingUp } from "lucide-react"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
 import { Badge } from "@/components/ui/badge"
+import { calculateAge, formatDate } from "@/lib/utils/dateUtils"
 
 export default function PlayerDetailPage() {
   const params = useParams()
@@ -21,31 +22,9 @@ export default function PlayerDetailPage() {
   const { data: player, isLoading, error } = usePlayer(parseInt(playerId, 10))
   const { data: history, isLoading: historyLoading, error: historyError } = usePlayerHistory(parseInt(playerId, 10))
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "Not provided"
-    return new Date(dateString).toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    })
-  }
-
   const getInitials = (name?: string, lastName?: string) => {
     if (!name || !lastName) return "??"
     return `${name[0]}${lastName[0]}`.toUpperCase()
-  }
-
-  const calculateAge = (dateOfBirth?: string) => {
-    if (!dateOfBirth) return null
-    const today = new Date()
-    const birthDate = new Date(dateOfBirth)
-    let age = today.getFullYear() - birthDate.getFullYear()
-    const monthDiff = today.getMonth() - birthDate.getMonth()
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--
-    }
-    return age
   }
 
   if (isLoading) {
