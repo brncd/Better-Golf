@@ -39,7 +39,7 @@ export function PlayerImportExport({ onImportComplete }: PlayerImportExportProps
   const createPlayerMutation = useCreatePlayer();
   const { toast } = useToast();
 
-  const players = (playersData as any)?.items || [];
+  const players = playersData?.items || [];
 
   // CSV Template for download
   const csvTemplate = [

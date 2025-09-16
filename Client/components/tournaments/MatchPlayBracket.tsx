@@ -37,7 +37,7 @@ export function MatchPlayBracket({ tournamentId, canEdit = false }: MatchPlayBra
   const updateMatchMutation = useUpdateMatch();
   const advanceRoundMutation = useAdvanceRound();
 
-  const players = (playersData as any)?.items || [];
+  const players = playersData?.items || [];
 
   const handleCreateBracket = () => {
     if (!bracketSetup.name || !bracketSetup.players?.length) return;

@@ -33,7 +33,7 @@ export function TeeTimesManager({ tournamentId, canEdit = false }: TeeTimesManag
   const assignPlayerMutation = useAssignPlayerToTeeTime();
   const removePlayerMutation = useRemovePlayerFromTeeTime();
 
-  const players = (playersData as any)?.items || [];
+  const players = playersData?.items || [];
 
   const handleGenerateTeeTimes = () => {
     generateTeeTimesMutation.mutate(tournamentId);
