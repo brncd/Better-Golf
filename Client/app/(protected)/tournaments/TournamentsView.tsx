@@ -6,14 +6,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useTournaments, useDeleteTournament } from "@/hooks/useTournaments"
-import type { TournamentListGetDTO } from "@/types"
+import type { TournamentListGetDTO, PaginationResponse } from "@/types"
 import { Plus, Edit, Trash2, Users, Calendar, Grid, List } from "lucide-react"
 import { format } from "date-fns"
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
 
-export function TournamentsView() {
+interface TournamentsViewProps {
+  initialTournaments?: PaginationResponse<TournamentListGetDTO>;
+}
+
+export function TournamentsView({ initialTournaments }: TournamentsViewProps) {
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [deletingTournamentId, setDeletingTournamentId] = useState<number | null>(null);
   const router = useRouter();

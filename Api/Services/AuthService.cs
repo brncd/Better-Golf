@@ -20,7 +20,7 @@ namespace Api.Services
             _configuration = configuration;
         }
 
-        public async Task<LoginResponseDTO?> LoginAsync(LoginRequestDTO request)
+        public async Task<string?> LoginAsync(LoginRequestDTO request)
         {
             // Try to find user by email first, then by username
             var user = await _userManager.FindByEmailAsync(request.EmailOrUsername) 
@@ -43,14 +43,7 @@ namespace Api.Services
             }
             var token = GenerateJwtToken(user, roles);
 
-            return new LoginResponseDTO
-            {
-                Token = token,
-                Email = user.Email ?? "",
-                Username = user.UserName ?? "",
-                Roles = roles.ToList(),
-                Expiration = DateTime.UtcNow.AddHours(24)
-            };
+            return token;
         }
 
         public async Task<LoginResponseDTO?> RegisterAsync(RegisterRequestDTO request)

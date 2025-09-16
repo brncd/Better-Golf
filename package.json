@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "openapi-typescript": "^7.9.1"
+  }
+}

@@ -1,6 +1,6 @@
 import { apiClient } from '../apiService';
 import type { 
-  CourseListGetDTO, 
+  CoursesListGetDTO,
   SingleCourseDTO, 
   CoursePostDTO, 
   HoleListGetDTO,
@@ -11,7 +11,7 @@ import type {
 
 export const courseService = {
   // Get all courses with pagination
-  getAll: (pagination?: PaginationRequest): Promise<PaginationResponse<CourseListGetDTO>> =>
+  getAll: (pagination?: PaginationRequest): Promise<PaginationResponse<CoursesListGetDTO>> =>
     apiClient.get(`/api/Courses?pageNumber=${pagination?.pageNumber || 1}&pageSize=${pagination?.pageSize || 10}`),
 
   // Get course by ID - Fixed: API uses number IDs, not string

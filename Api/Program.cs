@@ -79,6 +79,14 @@ internal class Program
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
             };
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    context.Token = context.Request.Cookies["token"];
+                    return Task.CompletedTask;
+                }
+            };
         });
 
         builder.Services.AddAuthorization();
@@ -158,14 +166,43 @@ internal class Program
         // Map controllers
         
         // Custom Auth endpoints
-        app.MapPost("/api/auth/login", async ([FromServices] AuthService authService, LoginRequestDTO request) =>
+        app.MapPost("/api/auth/login", async (HttpContext httpContext, [FromServices] AuthService authService, LoginRequestDTO request) =>
         {
-            var result = await authService.LoginAsync(request);
-            if (result == null)
+            var token = await authService.LoginAsync(request);
+            if (token == null)
                 return Results.Unauthorized();
-            
-            return Results.Ok(result);
+
+            httpContext.Response.Cookies.Append("token", token, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTime.UtcNow.AddHours(24)
+            });
+
+            return Results.Ok(new { message = "Login successful" });
         });
+
+        app.MapPost("/api/auth/logout", (HttpContext httpContext) =>
+        {
+            httpContext.Response.Cookies.Delete("token");
+            return Results.Ok(new { message = "Logged out" });
+        });
+
+        app.MapGet("/api/me", (ClaimsPrincipal user) =>
+        {
+            if (user.Identity?.IsAuthenticated ?? false)
+            {
+                return Results.Ok(new
+                {
+                    isAuthenticated = true,
+                    email = user.FindFirst(ClaimTypes.Email)?.Value,
+                    username = user.FindFirst(ClaimTypes.Name)?.Value,
+                    roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value)
+                });
+            }
+            return Results.Ok(new { isAuthenticated = false });
+        }).RequireAuthorization();
 
         app.MapPost("/api/auth/register", async ([FromServices] AuthService authService, RegisterRequestDTO request) =>
         {

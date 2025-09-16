@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { MainLayout } from "@/components/layouts/MainLayout"
 import { PlayerForm } from "@/components/organisms/PlayerForm"
+import { useCreatePlayer } from "@/hooks/usePlayers"
 import type { PlayerPostDTO } from "@/types"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -11,19 +11,15 @@ import Link from "next/link"
 
 export default function NewPlayerPage() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const createPlayerMutation = useCreatePlayer()
 
   const handleSubmit = async (data: PlayerPostDTO) => {
-    setIsLoading(true)
     try {
-      const { playerService } = await import("@/lib/services")
-      await playerService.create(data)
+      await createPlayerMutation.mutateAsync(data)
       router.push("/players")
     } catch (error) {
       console.error("Error creating player:", error)
-      // Error handling is done in the PlayerForm component
-    } finally {
-      setIsLoading(false)
+      // Error handling is done in the mutation hook
     }
   }
 
@@ -50,7 +46,7 @@ export default function NewPlayerPage() {
         </div>
 
         {/* Form */}
-        <PlayerForm onSubmit={handleSubmit} onCancel={handleCancel} isLoading={isLoading} />
+        <PlayerForm onSubmit={handleSubmit} onCancel={handleCancel} isLoading={createPlayerMutation.isPending} />
       </div>
     </MainLayout>
   )

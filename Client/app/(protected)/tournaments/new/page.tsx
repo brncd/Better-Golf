@@ -3,8 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { TournamentForm, TournamentFormState } from "@/components/organisms/TournamentForm"
-import { tournamentService } from "@/lib/services"
-import { useErrorHandler } from "@/hooks/useErrorHandler"
+import { useCreateTournament } from "@/hooks/useTournaments"
 import { getErrorMessage } from "@/lib/errors"
 import type { TournamentPostDTO } from "@/types"
 import { ArrowLeft } from "lucide-react"
@@ -13,12 +12,10 @@ import Link from "next/link"
 
 export default function NewTournamentPage() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { handleError } = useErrorHandler({ context: 'Tournament Creation' })
+  const createTournamentMutation = useCreateTournament()
 
   const handleSubmit = async (data: TournamentFormState) => {
-    setIsLoading(true)
     setError(null)
     try {
       const tournamentData: TournamentPostDTO = {
@@ -38,17 +35,11 @@ export default function NewTournamentPage() {
       };
 
       console.log("Sending tournament data:", JSON.stringify(tournamentData, null, 2));
-      await tournamentService.create(tournamentData)
+      await createTournamentMutation.mutateAsync(tournamentData)
       router.push("/tournaments")
     } catch (err) {
       console.error("Failed to create tournament:", err);
-      // Use the improved error handling system
-      handleError(err);
-      
-      // Extract user-friendly error message
       setError(getErrorMessage(err));
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -74,7 +65,7 @@ export default function NewTournamentPage() {
       </div>
 
       {/* Form */}
-      <TournamentForm onSubmit={handleSubmit} onCancel={handleCancel} isLoading={isLoading} error={error} />
+      <TournamentForm onSubmit={handleSubmit} onCancel={handleCancel} isLoading={createTournamentMutation.isPending} error={error} />
     </div>
   )
 }

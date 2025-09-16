@@ -15,7 +15,7 @@ export const authService = {
   
   logout: async (): Promise<void> => {
     logger.info('Logout');
-    await apiClient.post('/api/auth/logout');
+    await apiClient.post('/api/auth/logout', {});
   },
   
   me: async (): Promise<{ isAuthenticated: boolean; email?: string; username?: string; roles?: string[] }> => {

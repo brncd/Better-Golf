@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { MainLayout } from "@/components/layouts/MainLayout"
 import { CourseForm } from "@/components/organisms/CourseForm"
+import { useCreateCourse } from "@/hooks/useCourses"
 import type { CoursePostDTO } from "@/types"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -11,19 +11,15 @@ import Link from "next/link"
 
 export default function NewCoursePage() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const createCourseMutation = useCreateCourse()
 
   const handleSubmit = async (data: CoursePostDTO) => {
-    setIsLoading(true)
     try {
-      const { courseService } = await import("@/lib/services")
-      await courseService.create(data)
+      await createCourseMutation.mutateAsync(data)
       router.push("/courses")
     } catch (error) {
       console.error("Error creating course:", error)
-      // Error handling is done in the CourseForm component
-    } finally {
-      setIsLoading(false)
+      // Error handling is done in the mutation hook
     }
   }
 
@@ -50,7 +46,7 @@ export default function NewCoursePage() {
         </div>
 
         {/* Form */}
-        <CourseForm onSubmit={handleSubmit} onCancel={handleCancel} isLoading={isLoading} />
+        <CourseForm onSubmit={handleSubmit} onCancel={handleCancel} isLoading={createCourseMutation.isPending} />
       </div>
     </MainLayout>
   )

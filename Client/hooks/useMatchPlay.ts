@@ -53,7 +53,7 @@ export const useCreateMatchPlayBracket = () => {
     mutationFn: (setup: BracketSetup) => matchPlayService.createBracket(setup),
     onSuccess: (bracket) => {
       // Invalidate tournament brackets
-      queryClient.invalidateQueries({ queryKey: matchPlayKeys.tournament(bracket.tournamentId) });
+      queryClient.invalidateQueries({ queryKey: matchPlayKeys.tournament(bracket.tournamentId.toString()) });
       
       toast({
         title: "Bracket Created",
@@ -82,8 +82,8 @@ export const useUpdateMatch = () => {
       matchPlayService.updateMatch(matchId, score),
     onSuccess: (match) => {
       // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: matchPlayKeys.match(match.id) });
-      queryClient.invalidateQueries({ queryKey: matchPlayKeys.bracket(match.bracketId) });
+      queryClient.invalidateQueries({ queryKey: matchPlayKeys.match(match.id.toString()) });
+      queryClient.invalidateQueries({ queryKey: matchPlayKeys.bracket(match.bracketId.toString()) });
       
       toast({
         title: "Match Updated",
@@ -112,8 +112,8 @@ export const useAdvanceRound = () => {
       matchPlayService.advanceRound(bracketId, advancement),
     onSuccess: (bracket) => {
       // Invalidate bracket queries
-      queryClient.invalidateQueries({ queryKey: matchPlayKeys.bracket(bracket.id) });
-      queryClient.invalidateQueries({ queryKey: matchPlayKeys.tournament(bracket.tournamentId) });
+      queryClient.invalidateQueries({ queryKey: matchPlayKeys.bracket(bracket.id.toString()) });
+      queryClient.invalidateQueries({ queryKey: matchPlayKeys.tournament(bracket.tournamentId.toString()) });
       
       toast({
         title: "Round Advanced",

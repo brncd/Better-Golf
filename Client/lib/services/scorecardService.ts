@@ -22,6 +22,10 @@ export const scorecardService = {
   updateScorecard: (id: number, scorecard: ScorecardPostDTO): Promise<void> =>
     apiClient.put(`/api/Scorecards/${id}`, scorecard),
 
+  // Update a specific hole score
+  updateHoleScore: (scorecardId: number, holeId: number, strokes: number, roundNumber?: number): Promise<void> =>
+    apiClient.put(`/api/Scorecards/${scorecardId}/holes/${holeId}`, { strokes, roundNumber }),
+
   // Lock a scorecard (prevent further edits)
   lockScorecard: (id: number): Promise<void> =>
     apiClient.put(`/api/Scorecards/${id}/lock`, {}),
