@@ -14,7 +14,7 @@ import {
   useCreateScorecard, 
   useUpdateScorecard 
 } from "@/hooks/useScorecardService";
-import { useCreateScorecard as useCreateScorecardOld, useUpdateScorecard as useUpdateScorecardOld } from "@/hooks/useScorecards";
+import { useCreateScorecard as useCreateScorecardOld, useUpdateScorecard as useUpdateScorecardOld } from "@/hooks/useScorecardService";
 import { ScorecardPostDTO, ScorecardResultPostDTO } from "@/types";
 import { TestTube, Play, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";

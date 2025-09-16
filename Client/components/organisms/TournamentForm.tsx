@@ -165,9 +165,9 @@ export function TournamentForm({ initialData, onSubmit, onCancel, isLoading, err
                   <SelectValue placeholder="Select a golf course" />
                 </SelectTrigger>
                 <SelectContent>
-                  {courses.map((course: any) => (
+                  {courses.map((course: CoursesListGetDTO) => (
                     <SelectItem key={course.id} value={course.id.toString()}>
-                      {course.name} ({course.holes?.length || 18} holes)
+                      {course.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

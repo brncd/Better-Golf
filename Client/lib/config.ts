@@ -29,6 +29,11 @@ export interface AppConfig {
     googleMapsApiKey?: string
     analyticsId?: string
   }
+  demo: {
+    email: string
+    username: string
+    password: string
+  }
 }
 
 export const config: AppConfig = {
@@ -55,6 +60,11 @@ export const config: AppConfig = {
   external: {
     googleMapsApiKey: getEnvVar('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY'),
     analyticsId: getEnvVar('NEXT_PUBLIC_ANALYTICS_ID'),
+  },
+  demo: {
+    email: getEnvVar('NEXT_PUBLIC_DEMO_EMAIL', 'demo@bettergolf.com'),
+    username: getEnvVar('NEXT_PUBLIC_DEMO_USERNAME', 'demo'),
+    password: getEnvVar('NEXT_PUBLIC_DEMO_PASSWORD', 'Demo123!'),
   },
 }
 

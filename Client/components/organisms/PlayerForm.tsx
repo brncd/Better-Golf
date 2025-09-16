@@ -75,7 +75,7 @@ export function PlayerForm({ initialData, onSubmit, onCancel, isLoading }: Playe
     }
   }
 
-  const updateField = (field: keyof PlayerPostDTO, value: any) => {
+  const updateField = (field: keyof PlayerPostDTO, value: string | number | Date) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }))

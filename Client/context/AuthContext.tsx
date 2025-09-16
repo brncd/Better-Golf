@@ -1,9 +1,10 @@
-"use client"
+'use client'
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { createContext, useContext, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { User, LoginRequest, RegisterRequest, AuthResponse } from '@/types';
 import { authService } from '@/lib/authService';
+import { LoadingSpinner } from '@/components/atoms/LoadingSpinner';
 
 interface AuthContextType {
   user: User | null;
@@ -11,7 +12,7 @@ interface AuthContextType {
   login: (credentials: LoginRequest) => Promise<AuthResponse>;
   register: (userData: RegisterRequest) => Promise<AuthResponse>;
   logout: () => void;
-  loading: boolean;
+  isLoading: boolean;
   hasRole: (role: string) => boolean;
   isAdmin: () => boolean;
 }
@@ -22,75 +23,53 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
+const authQueryKey = ['auth-user'];
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const queryClient = useQueryClient();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  // Initialize user from stored JWT token
-  useEffect(() => {
-    const initializeAuth = () => {
-      if (authService.isAuthenticated()) {
-        const userData = authService.getUserFromToken();
-        if (userData) {
-          setUser(userData);
-        } else {
-          // Invalid token, clear it
-          authService.logout();
-          setUser(null);
+  const { data: user, isLoading, isError } = useQuery({
+    queryKey: authQueryKey,
+    queryFn: async () => {
+      try {
+        const me = await authService.me();
+        if (me.isAuthenticated) {
+          return {
+            email: me.email!,
+            username: me.username!,
+            roles: me.roles!,
+          };
         }
-      } else {
-        setUser(null);
+      } catch (error) {
+        // This will happen on 401s for non-authed users
       }
-      setLoading(false);
-    };
+      return null;
+    },
+    staleTime: Infinity,
+    retry: false,
+  });
 
-    // Only run on client side
-    if (typeof window !== 'undefined') {
-      initializeAuth();
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  // Login mutation
   const loginMutation = useMutation({
-    mutationFn: async (credentials: LoginRequest) => {
-      const response = await authService.login(credentials);
-      return response;
-    },
-    onSuccess: (response) => {
-      // Set user data from response
-      setUser({
-        email: response.email,
-        username: response.username,
-        roles: response.roles
-      });
+    mutationFn: authService.login,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: authQueryKey });
     },
   });
 
-  // Register mutation
   const registerMutation = useMutation({
-    mutationFn: async (userData: RegisterRequest) => {
-      const response = await authService.register(userData);
-      return response;
-    },
-    onSuccess: (response) => {
-      // Set user data from response
-      setUser({
-        email: response.email,
-        username: response.username,
-        roles: response.roles
-      });
+    mutationFn: authService.register,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: authQueryKey });
     },
   });
 
-  // Logout function
-  const logout = () => {
-    authService.logout();
-    setUser(null);
-    queryClient.clear();
-  };
+  const logoutMutation = useMutation({
+    mutationFn: authService.logout,
+    onSuccess: () => {
+      queryClient.setQueryData(authQueryKey, null);
+      queryClient.clear();
+    },
+  });
 
   const hasRole = (role: string): boolean => {
     return user?.roles?.includes(role) ?? false;
@@ -101,15 +80,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const value: AuthContextType = {
-    user,
+    user: user || null,
     isAuthenticated: !!user,
     login: loginMutation.mutateAsync,
     register: registerMutation.mutateAsync,
-    logout,
-    loading,
+    logout: () => logoutMutation.mutate(),
+    isLoading,
     hasRole,
     isAdmin,
   };
+
+  if (isLoading) {
+    return <div className="flex h-screen items-center justify-center"><LoadingSpinner /></div>;
+  }
 
   return (
     <AuthContext.Provider value={value}>

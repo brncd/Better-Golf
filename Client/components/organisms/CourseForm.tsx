@@ -17,13 +17,11 @@ interface CourseFormProps {
 }
 
 export function CourseForm({ initialData, onSubmit, onCancel, isLoading }: CourseFormProps) {
-  const [formData, setFormData] = useState<CoursePostDTO>({
+  const [formData, setFormData] = useState<Partial<CoursePostDTO>>({
     name: initialData?.name || "",
-    location: initialData?.location || "",
-    numberOfHoles: initialData?.numberOfHoles || 18,
-    description: initialData?.description || "",
-    rating: initialData?.rating || undefined,
-    slope: initialData?.slope || undefined,
+    courseSlope: initialData?.courseSlope || 113,
+    courseRating: initialData?.courseRating || 72,
+    par: initialData?.par || 72,
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -31,24 +29,17 @@ export function CourseForm({ initialData, onSubmit, onCancel, isLoading }: Cours
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name.trim()) {
+    if (!formData.name?.trim()) {
       newErrors.name = "Course name is required"
     }
-
-    if (!formData.location.trim()) {
-      newErrors.location = "Location is required"
+    if (!formData.courseRating || formData.courseRating < 60 || formData.courseRating > 80) {
+      newErrors.courseRating = "Course rating must be between 60 and 80"
     }
-
-    if (formData.numberOfHoles < 1 || formData.numberOfHoles > 36) {
-      newErrors.numberOfHoles = "Number of holes must be between 1 and 36"
+    if (!formData.courseSlope || formData.courseSlope < 55 || formData.courseSlope > 155) {
+      newErrors.courseSlope = "Course slope must be between 55 and 155"
     }
-
-    if (formData.rating && (formData.rating < 60 || formData.rating > 80)) {
-      newErrors.rating = "Course rating must be between 60 and 80"
-    }
-
-    if (formData.slope && (formData.slope < 55 || formData.slope > 155)) {
-      newErrors.slope = "Slope rating must be between 55 and 155"
+    if (!formData.par || formData.par < 60 || formData.par > 80) {
+      newErrors.par = "Course par must be between 60 and 80"
     }
 
     setErrors(newErrors)
@@ -58,11 +49,11 @@ export function CourseForm({ initialData, onSubmit, onCancel, isLoading }: Cours
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (validateForm()) {
-      onSubmit(formData)
+      onSubmit(formData as CoursePostDTO)
     }
   }
 
-  const updateField = (field: keyof CoursePostDTO, value: any) => {
+  const updateField = (field: keyof CoursePostDTO, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }))
@@ -90,15 +81,19 @@ export function CourseForm({ initialData, onSubmit, onCancel, isLoading }: Cours
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="location">Location *</Label>
+              <Label htmlFor="courseRating">Course Rating *</Label>
               <Input
-                id="location"
-                value={formData.location}
-                onChange={(e) => updateField("location", e.target.value)}
-                placeholder="Enter course location"
-                className={errors.location ? "border-destructive" : ""}
+                id="courseRating"
+                type="number"
+                value={formData.courseRating}
+                onChange={(e) => updateField("courseRating", parseFloat(e.target.value) || 0)}
+                className={errors.courseRating ? "border-destructive" : ""}
+                placeholder="Enter course rating"
+                min="60"
+                max="80"
+                step="0.1"
               />
-              {errors.location && <p className="text-sm text-destructive">{errors.location}</p>}
+              {errors.courseRating && <p className="text-sm text-destructive">{errors.courseRating}</p>}
             </div>
           </div>
 
@@ -120,52 +115,34 @@ export function CourseForm({ initialData, onSubmit, onCancel, isLoading }: Cours
           <CardTitle>Course Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="numberOfHoles">Number of Holes *</Label>
-              <Input
-                id="numberOfHoles"
-                type="number"
-                value={formData.numberOfHoles}
-                onChange={(e) => updateField("numberOfHoles", Number.parseInt(e.target.value) || 18)}
-                placeholder="18"
-                min="1"
-                max="36"
-                className={errors.numberOfHoles ? "border-destructive" : ""}
-              />
-              {errors.numberOfHoles && <p className="text-sm text-destructive">{errors.numberOfHoles}</p>}
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="par">Course Par</Label>
+            <Input
+              id="par"
+              type="number"
+              value={formData.par}
+              onChange={(e) => updateField("par", parseInt(e.target.value) || 0)}
+              className={errors.par ? "border-destructive" : ""}
+              placeholder="Enter course par"
+              min="60"
+              max="80"
+            />
+            {errors.par && <p className="text-sm text-destructive">{errors.par}</p>}
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="rating">Course Rating</Label>
-              <Input
-                id="rating"
-                type="number"
-                value={formData.rating || ""}
-                onChange={(e) => updateField("rating", e.target.value ? Number.parseFloat(e.target.value) : undefined)}
-                placeholder="72.5"
-                min="60"
-                max="80"
-                step="0.1"
-                className={errors.rating ? "border-destructive" : ""}
-              />
-              {errors.rating && <p className="text-sm text-destructive">{errors.rating}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="slope">Slope Rating</Label>
-              <Input
-                id="slope"
-                type="number"
-                value={formData.slope || ""}
-                onChange={(e) => updateField("slope", e.target.value ? Number.parseInt(e.target.value) : undefined)}
-                placeholder="113"
-                min="55"
-                max="155"
-                className={errors.slope ? "border-destructive" : ""}
-              />
-              {errors.slope && <p className="text-sm text-destructive">{errors.slope}</p>}
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="slope">Slope Rating</Label>
+            <Input
+              id="slope"
+              type="number"
+              value={formData.courseSlope || ""}
+              onChange={(e) => updateField("courseSlope", parseInt(e.target.value) || 0)}
+              placeholder="113"
+              min="55"
+              max="155"
+              className={errors.courseSlope ? "border-destructive" : ""}
+            />
+            {errors.courseSlope && <p className="text-sm text-destructive">{errors.courseSlope}</p>}
           </div>
         </CardContent>
       </Card>

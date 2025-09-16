@@ -1,8 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from "axios"
 import { config } from "./config"
 import { logger } from "./logger"
-import { navigationService } from "./navigationService"
-import { handleApiError, BetterGolfError } from "./errors"
+import { handleApiError } from "./errors"
 
 class ApiService {
   private client: AxiosInstance
@@ -14,23 +13,17 @@ class ApiService {
       headers: {
         "Content-Type": "application/json",
       },
+      withCredentials: true,
     })
 
-    // Request interceptor for logging and auth
+    // Request interceptor for logging
     this.client.interceptors.request.use(
       (config) => {
-        // Add JWT token to Authorization header
-        const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`
-        }
-        
         logger.apiRequest(
           config.method?.toUpperCase() || 'UNKNOWN',
           config.url || 'unknown',
           config.data
         )
-        
         return config
       },
       (error: AxiosError) => {
@@ -51,19 +44,7 @@ class ApiService {
         return response
       },
       (error: AxiosError) => {
-        const betterGolfError = handleApiError(error)
-        
-        if (error.response?.status === 401) {
-          // Handle unauthorized access (only on client side)
-          if (typeof window !== 'undefined') {
-            logger.authFailure('Token expired or invalid', error)
-            // Clear invalid token
-            localStorage.removeItem('authToken')
-            navigationService.redirectToLogin()
-          }
-        }
-        
-        return Promise.reject(betterGolfError)
+        return Promise.reject(handleApiError(error))
       }
     )
   }

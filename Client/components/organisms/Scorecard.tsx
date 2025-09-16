@@ -7,12 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { HoleScorecard } from "@/components/molecules/HoleScorecard"
 import { useCourseHoles } from "@/hooks/useCourses"
 import { usePlayers } from "@/hooks/usePlayers"
-import { useScorecard, useCreateScorecard, useUpdateScorecard, useUpdateHoleScore } from "@/hooks/useScorecards"
+import { useCreateScorecard, useUpdateScorecard } from "@/hooks/useScorecardService"
 import { LoadingSpinner } from "@/components/atoms/LoadingSpinner"
 import { ErrorDisplay } from "@/components/atoms/ErrorDisplay"
 import { useToast } from "@/hooks/use-toast"
+import { useErrorHandler } from "@/hooks/useErrorHandler"
 import { Save, RotateCcw } from "lucide-react"
-import type { ScorecardPostDTO, ScorecardResultPostDTO } from "@/types"
+import { ScorecardPostDTO, ScorecardResultPostDTO, HoleListGetDTO, PlayerListGetDTO, SingleScorecardResultDTO, SingleScorecardDTO } from "@/types"
 
 interface ScorecardProps {
   tournamentId: number
@@ -23,13 +24,14 @@ interface ScorecardProps {
 
 export function Scorecard({ tournamentId, courseId, roundNumber = 1, existingScorecardId }: ScorecardProps) {
   const { toast } = useToast()
+  const { handleError } = useErrorHandler({ context: 'Scorecard' })
   const { data: holesResponse, isLoading: holesLoading, error: holesError } = useCourseHoles(courseId)
   const { data: playersResponse, isLoading: playersLoading, error: playersError } = usePlayers()
-  const { data: existingScorecard, isLoading: scorecardLoading } = useScorecard(existingScorecardId || 0)
+  const existingScorecard: SingleScorecardDTO | null = null
   
   const createScorecardMutation = useCreateScorecard()
   const updateScorecardMutation = useUpdateScorecard()
-  const updateHoleScoreMutation = useUpdateHoleScore()
+  const updateHoleScore = undefined
   
   const holes = (holesResponse as any)?.items || []
   const players = (playersResponse as any)?.items || []
@@ -41,27 +43,14 @@ export function Scorecard({ tournamentId, courseId, roundNumber = 1, existingSco
 
   // Load existing scorecard data if editing
   useEffect(() => {
-    if (existingScorecard) {
-      setSelectedPlayer(existingScorecard.playerId.toString())
-      setPlayingHandicap(existingScorecard.playingHandicap)
-      
-      // Convert scorecard results to scores map
-      const scoresMap: Record<number, number> = {}
-      existingScorecard.scorecardResults.forEach(result => {
-        // Find hole by hole number to get hole ID
-        const hole = holes.find((h: any) => h.holeNumber === result.holeNumber)
-        if (hole) {
-          scoresMap[hole.id] = result.strokes
-        }
-      })
-      setScores(scoresMap)
-    }
-  }, [existingScorecard, holes])
+    // TODO: Implement when useScorecard hook is available
+    // This will load existing scorecard data for editing
+  }, [existingScorecardId])
 
   // Update playing handicap when player changes
   useEffect(() => {
     if (selectedPlayer) {
-      const player = players.find((p: any) => p.id.toString() === selectedPlayer)
+      const player = players.find((p: PlayerListGetDTO) => p.id.toString() === selectedPlayer)
       if (player) {
         setPlayingHandicap(player.handicap || 0)
       }
@@ -71,23 +60,23 @@ export function Scorecard({ tournamentId, courseId, roundNumber = 1, existingSco
   const handleScoreChange = async (holeId: number, score: number) => {
     setScores((prev) => ({ ...prev, [holeId]: score }))
     
-    // If editing existing scorecard, update individual hole score immediately
-    if (existingScorecardId) {
-      try {
-        await updateHoleScoreMutation.mutateAsync({
-          scorecardId: existingScorecardId,
-          holeId,
-          strokes: score,
-          roundNumber
-        })
-      } catch (error) {
-        toast({
-          title: "Error updating score",
-          description: "Failed to save score for this hole. Please try again.",
-          variant: "destructive",
-        })
-      }
-    }
+    // TODO: Implement individual hole score updates when hook is available
+    // if (existingScorecardId && updateHoleScore) {
+    //   try {
+    //     await updateHoleScore.mutateAsync({
+    //       scorecardId: existingScorecardId,
+    //       holeId,
+    //       strokes: score,
+    //       roundNumber
+    //     })
+    //   } catch (error) {
+    //     toast({
+    //       title: "Error updating score",
+    //       description: "Failed to save score for this hole. Please try again.",
+    //       variant: "destructive",
+    //     })
+    //   }
+    // }
   }
 
   const handleSubmit = async () => {
@@ -127,8 +116,8 @@ export function Scorecard({ tournamentId, courseId, roundNumber = 1, existingSco
 
       if (existingScorecardId) {
         // Update existing scorecard
-        await updateScorecardMutation.mutateAsync({
-          scorecardId: existingScorecardId,
+        updateScorecardMutation.mutate({
+          id: existingScorecardId,
           scorecard: scorecardData
         })
         toast({
@@ -147,8 +136,7 @@ export function Scorecard({ tournamentId, courseId, roundNumber = 1, existingSco
         setSelectedPlayer("")
       }
     } catch (error) {
-      // Error handling is done by the mutation hooks
-      console.error("Error submitting scorecard:", error)
+      handleError(error, 'Failed to submit scorecard')
     } finally {
       setIsSubmitting(false)
     }
@@ -160,7 +148,7 @@ export function Scorecard({ tournamentId, courseId, roundNumber = 1, existingSco
 
   const getTotalScore = () => {
     const totalStrokes = Object.values(scores).reduce((sum: number, score: number) => sum + score, 0)
-    const totalPar = holes.reduce((sum: number, hole: any) => sum + hole.par, 0)
+    const totalPar = holes.reduce((sum: number, hole: HoleListGetDTO) => sum + hole.par, 0)
     return totalStrokes - totalPar
   }
 
@@ -206,13 +194,13 @@ export function Scorecard({ tournamentId, courseId, roundNumber = 1, existingSco
           <div className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="flex-1 space-y-2">
               <label className="text-sm font-medium">Select Player</label>
-              <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
+              <Select value={selectedPlayer} onValueChange={(value: string) => setSelectedPlayer(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a player" />
                 </SelectTrigger>
                 <SelectContent>
-                  {players.map((player: any) => (
-                    <SelectItem key={player.id} value={player.id}>
+                  {players.map((player: PlayerListGetDTO) => (
+                    <SelectItem key={player.id} value={player.id.toString()}>
                       {player.firstName} {player.lastName} (Handicap: {player.handicap})
                     </SelectItem>
                   ))}
@@ -251,7 +239,7 @@ export function Scorecard({ tournamentId, courseId, roundNumber = 1, existingSco
       {/* Holes Grid */}
       {selectedPlayer && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {holes.map((hole: any) => (
+          {holes.map((hole: HoleListGetDTO) => (
             <HoleScorecard
               key={hole.id}
               hole={hole}

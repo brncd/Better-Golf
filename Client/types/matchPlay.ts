@@ -1,6 +1,6 @@
 export interface MatchPlayBracket {
-  id: string;
-  tournamentId: string;
+  id: number;
+  tournamentId: number;
   name: string;
   totalRounds: number;
   currentRound: number;
@@ -11,8 +11,8 @@ export interface MatchPlayBracket {
 }
 
 export interface Match {
-  id: string;
-  bracketId: string;
+  id: number;
+  bracketId: number;
   roundNumber: number;
   matchNumber: number;
   player1?: MatchPlayer;
@@ -22,12 +22,12 @@ export interface Match {
   scheduledTime?: string;
   completedAt?: string;
   score?: MatchScore;
-  nextMatchId?: string; // For advancement
+  nextMatchId?: number; // For advancement
 }
 
 export interface MatchPlayer {
-  id: string;
-  playerId: string;
+  id: number;
+  playerId: number;
   playerName: string;
   handicap?: number;
   seed?: number;
@@ -49,9 +49,9 @@ export interface HoleScore {
 }
 
 export interface BracketSetup {
-  tournamentId: string;
+  tournamentId: number;
   name: string;
-  players: string[]; // Player IDs
+  players: number[]; // Player IDs
   seedingMethod: 'Random' | 'Handicap' | 'Manual';
   byeHandling: 'Random' | 'LowestSeed';
 }
@@ -59,7 +59,7 @@ export interface BracketSetup {
 export interface RoundAdvancement {
   roundNumber: number;
   matches: {
-    matchId: string;
-    winnerId: string;
+    matchId: number;
+    winnerId: number;
   }[];
 }

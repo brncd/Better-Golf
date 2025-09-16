@@ -17,10 +17,12 @@ interface HoleFormProps {
 }
 
 export function HoleForm({ courseId, initialData, onSubmit, onCancel, isLoading }: HoleFormProps) {
-  const [formData, setFormData] = useState<HolePostDTO>({
-    number: initialData?.number || 1,
+  const [formData, setFormData] = useState<Partial<HolePostDTO>>({
+    holeNumber: initialData?.holeNumber || 1,
     par: initialData?.par || 4,
-    strokeIndex: initialData?.strokeIndex || 1,
+    handicap: initialData?.handicap || 1,
+    yardage: initialData?.yardage || 150,
+    description: initialData?.description || "",
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -28,16 +30,14 @@ export function HoleForm({ courseId, initialData, onSubmit, onCancel, isLoading 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
-    if (formData.number < 1 || formData.number > 36) {
-      newErrors.number = "Hole number must be between 1 and 36"
+    if (!formData.holeNumber || formData.holeNumber < 1 || formData.holeNumber > 18) {
+      newErrors.holeNumber = "Hole number must be between 1 and 18"
     }
-
-    if (formData.par < 3 || formData.par > 6) {
-      newErrors.par = "Par must be between 3 and 6"
+    if (!formData.par || formData.par < 3 || formData.par > 5) {
+      newErrors.par = "Par must be between 3 and 5"
     }
-
-    if (formData.strokeIndex < 1 || formData.strokeIndex > 18) {
-      newErrors.strokeIndex = "Stroke index must be between 1 and 18"
+    if (!formData.handicap || formData.handicap < 1 || formData.handicap > 18) {
+      newErrors.handicap = "Handicap must be between 1 and 18"
     }
 
     setErrors(newErrors)
@@ -47,11 +47,11 @@ export function HoleForm({ courseId, initialData, onSubmit, onCancel, isLoading 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (validateForm()) {
-      onSubmit(formData)
+      onSubmit(formData as HolePostDTO)
     }
   }
 
-  const updateField = (field: keyof HolePostDTO, value: any) => {
+  const updateField = (field: keyof HolePostDTO, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }))
@@ -67,18 +67,18 @@ export function HoleForm({ courseId, initialData, onSubmit, onCancel, isLoading 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="number">Hole Number *</Label>
+              <Label htmlFor="holeNumber">Hole Number *</Label>
               <Input
-                id="number"
+                id="holeNumber"
                 type="number"
-                value={formData.number}
-                onChange={(e) => updateField("number", Number.parseInt(e.target.value) || 1)}
-                placeholder="1"
+                value={formData.holeNumber}
+                onChange={(e) => updateField("holeNumber", parseInt(e.target.value) || 0)}
+                className={errors.holeNumber ? "border-destructive" : ""}
+                placeholder="Enter hole number"
                 min="1"
-                max="36"
-                className={errors.number ? "border-destructive" : ""}
+                max="18"
               />
-              {errors.number && <p className="text-sm text-destructive">{errors.number}</p>}
+              {errors.holeNumber && <p className="text-sm text-destructive">{errors.holeNumber}</p>}
             </div>
 
             <div className="space-y-2">
@@ -87,28 +87,28 @@ export function HoleForm({ courseId, initialData, onSubmit, onCancel, isLoading 
                 id="par"
                 type="number"
                 value={formData.par}
-                onChange={(e) => updateField("par", Number.parseInt(e.target.value) || 4)}
+                onChange={(e) => updateField("par", parseInt(e.target.value) || 4)}
                 placeholder="4"
                 min="3"
-                max="6"
+                max="5"
                 className={errors.par ? "border-destructive" : ""}
               />
               {errors.par && <p className="text-sm text-destructive">{errors.par}</p>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="strokeIndex">Stroke Index *</Label>
+              <Label htmlFor="handicap">Handicap *</Label>
               <Input
-                id="strokeIndex"
+                id="handicap"
                 type="number"
-                value={formData.strokeIndex}
-                onChange={(e) => updateField("strokeIndex", Number.parseInt(e.target.value) || 1)}
-                placeholder="1"
+                value={formData.handicap}
+                onChange={(e) => updateField("handicap", parseInt(e.target.value) || 0)}
+                className={errors.handicap ? "border-destructive" : ""}
+                placeholder="Enter handicap"
                 min="1"
                 max="18"
-                className={errors.strokeIndex ? "border-destructive" : ""}
               />
-              {errors.strokeIndex && <p className="text-sm text-destructive">{errors.strokeIndex}</p>}
+              {errors.handicap && <p className="text-sm text-destructive">{errors.handicap}</p>}
             </div>
           </div>
 

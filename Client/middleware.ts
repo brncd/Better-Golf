@@ -1,87 +1,74 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { jwtVerify } from 'jose';
 
-// Define protected routes that require authentication
 const protectedRoutes = [
   '/dashboard',
   '/tournaments',
   '/players',
   '/courses',
   '/admin',
-  '/scoring'
-]
+  '/scoring',
+  '/profile'
+];
 
-// Define admin-only routes
 const adminRoutes = [
   '/admin'
-]
+];
 
-// Define public routes that don't require authentication
-const publicRoutes = [
-  '/login',
-  '/register',
-  '/'
-]
-
-// Helper function to validate JWT token
-function isValidToken(token: string): boolean {
+async function verifyToken(token: string, secret: string) {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    const currentTime = Date.now() / 1000
-    return payload.exp > currentTime
-  } catch {
-    return false
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
+    return payload;
+  } catch (error) {
+    return null;
   }
 }
 
-// Helper function to get roles from JWT token
-function getRolesFromToken(token: string): string[] {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    const roles = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || 
-                 payload.role || []
-    return Array.isArray(roles) ? roles : [roles]
-  } catch {
-    return []
-  }
-}
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const token = request.cookies.get('token')?.value;
+  const secret = process.env.JWT_SECRET;
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-  
-  // Get token from localStorage (we'll handle this client-side)
-  // For now, we'll do basic route protection without token validation
-  // since localStorage is not accessible in middleware
-
-  // Check if the route is public
-  if (publicRoutes.includes(pathname)) {
-    return NextResponse.next()
+  if (!secret) {
+    console.error("JWT_SECRET is not set");
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url);
   }
 
-  // Check if the route is protected
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
-  
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+
   if (isProtectedRoute) {
-    // Since we can't access localStorage in middleware, we'll let client-side
-    // components handle authentication redirects. This middleware will mainly
-    // handle static route protection.
-    
-    // In a production app, you might want to use cookies for server-side validation
-    // or implement a different authentication strategy
+    if (!token) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url);
+    }
+
+    const payload = await verifyToken(token, secret);
+
+    if (!payload) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url);
+    }
+
+    const roles = (payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role || []) as string[];
+    const isAdminRoute = adminRoutes.some(route => pathname.startsWith(route));
+
+    if (isAdminRoute && !roles.includes('Admin')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url);
+    }
   }
 
-  return NextResponse.next()
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|login|register|.*\.png$).*)',
   ],
 }

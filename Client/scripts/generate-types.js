@@ -8,7 +8,7 @@ const http = require('http');
 
 const API_URL = process.env.API_URL || 'http://localhost:5100';
 const OUTPUT_FILE = path.join(__dirname, '../types/api-generated.ts');
-const SWAGGER_ENDPOINT = `${API_URL}/swagger/v1/swagger.json`;
+const SWAGGER_ENDPOINT = `${API_URL}/swagger/v0.1/swagger.json`;
 
 // Function to check if API is accessible
 function checkApiHealth() {

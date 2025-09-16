@@ -1,11 +1,8 @@
 export interface TeeTime {
-  id: string;
-  tournamentId: string;
+  id: number;
+  tournamentId: number;
   roundNumber: number;
   teeTimeSlot: string; // ISO datetime string
-  courseId: string;
-  courseName: string;
-  holeNumber: number;
   players: TeeTimePlayer[];
   maxPlayers: number;
   status: 'Available' | 'Booked' | 'InProgress' | 'Completed';
@@ -14,8 +11,8 @@ export interface TeeTime {
 }
 
 export interface TeeTimePlayer {
-  id: string;
-  playerId: string;
+  id: number;
+  playerId: number;
   playerName: string;
   handicap?: number;
   category?: string;
@@ -29,14 +26,14 @@ export interface TeeTimeSlot {
 }
 
 export interface TeeTimeGeneration {
-  tournamentId: string;
+  tournamentId: number;
   roundNumber: number;
   startDate: string;
   startTime: string;
   endTime: string;
   interval: number; // minutes between groups
   maxPlayersPerGroup: number;
-  courseIds: string[];
+  courseIds: number[];
 }
 
 export interface TeeTimeSchedule {
@@ -50,7 +47,7 @@ export interface TeeTimeRound {
 }
 
 export interface TeeTimeAssignment {
-  teeTimeId: string;
-  playerId: string;
+  teeTimeId: number;
+  playerId: number;
   position: number;
 }

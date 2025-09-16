@@ -55,7 +55,7 @@ export function CategoryForm({ initialData, onSubmit, onCancel, isLoading }: Cat
     }
   }
 
-  const updateField = (field: keyof CategoryPostDTO, value: any) => {
+  const updateField = (field: keyof CategoryPostDTO, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }))

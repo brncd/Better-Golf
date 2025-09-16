@@ -29,18 +29,17 @@ export function DemoUserButton({ className }: DemoUserButtonProps) {
     try {
       // Use AuthContext login method - now uses cookies
       await login({
-        emailOrUsername: "demo@bettergolf.com",
-        password: "Demo123!"
+        emailOrUsername: config.demo.email,
+        password: config.demo.password
       })
 
-      // Seed demo data using Authorization header
-      const token = authService.getStoredToken()
+      // Seed demo data using cookies (credentials: 'include')
       const response = await fetch(`${config.api.baseUrl}/api/seed-demo-data`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
       })
 
       // Redirect to dashboard regardless of seeding result
@@ -49,25 +48,24 @@ export function DemoUserButton({ className }: DemoUserButtonProps) {
       // If login fails, try to register first
       try {
         await authService.register({
-          username: "demo",
-          email: "demo@bettergolf.com",
-          password: "Demo123!"
+          username: config.demo.username,
+          email: config.demo.email,
+          password: config.demo.password
         })
 
         // Then login using AuthContext
         await login({
-          emailOrUsername: "demo@bettergolf.com",
-          password: "Demo123!"
+          emailOrUsername: config.demo.email,
+          password: config.demo.password
         })
 
-        // Seed demo data using Authorization header
-        const token = authService.getStoredToken()
+        // Seed demo data using cookies (credentials: 'include')
         const response = await fetch(`${config.api.baseUrl}/api/seed-demo-data`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
         })
 
         router.push('/dashboard')

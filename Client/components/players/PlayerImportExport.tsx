@@ -25,7 +25,7 @@ interface ImportResult {
   duplicates: number;
 }
 
-export function PlayerImportExport({ onImportComplete }: PlayerImportExportProps) {
+export function PlayerImportExport({ onImportComplete }: PlayerImportExportProps = {}) {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);

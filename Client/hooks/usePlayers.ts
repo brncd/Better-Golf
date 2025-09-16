@@ -22,37 +22,57 @@ export const playerKeys = {
 };
 
 // Players List Query
-export const usePlayers = (params?: PaginationRequest) => {
+export const usePlayers = (params?: PaginationRequest, options?: { initialData?: PaginationResponse<PlayerListGetDTO> }) => {
   const { handleError } = useErrorHandler({ context: 'usePlayers' });
   
-  return useQuery({
+  const query = useQuery({
     queryKey: playerKeys.list(params || {}),
     queryFn: () => playerService.getAll(params),
-    onError: (error) => handleError(error, 'Failed to fetch players'),
+    initialData: options?.initialData,
   });
+
+  // Handle errors using the error state
+  if (query.error) {
+    handleError(query.error, 'Failed to fetch players');
+  }
+
+  return query;
 };
 
 // Single Player Query
-export const usePlayer = (id: string) => {
+export const usePlayer = (id: number) => {
   const { handleError } = useErrorHandler({ context: 'usePlayer' });
   
-  return useQuery({
-    queryKey: playerKeys.detail(id),
+  const query = useQuery({
+    queryKey: playerKeys.detail(id.toString()),
     queryFn: () => playerService.getById(id),
     enabled: !!id,
-    onError: (error) => handleError(error, `Failed to fetch player ${id}`),
   });
+
+  // Handle errors using the error state
+  if (query.error) {
+    handleError(query.error, `Failed to fetch player ${id}`);
+  }
+
+  return query;
 };
 
-// Current User Profile Query
+// Current User Profile Query (disabled for now as API doesn't support it)
 export const useMyProfile = () => {
   const { handleError } = useErrorHandler({ context: 'useMyProfile' });
   
-  return useQuery({
+  const query = useQuery({
     queryKey: playerKeys.profile(),
-    queryFn: () => playerService.getMyProfile(),
-    onError: (error) => handleError(error, 'Failed to fetch your profile'),
+    queryFn: () => Promise.reject(new Error('Profile endpoint not implemented')),
+    enabled: false, // Disable until API supports this endpoint
   });
+
+  // Handle errors using the error state
+  if (query.error) {
+    handleError(query.error, 'Failed to fetch your profile');
+  }
+
+  return query;
 };
 
 // Create Player Mutation
@@ -90,12 +110,12 @@ export const useUpdatePlayer = () => {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: ({ id, player }: { id: string; player: Partial<PlayerPostDTO> }) =>
+    mutationFn: ({ id, player }: { id: number; player: PlayerPostDTO }) =>
       playerService.update(id, player),
     onSuccess: (updatedPlayer, { id }) => {
       // Update the specific player in cache
       queryClient.setQueryData(
-        playerKeys.detail(id),
+        playerKeys.detail(id.toString()),
         updatedPlayer
       );
       
@@ -118,14 +138,14 @@ export const useUpdatePlayer = () => {
   });
 };
 
-// Update My Profile Mutation
+// Update My Profile Mutation (disabled for now as API doesn't support it)
 export const useUpdateMyProfile = () => {
   const queryClient = useQueryClient();
   const { handleError } = useErrorHandler({ context: 'useUpdateMyProfile' });
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: (profile: Partial<PlayerProfileDTO>) => playerService.updateMyProfile(profile),
+    mutationFn: (profile: Partial<PlayerProfileDTO>) => Promise.reject(new Error('Profile update endpoint not implemented')),
     onSuccess: (updatedProfile) => {
       // Update profile in cache
       queryClient.setQueryData(playerKeys.profile(), updatedProfile);
@@ -153,10 +173,10 @@ export const useDeletePlayer = () => {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: (id: string) => playerService.delete(id),
+    mutationFn: (id: number) => playerService.delete(id),
     onSuccess: (_, id) => {
       // Remove from cache
-      queryClient.removeQueries({ queryKey: playerKeys.detail(id) });
+      queryClient.removeQueries({ queryKey: playerKeys.detail(id.toString()) });
       
       // Invalidate lists
       queryClient.invalidateQueries({ queryKey: playerKeys.lists() });

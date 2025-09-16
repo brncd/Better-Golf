@@ -94,6 +94,27 @@ export const useUpdateScorecard = () => {
   });
 };
 
+// Hook to update individual hole score
+export function useUpdateHoleScore() {
+  const queryClient = useQueryClient();
+  const { handleError } = useErrorHandler({ context: 'Score Update' });
+
+  return useMutation<void, Error, { 
+    scorecardId: number; 
+    holeId: number; 
+    strokes: number; 
+    roundNumber?: number;
+  }>({
+    mutationFn: ({ scorecardId, holeId, strokes, roundNumber }) => 
+      scorecardService.updateHoleScore(scorecardId, holeId, strokes, roundNumber),
+    onSuccess: (_, variables) => {
+      // Invalidate scorecard to refresh totals
+      queryClient.invalidateQueries({ queryKey: ['scorecard', variables.scorecardId] });
+    },
+    onError: (error) => handleError(error),
+  });
+}
+
 // Lock scorecard mutation
 export const useLockScorecard = () => {
   const queryClient = useQueryClient();

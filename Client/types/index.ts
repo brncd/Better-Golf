@@ -543,3 +543,10 @@ export interface CourseDetailGetDTO {
   description: string;
   holes: HoleDTO[];
 }
+
+// ================== Re-export from separate type files ==================
+export * from './teeTime';
+export * from './matchPlay';
+export * from './scoringFormat';
+export * from './roundInfo';
+export * from './gameFormat';
