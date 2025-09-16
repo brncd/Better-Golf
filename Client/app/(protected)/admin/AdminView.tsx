@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import { MainLayout } from "@/components/layouts/MainLayout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Settings, Users, Tag, Shield, Eye } from "lucide-react"
@@ -18,8 +17,7 @@ export function AdminView({ user }: AdminViewProps) {
   const categories = categoriesResponse?.items || []
 
   return (
-    <MainLayout user={user || null}>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-balance">Administration</h1>
@@ -182,7 +180,6 @@ export function AdminView({ user }: AdminViewProps) {
             </div>
           </CardContent>
         </Card>
-      </div>
-    </MainLayout>
+    </div>
   )
 }

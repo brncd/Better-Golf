@@ -1,7 +1,5 @@
 "use client"
 
-import { MainLayout } from "@/components/layouts/MainLayout"
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { StatCard } from "@/components/molecules/StatCard"
 import { QuickActionCard } from "@/components/molecules/QuickActionCard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,9 +18,7 @@ interface DashboardViewProps {
 
 export function DashboardView({ stats, activity, activeTournaments, upcomingTournaments }: DashboardViewProps) {
   return (
-    <ProtectedRoute>
-      <MainLayout>
-        <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-balance">Dashboard</h1>
@@ -189,8 +185,6 @@ export function DashboardView({ stats, activity, activeTournaments, upcomingTour
             </div>
           </CardContent>
         </Card>
-        </div>
-      </MainLayout>
-    </ProtectedRoute>
+    </div>
   )
 }
