@@ -13,7 +13,12 @@ import { useTeeTimes, useGenerateTeeTimes, useAssignPlayerToTeeTime, useRemovePl
 import { usePlayers } from '@/hooks/usePlayers';
 import { LoadingSpinner } from '@/components/atoms/LoadingSpinner';
 import { ErrorDisplay } from '@/components/atoms/ErrorDisplay';
-import type { TeeTime, TeeTimePlayer } from '@/types/teeTime';
+import type { 
+  TeeTimeDTO, 
+  TeeTimePlayer, 
+  PlayerListGetDTO, 
+  TournamentStatus 
+} from '@/types';
 
 interface TeeTimesManagerProps {
   tournamentId: string;
@@ -25,22 +30,26 @@ export function TeeTimesManager({ tournamentId, canEdit = false }: TeeTimesManag
   const [selectedRound, setSelectedRound] = useState<number>(1);
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
-  const [selectedTeeTime, setSelectedTeeTime] = useState<TeeTime | null>(null);
+  const [selectedTeeTime, setSelectedTeeTime] = useState<TeeTimeDTO | null>(null);
 
-  const { data: teeTimes, isLoading, error } = useTeeTimes(tournamentId);
-  const { data: playersData } = usePlayers();
+  const { data: teeTimes, isLoading, error } = useTeeTimes(parseInt(tournamentId));
+  const { data: playersData } = usePlayers({ pageNumber: 1, pageSize: 100 });
   const generateTeeTimesMutation = useGenerateTeeTimes();
   const assignPlayerMutation = useAssignPlayerToTeeTime();
   const removePlayerMutation = useRemovePlayerFromTeeTime();
 
   const players = playersData?.items || [];
 
-  const handleGenerateTeeTimes = () => {
-    generateTeeTimesMutation.mutate(tournamentId);
+  const handleGenerateTeeTimes = async () => {
+    await generateTeeTimesMutation.mutateAsync({
+      tournamentId: parseInt(tournamentId),
+      roundId: parseInt(selectedRound.toString()),
+      holeNumber: parseInt(selectedTeeTime?.holeNumber.toString() || '1'),
+    });
     setShowGenerateDialog(false);
   };
 
-  const handleAssignPlayer = (playerId: string, position: number) => {
+  const handleAssignPlayer = async (playerId: string, position: number) => {
     if (!selectedTeeTime) return;
     
     // For now, we'll use mock data since the API structure needs to be aligned
@@ -57,7 +66,7 @@ export function TeeTimesManager({ tournamentId, canEdit = false }: TeeTimesManag
     setShowAssignDialog(false);
   };
 
-  const handleRemovePlayer = (teeTimeId: string, playerId: string) => {
+  const handleRemovePlayer = async (teeTimeId: number, playerId: number) => {
     removePlayerMutation.mutate({ teeTimeId, playerId });
   };
 
@@ -91,8 +100,8 @@ export function TeeTimesManager({ tournamentId, canEdit = false }: TeeTimesManag
     return <ErrorDisplay error={error} />;
   }
 
-  const filteredTeeTimes = teeTimes?.filter((teeTime: TeeTime) => {
-    const teeTimeDate = new Date(teeTime.teeTimeSlot).toISOString().split('T')[0];
+  const filteredTeeTimes = teeTimes?.filter((teeTime: TeeTimeDTO) => {
+    const teeTimeDate = new Date(teeTime.date || '').toISOString().split('T')[0];
     return teeTimeDate === selectedDate && teeTime.roundNumber === selectedRound;
   }) || [];
 

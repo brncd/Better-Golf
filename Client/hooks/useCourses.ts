@@ -4,7 +4,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { courseService } from '@/lib/services/courseService';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
 import { useToast } from '@/hooks/use-toast';
-import type { CoursesListGetDTO, SingleCourseDTO, CoursePostDTO, HoleListGetDTO, HolePostDTO, PaginationRequest } from '@/types';
+import type { 
+  CoursesListGetDTO, 
+  SingleCourseDTO, 
+  CoursePostDTO, 
+  HoleListGetDTO,
+  HolePostDTO,
+  PaginationRequest,
+  PaginationResponse 
+} from '@/types';
 
 // Query Keys
 export const courseKeys = {

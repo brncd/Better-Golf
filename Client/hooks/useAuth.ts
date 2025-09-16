@@ -8,7 +8,7 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
 
-  const { user, isAuthenticated, login, logout, loading } = context;
+  const { user, isAuthenticated, login, logout, isLoading } = context;
 
   const hasRole = (role: string): boolean => {
     return user?.roles?.includes(role) ?? false;
@@ -43,7 +43,7 @@ export const useAuth = () => {
     isAuthenticated,
     login,
     logout,
-    loading,
+    loading: isLoading,
     hasRole,
     isAdmin,
     isTournamentOrganizer,
